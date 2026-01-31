@@ -1,0 +1,25 @@
+{
+  "vaultInbox": "/Users/i.bisarnov/obsidian/3d brain/Inbox",
+  "outputFilenameTemplate": "TabDump {ts}.md",
+  "browsers": ["Chrome", "Safari"],
+  "allowlistUrlContains": [
+    "mail.google.com",
+    "calendar.google.com",
+    "slack.com",
+    "notion.so"
+  ],
+  "keepPinnedTabs": true,
+  "skipUrlPrefixes": [
+    "chrome://",
+    "chrome-extension://",
+    "about:",
+    "file://",
+    "safari-web-extension://",
+    "favorites://",
+    "safari://"
+  ],
+  "skipTitlesExact": ["New Tab", "Start Page"],
+  "outputGroupByWindow": true,
+  "outputIncludeMetadata": false,
+  "dryRun": true
+}

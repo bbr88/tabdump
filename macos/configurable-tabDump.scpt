@@ -21,7 +21,6 @@ Planned: Firefox (via UI scripting)
 property VAULT_INBOX : "/Users/i.bisarnov/obsidian/3d brain/Inbox/"
 
 -- 2) Output filename template
---    Tokens supported: {ts}
 property OUTPUT_FILENAME_TEMPLATE : "TabDump {ts}.md"
 
 -- 3) Which browsers to process
@@ -49,12 +48,117 @@ property OUTPUT_INCLUDE_METADATA : false
 -- Safety: if true, don’t close anything, only dump (dry run)
 property DRY_RUN : true
 
+-- Optional: JSON config file. If present, values override the defaults above.
+property CONFIG_PATH : "/Users/i.bisarnov/develop/orc-visioner/tabDump/macos/tabdump.json"
+
 -- =========================
 -- END CONFIG
 -- =========================
 
+-- ---------- JSON config loading ----------
+on loadJsonConfig(pathStr)
+  set py to "CONFIG_PATH=" & quoted form of pathStr & " python3 - <<'PY'\n" & ¬
+    "import json, os\n" & ¬
+    "p = os.path.expanduser(os.environ.get('CONFIG_PATH', ''))\n" & ¬
+    "if not p or not os.path.exists(p):\n" & ¬
+    "  print('')\n" & ¬
+    "  raise SystemExit\n" & ¬
+    "with open(p, 'r', encoding='utf-8') as f:\n" & ¬
+    "  data = json.load(f)\n" & ¬
+    "\n" & ¬
+    "key_map = {\n" & ¬
+    "  'vaultInbox': 'VAULT_INBOX',\n" & ¬
+    "  'outputFilenameTemplate': 'OUTPUT_FILENAME_TEMPLATE',\n" & ¬
+    "  'browsers': 'BROWSERS',\n" & ¬
+    "  'allowlistUrlContains': 'ALLOWLIST_URL_CONTAINS',\n" & ¬
+    "  'keepPinnedTabs': 'KEEP_PINNED_TABS',\n" & ¬
+    "  'skipUrlPrefixes': 'SKIP_URL_PREFIXES',\n" & ¬
+    "  'skipTitlesExact': 'SKIP_TITLES_EXACT',\n" & ¬
+    "  'outputGroupByWindow': 'OUTPUT_GROUP_BY_WINDOW',\n" & ¬
+    "  'outputIncludeMetadata': 'OUTPUT_INCLUDE_METADATA',\n" & ¬
+    "  'dryRun': 'DRY_RUN',\n" & ¬
+    "}\n" & ¬
+    "allowed = set(key_map.values())\n" & ¬
+    "\n" & ¬
+    "def esc(s):\n" & ¬
+    "  return str(s).replace('\\\\', '\\\\\\\\').replace('\"', '\\\\\"').replace('\\n', '\\\\n').replace('\\r', '\\\\r')\n" & ¬
+    "\n" & ¬
+    "def as_as(v):\n" & ¬
+    "  if isinstance(v, bool):\n" & ¬
+    "    return 'true' if v else 'false'\n" & ¬
+    "  if isinstance(v, (int, float)):\n" & ¬
+    "    return str(v)\n" & ¬
+    "  if isinstance(v, list):\n" & ¬
+    "    return '{' + ', '.join(as_as(x) for x in v) + '}'\n" & ¬
+    "  if isinstance(v, dict):\n" & ¬
+    "    return '{' + ', '.join([f'|{k}|:' + as_as(val) for k, val in v.items()]) + '}'\n" & ¬
+    "  return '\"' + esc(v) + '\"'\n" & ¬
+    "\n" & ¬
+    "pairs = []\n" & ¬
+    "for k, v in data.items():\n" & ¬
+    "  k2 = key_map.get(k, k)\n" & ¬
+    "  if k2 == 'VAULT_INBOX' and isinstance(v, str):\n" & ¬
+    "    v = os.path.expanduser(v)\n" & ¬
+    "  if k2 in allowed:\n" & ¬
+    "    pairs.append(f'|{k2}|:' + as_as(v))\n" & ¬
+    "print('{' + ', '.join(pairs) + '}')\n" & ¬
+    "PY"
+
+  set recText to do shell script py
+  if recText is "" then return missing value
+  return run script recText
+end loadJsonConfig
+
+on applyConfig(cfg)
+  try
+    set VAULT_INBOX to VAULT_INBOX of cfg
+  end try
+  try
+    set OUTPUT_FILENAME_TEMPLATE to OUTPUT_FILENAME_TEMPLATE of cfg
+  end try
+  try
+    set BROWSERS to BROWSERS of cfg
+  end try
+  try
+    set ALLOWLIST_URL_CONTAINS to ALLOWLIST_URL_CONTAINS of cfg
+  end try
+  try
+    set KEEP_PINNED_TABS to KEEP_PINNED_TABS of cfg
+  end try
+  try
+    set SKIP_URL_PREFIXES to SKIP_URL_PREFIXES of cfg
+  end try
+  try
+    set SKIP_TITLES_EXACT to SKIP_TITLES_EXACT of cfg
+  end try
+  try
+    set OUTPUT_GROUP_BY_WINDOW to OUTPUT_GROUP_BY_WINDOW of cfg
+  end try
+  try
+    set OUTPUT_INCLUDE_METADATA to OUTPUT_INCLUDE_METADATA of cfg
+  end try
+  try
+    set DRY_RUN to DRY_RUN of cfg
+  end try
+end applyConfig
+
+set cfg to my loadJsonConfig(CONFIG_PATH)
+if cfg is not missing value then
+  my applyConfig(cfg)
+end if
+set VAULT_INBOX to my normalizeDirPath(VAULT_INBOX)
+
 
 -- ---------- Helpers ----------
+on normalizeDirPath(pathStr)
+  set p to pathStr as text
+  if p is "" then
+    error "VAULT_INBOX is empty. Set vaultInbox in the JSON config."
+  end if
+  if p ends with "/" then return p
+  return p & "/"
+end normalizeDirPath
+
 on nowTimestamp()
   return do shell script "date '+%Y-%m-%d %H-%M-%S'"
 end nowTimestamp
