@@ -48,8 +48,8 @@ property OUTPUT_INCLUDE_METADATA : false
 -- Safety: if true, don’t close anything, only dump (dry run)
 property DRY_RUN : true
 
--- Optional: JSON config file. If present, values override the defaults above.
-property CONFIG_PATH : "/Users/i.bisarnov/develop/orc-visioner/tabDump/macos/tabdump.json"
+-- Optional: JSON config file. If empty, uses tabdump.json next to this script.
+property CONFIG_PATH : ""
 
 -- =========================
 -- END CONFIG
@@ -142,7 +142,12 @@ on applyConfig(cfg)
   end try
 end applyConfig
 
-set cfg to my loadJsonConfig(CONFIG_PATH)
+set configPathResolved to CONFIG_PATH
+if configPathResolved is "" then
+  set configPathResolved to my defaultConfigPath()
+end if
+
+set cfg to my loadJsonConfig(configPathResolved)
 if cfg is not missing value then
   my applyConfig(cfg)
 end if
@@ -150,6 +155,16 @@ set VAULT_INBOX to my normalizeDirPath(VAULT_INBOX)
 
 
 -- ---------- Helpers ----------
+on defaultConfigPath()
+  try
+    set scriptPath to POSIX path of (path to me)
+    set scriptDir to do shell script "dirname " & quoted form of scriptPath
+    return scriptDir & "/tabdump.json"
+  on error
+    return ""
+  end try
+end defaultConfigPath
+
 on normalizeDirPath(pathStr)
   set p to pathStr as text
   if p is "" then
