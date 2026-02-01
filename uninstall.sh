@@ -5,11 +5,17 @@ APP_PATH="${HOME}/Applications/TabDump.app"
 CONFIG_DIR="${HOME}/Library/Application Support/TabDump"
 ENGINE_DEST="${CONFIG_DIR}/TabDump.scpt"
 CONFIG_PATH="${CONFIG_DIR}/config.json"
+MONITOR_DEST="${CONFIG_DIR}/monitor_tabs.py"
+POSTPROCESS_DEST="${CONFIG_DIR}/postprocess_tabdump.py"
+LOG_DIR="${CONFIG_DIR}/logs"
 MONITOR_STATE_PATH="${CONFIG_DIR}/monitor_state.json"
 MONITOR_LOCK_PATH="${CONFIG_DIR}/monitor_state.lock"
 STATE_PATH="${CONFIG_DIR}/state.json"
 CLI_PATH="${HOME}/.local/bin/tabdump"
 BUNDLE_ID="io.orc-visioner.tabdump"
+LAUNCH_AGENT_DIR="${HOME}/Library/LaunchAgents"
+LAUNCH_LABEL="io.orc-visioner.tabdump.monitor"
+LAUNCH_AGENT_PATH="${LAUNCH_AGENT_DIR}/${LAUNCH_LABEL}.plist"
 
 ASSUME_YES=0
 if [[ "${1:-}" == "--yes" ]]; then
@@ -19,8 +25,12 @@ fi
 echo "TabDump uninstaller"
 echo "This will remove:"
 echo "  - ${ENGINE_DEST}"
+echo "  - ${MONITOR_DEST}"
+echo "  - ${POSTPROCESS_DEST}"
 echo "  - ${APP_PATH}"
 echo "  - ${CLI_PATH}"
+echo "  - ${LAUNCH_AGENT_PATH}"
+echo "  - ${LOG_DIR}"
 echo "  - ${MONITOR_STATE_PATH}"
 echo "  - ${MONITOR_LOCK_PATH}"
 echo "  - ${STATE_PATH}"
@@ -49,6 +59,17 @@ if command -v tccutil >/dev/null 2>&1; then
   tccutil reset AppleEvents "${BUNDLE_ID}" >/dev/null 2>&1 || true
 fi
 
+if command -v launchctl >/dev/null 2>&1; then
+  set +e
+  UID_NUM="$(id -u)"
+  launchctl bootout "gui/${UID_NUM}" "${LAUNCH_AGENT_PATH}" >/dev/null 2>&1
+  set -e
+fi
+
+if [[ -e "${LAUNCH_AGENT_PATH}" ]]; then
+  rm -f "${LAUNCH_AGENT_PATH}"
+fi
+
 if [[ -e "${APP_PATH}" ]]; then
   rm -rf "${APP_PATH}"
 fi
@@ -61,12 +82,24 @@ if [[ -e "${ENGINE_DEST}" ]]; then
   rm -f "${ENGINE_DEST}"
 fi
 
+if [[ -e "${MONITOR_DEST}" ]]; then
+  rm -f "${MONITOR_DEST}"
+fi
+
+if [[ -e "${POSTPROCESS_DEST}" ]]; then
+  rm -f "${POSTPROCESS_DEST}"
+fi
+
 if [[ -e "${MONITOR_STATE_PATH}" ]]; then
   rm -f "${MONITOR_STATE_PATH}"
 fi
 
 if [[ -e "${MONITOR_LOCK_PATH}" ]]; then
   rm -f "${MONITOR_LOCK_PATH}"
+fi
+
+if [[ -d "${LOG_DIR}" ]]; then
+  rm -rf "${LOG_DIR}"
 fi
 
 if [[ -e "${STATE_PATH}" ]]; then

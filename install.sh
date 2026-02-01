@@ -5,17 +5,36 @@ CONFIG_DIR="${HOME}/Library/Application Support/TabDump"
 CONFIG_PATH="${CONFIG_DIR}/config.json"
 ENGINE_SOURCE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/macos/configurable-tabDump.scpt"
 ENGINE_DEST="${CONFIG_DIR}/TabDump.scpt"
+CORE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/core"
+MONITOR_SOURCE="${CORE_DIR}/monitor_tabs.py"
+POSTPROCESS_SOURCE="${CORE_DIR}/postprocess_tabdump.py"
+MONITOR_DEST="${CONFIG_DIR}/monitor_tabs.py"
+POSTPROCESS_DEST="${CONFIG_DIR}/postprocess_tabdump.py"
 APP_PATH="${HOME}/Applications/TabDump.app"
 BUNDLE_ID="io.orc-visioner.tabdump"
 BIN_DIR="${HOME}/.local/bin"
 CLI_PATH="${BIN_DIR}/tabdump"
+LAUNCH_AGENT_DIR="${HOME}/Library/LaunchAgents"
+LAUNCH_LABEL="io.orc-visioner.tabdump.monitor"
+LAUNCH_AGENT_PATH="${LAUNCH_AGENT_DIR}/${LAUNCH_LABEL}.plist"
+LOG_DIR="${CONFIG_DIR}/logs"
+PYTHON_BIN="$(command -v python3 || true)"
 
 echo "TabDump installer"
+if [[ -z "${PYTHON_BIN}" ]]; then
+  echo "python3 not found on PATH. Please install Python 3 and retry."
+  exit 1
+fi
+
 echo "This will create/update:"
 echo "  - ${ENGINE_DEST}"
+echo "  - ${MONITOR_DEST}"
+echo "  - ${POSTPROCESS_DEST}"
 echo "  - ${CONFIG_PATH}"
 echo "  - ${APP_PATH}"
 echo "  - ${CLI_PATH}"
+echo "  - ${LAUNCH_AGENT_PATH}"
+echo "  - Python: ${PYTHON_BIN}"
 echo
 
 read -r -p "Vault Inbox path (required): " VAULT_INBOX_RAW
@@ -42,10 +61,15 @@ PY
 
 mkdir -p "${VAULT_INBOX}"
 mkdir -p "${CONFIG_DIR}"
+mkdir -p "${LOG_DIR}"
 mkdir -p "$(dirname "${APP_PATH}")"
 mkdir -p "${BIN_DIR}"
+mkdir -p "${LAUNCH_AGENT_DIR}"
 
 cp -f "${ENGINE_SOURCE}" "${ENGINE_DEST}"
+cp -f "${MONITOR_SOURCE}" "${MONITOR_DEST}"
+cp -f "${POSTPROCESS_SOURCE}" "${POSTPROCESS_DEST}"
+chmod +x "${MONITOR_DEST}" "${POSTPROCESS_DEST}"
 
 VAULT_INBOX="${VAULT_INBOX}" CONFIG_PATH="${CONFIG_PATH}" python3 - <<'PY'
 import json, os
@@ -102,9 +126,23 @@ with open(config_path, "w", encoding="utf-8") as f:
 PY
 fi
 
+read -r -p "OpenAI API key for tagging (leave empty to skip): " OPENAI_API_KEY
+
 echo
 echo "Wrote config: ${CONFIG_PATH}"
 echo "Vault Inbox:  ${VAULT_INBOX}"
+
+START_INTERVAL="$(CONFIG_PATH="${CONFIG_PATH}" python3 - <<'PY'
+import json, os
+p = os.environ["CONFIG_PATH"]
+with open(p, "r", encoding="utf-8") as f:
+  data = json.load(f)
+minutes = int(data.get("checkEveryMinutes", 5))
+if minutes < 1:
+  minutes = 1
+print(minutes * 60)
+PY
+)"
 
 osacompile -o "${APP_PATH}" "${ENGINE_DEST}"
 
@@ -125,14 +163,68 @@ open "$HOME/Applications/TabDump.app"
 SH
 chmod +x "${CLI_PATH}"
 
+cat > "${LAUNCH_AGENT_PATH}" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>${LAUNCH_LABEL}</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>${PYTHON_BIN}</string>
+    <string>${MONITOR_DEST}</string>
+  </array>
+PLIST
+
+if [[ -n "${OPENAI_API_KEY}" ]]; then
+  cat >> "${LAUNCH_AGENT_PATH}" <<PLIST
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>OPENAI_API_KEY</key>
+    <string>${OPENAI_API_KEY}</string>
+  </dict>
+PLIST
+fi
+
+cat >> "${LAUNCH_AGENT_PATH}" <<PLIST
+  <key>StartInterval</key>
+  <integer>${START_INTERVAL}</integer>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>${LOG_DIR}/monitor.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>${LOG_DIR}/monitor.err.log</string>
+</dict>
+</plist>
+PLIST
+
+if command -v launchctl >/dev/null 2>&1; then
+  set +e
+  UID_NUM="$(id -u)"
+  launchctl bootout "gui/${UID_NUM}" "${LAUNCH_AGENT_PATH}" >/dev/null 2>&1
+  launchctl bootstrap "gui/${UID_NUM}" "${LAUNCH_AGENT_PATH}"
+  launchctl enable "gui/${UID_NUM}/${LAUNCH_LABEL}" >/dev/null 2>&1
+  launchctl kickstart -k "gui/${UID_NUM}/${LAUNCH_LABEL}" >/dev/null 2>&1
+  set -e
+fi
+
 echo
 echo "Installed engine: ${ENGINE_DEST}"
+echo "Installed monitor: ${MONITOR_DEST}"
+echo "Installed postprocess: ${POSTPROCESS_DEST}"
 echo "Installed app:    ${APP_PATH}"
 echo "Bundle id:        ${BUNDLE_ID}"
 echo "Installed CLI:    ${CLI_PATH}"
+echo "Installed job:    ${LAUNCH_AGENT_PATH}"
 echo
 echo "OpenClaw command:"
 echo "  open ~/Applications/TabDump.app"
 echo
 echo "If Automation prompts do not reappear, reset with:"
 echo "  tccutil reset AppleEvents ${BUNDLE_ID}"
+echo
+echo "To reload the job after changing checkEveryMinutes:"
+echo "  launchctl bootout gui/$(id -u) ${LAUNCH_AGENT_PATH}"
+echo "  launchctl bootstrap gui/$(id -u) ${LAUNCH_AGENT_PATH}"
