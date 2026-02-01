@@ -6,6 +6,7 @@ CONFIG_DIR="${HOME}/Library/Application Support/TabDump"
 ENGINE_DEST="${CONFIG_DIR}/TabDump.scpt"
 CONFIG_PATH="${CONFIG_DIR}/config.json"
 CLI_PATH="${HOME}/.local/bin/tabdump"
+BUNDLE_ID="io.orc-visioner.tabdump"
 
 ASSUME_YES=0
 if [[ "${1:-}" == "--yes" ]]; then
@@ -36,6 +37,10 @@ else
   if [[ "${CONFIRM_CFG}" == "y" || "${CONFIRM_CFG}" == "Y" ]]; then
     REMOVE_CONFIG=1
   fi
+fi
+
+if command -v tccutil >/dev/null 2>&1; then
+  tccutil reset AppleEvents "${BUNDLE_ID}" >/dev/null 2>&1 || true
 fi
 
 if [[ -e "${APP_PATH}" ]]; then
