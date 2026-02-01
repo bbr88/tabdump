@@ -48,6 +48,14 @@ property OUTPUT_INCLUDE_METADATA : false
 -- Safety: if true, don’t close anything, only dump (dry run)
 property DRY_RUN : true
 
+-- Automation defaults (used by external runner)
+property MAX_TABS : 30
+property CHECK_EVERY_MINUTES : 5
+property COOLDOWN_MINUTES : 30
+
+-- Post-processing model hint (used by external runner)
+property TAG_MODEL : "gpt-4.1-mini"
+
 -- Optional: JSON config file. If empty, resolves via default locations.
 property CONFIG_PATH : ""
 
@@ -77,6 +85,10 @@ on loadJsonConfig(pathStr)
     "  'outputGroupByWindow': 'OUTPUT_GROUP_BY_WINDOW',\n" & ¬
     "  'outputIncludeMetadata': 'OUTPUT_INCLUDE_METADATA',\n" & ¬
     "  'dryRun': 'DRY_RUN',\n" & ¬
+    "  'maxTabs': 'MAX_TABS',\n" & ¬
+    "  'checkEveryMinutes': 'CHECK_EVERY_MINUTES',\n" & ¬
+    "  'cooldownMinutes': 'COOLDOWN_MINUTES',\n" & ¬
+    "  'tagModel': 'TAG_MODEL',\n" & ¬
     "}\n" & ¬
     "allowed = set(key_map.values())\n" & ¬
     "\n" & ¬
@@ -139,6 +151,18 @@ on applyConfig(cfg)
   end try
   try
     set DRY_RUN to DRY_RUN of cfg
+  end try
+  try
+    set MAX_TABS to MAX_TABS of cfg
+  end try
+  try
+    set CHECK_EVERY_MINUTES to CHECK_EVERY_MINUTES of cfg
+  end try
+  try
+    set COOLDOWN_MINUTES to COOLDOWN_MINUTES of cfg
+  end try
+  try
+    set TAG_MODEL to TAG_MODEL of cfg
   end try
 end applyConfig
 

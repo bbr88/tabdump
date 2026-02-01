@@ -76,7 +76,11 @@ data = {
   "skipTitlesExact": ["New Tab", "Start Page"],
   "outputGroupByWindow": True,
   "outputIncludeMetadata": False,
-  "dryRun": True
+  "dryRun": True,
+  "maxTabs": 30,
+  "checkEveryMinutes": 5,
+  "cooldownMinutes": 30,
+  "tagModel": "gpt-4.1-mini"
 }
 
 with open(config_path, "w", encoding="utf-8") as f:

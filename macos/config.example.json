@@ -27,5 +27,9 @@
   ],
   "outputGroupByWindow": true,
   "outputIncludeMetadata": false,
-  "dryRun": true
+  "dryRun": true,
+  "maxTabs": 30,
+  "checkEveryMinutes": 5,
+  "cooldownMinutes": 30,
+  "tagModel": "gpt-4.1-mini"
 }
