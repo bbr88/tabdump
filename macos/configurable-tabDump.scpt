@@ -226,6 +226,10 @@ on nowTimestamp()
   return do shell script "date '+%Y-%m-%d %H-%M-%S'"
 end nowTimestamp
 
+on nowEpochSeconds()
+  return (do shell script "date +%s") as integer
+end nowEpochSeconds
+
 on ensureFolder(pathStr)
   do shell script "mkdir -p " & quoted form of pathStr
 end ensureFolder
@@ -299,6 +303,132 @@ on shouldProcess(browserName, enabledList)
   end repeat
   return false
 end shouldProcess
+
+on stateFilePath()
+  set homePath to do shell script "printf %s \"$HOME\""
+  return homePath & "/Library/Application Support/TabDump/state.json"
+end stateFilePath
+
+on stateDirPath()
+  set statePath to my stateFilePath()
+  return do shell script "dirname " & quoted form of statePath
+end stateDirPath
+
+on readState(pathStr)
+  set py to "STATE_PATH=" & quoted form of pathStr & " python3 - <<'PY'\n" & ¬
+    "import json, os\n" & ¬
+    "p = os.environ.get('STATE_PATH', '')\n" & ¬
+    "if not p or not os.path.exists(p):\n" & ¬
+    "  print('0 0 0')\n" & ¬
+    "  raise SystemExit\n" & ¬
+    "with open(p, 'r', encoding='utf-8') as f:\n" & ¬
+    "  data = json.load(f)\n" & ¬
+    "last_check = int(data.get('lastCheck', 0))\n" & ¬
+    "last_dump = int(data.get('lastDump', 0))\n" & ¬
+    "last_tabs = int(data.get('lastTabs', 0))\n" & ¬
+    "print(f\"{last_check} {last_dump} {last_tabs}\")\n" & ¬
+    "PY"
+
+  set outText to do shell script py
+  set AppleScript's text item delimiters to " "
+  set parts to text items of outText
+  set AppleScript's text item delimiters to ""
+
+  set lastCheck to 0
+  set lastDump to 0
+  set lastTabs to 0
+  try
+    if (count of parts) ≥ 1 then set lastCheck to (item 1 of parts) as integer
+    if (count of parts) ≥ 2 then set lastDump to (item 2 of parts) as integer
+    if (count of parts) ≥ 3 then set lastTabs to (item 3 of parts) as integer
+  end try
+
+  return {lastCheck:lastCheck, lastDump:lastDump, lastTabs:lastTabs}
+end readState
+
+on writeState(pathStr, lastCheck, lastDump, lastTabs)
+  my ensureFolder(my stateDirPath())
+  set py to "STATE_PATH=" & quoted form of pathStr & " LAST_CHECK=" & quoted form of (lastCheck as text) & " LAST_DUMP=" & quoted form of (lastDump as text) & " LAST_TABS=" & quoted form of (lastTabs as text) & " python3 - <<'PY'\n" & ¬
+    "import json, os\n" & ¬
+    "p = os.environ['STATE_PATH']\n" & ¬
+    "def to_int(val):\n" & ¬
+    "  s = str(val).replace(',', '')\n" & ¬
+    "  try:\n" & ¬
+    "    return int(s)\n" & ¬
+    "  except Exception:\n" & ¬
+    "    return int(float(s))\n" & ¬
+    "data = {\n" & ¬
+    "  'lastCheck': to_int(os.environ.get('LAST_CHECK', 0)),\n" & ¬
+    "  'lastDump': to_int(os.environ.get('LAST_DUMP', 0)),\n" & ¬
+    "  'lastTabs': to_int(os.environ.get('LAST_TABS', 0)),\n" & ¬
+    "}\n" & ¬
+    "with open(p, 'w', encoding='utf-8') as f:\n" & ¬
+    "  json.dump(data, f, indent=2)\n" & ¬
+    "  f.write('\\n')\n" & ¬
+    "PY"
+  do shell script py
+end writeState
+
+on countOpenTabs()
+  set totalTabs to 0
+
+  tell application "System Events"
+    set chromeRunning to (exists process "Google Chrome")
+    set safariRunning to (exists process "Safari")
+  end tell
+
+  if chromeRunning and my shouldProcess("Chrome", BROWSERS) then
+    tell application "Google Chrome"
+      repeat with w in windows
+        set totalTabs to totalTabs + (count of tabs of w)
+      end repeat
+    end tell
+  end if
+
+  if safariRunning and my shouldProcess("Safari", BROWSERS) then
+    tell application "Safari"
+      repeat with w in windows
+        set totalTabs to totalTabs + (count of tabs of w)
+      end repeat
+    end tell
+  end if
+
+  return totalTabs
+end countOpenTabs
+
+-- ---------- Self-gating ----------
+set statePath to my stateFilePath()
+set stateRec to my readState(statePath)
+
+set lastCheck to lastCheck of stateRec
+set lastDump to lastDump of stateRec
+set lastTabs to lastTabs of stateRec
+
+set nowEpoch to my nowEpochSeconds()
+set checkEverySec to (CHECK_EVERY_MINUTES as integer) * 60
+set cooldownSec to (COOLDOWN_MINUTES as integer) * 60
+
+if checkEverySec > 0 then
+  if (nowEpoch - lastCheck) < checkEverySec then return
+end if
+
+set totalTabs to my countOpenTabs()
+set lastCheck to nowEpoch
+set lastTabs to totalTabs
+
+if (MAX_TABS as integer) > 0 then
+  if totalTabs < (MAX_TABS as integer) then
+    my writeState(statePath, lastCheck, lastDump, lastTabs)
+    return
+  end if
+end if
+
+if cooldownSec > 0 then
+  if (nowEpoch - lastDump) < cooldownSec then
+    my writeState(statePath, lastCheck, lastDump, lastTabs)
+    return
+  end if
+end if
 
 
 -- ---------- Detect running processes (don’t auto-launch) ----------
@@ -486,6 +616,8 @@ end if
 -- ---------- Write file ----------
 set mdText to my joinLines(mdLines)
 my writeUtf8File(outPath, mdText)
+set lastDump to my nowEpochSeconds()
+my writeState(statePath, lastCheck, lastDump, totalTabs)
 
 
 -- =========================
