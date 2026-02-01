@@ -1,16 +1,12 @@
 #!/usr/bin/env python3
 """Post-process a TabDump markdown file.
 
-- Parses Markdown links in bullet list form: - [Title](URL)
-- Deduplicates URLs
-- Groups by domain
-- Calls OpenAI to assign topic tags (lightweight, from title+url only)
-- Writes a cleaned companion note: "<orig stem> (clean).md"
-
-Requirements:
-- OPENAI_API_KEY env var
-
-This is v1: no PDF content fetching yet.
+Pipeline:
+- Parse Markdown links
+- Deduplicate URLs
+- Classify/enrich (topic/kind/action/score) via LLM
+- Pretty render into a structured Markdown note
+- Write companion note: "<orig stem> (clean).md"
 """
 
 import json
@@ -24,6 +20,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+from pretty_renderer import render_markdown
 LINK_RE = re.compile(r"^-\s+\[(?P<title>[^\]]+)\]\((?P<url>[^\)]+)\)\s*$")
 TRACKING_PARAMS = {
     "fbclid",
@@ -88,18 +85,39 @@ class Item:
     norm_url: str
     clean_url: str
     domain: str
+    browser: Optional[str]
 
 
 def extract_items(md: str) -> List[Item]:
     items: List[Item] = []
+    current_browser: Optional[str] = None
     for line in md.splitlines():
+        if line.startswith("## "):
+            if line.startswith("## Chrome"):
+                current_browser = "chrome"
+            elif line.startswith("## Safari"):
+                current_browser = "safari"
+            elif line.startswith("## Firefox"):
+                current_browser = "firefox"
+        if line.startswith("### "):
+            # ignore window headings
+            continue
         m = LINK_RE.match(line)
         if not m:
             continue
         title = m.group("title").strip()
         url = m.group("url").strip()
         clean_url = normalize_url(url)
-        items.append(Item(title=title, url=url, norm_url=clean_url, clean_url=clean_url, domain=domain_of(clean_url)))
+        items.append(
+            Item(
+                title=title,
+                url=url,
+                norm_url=clean_url,
+                clean_url=clean_url,
+                domain=domain_of(clean_url),
+                browser=current_browser,
+            )
+        )
     return items
 
 
@@ -138,6 +156,87 @@ def openai_chat_json(system: str, user: str, model: Optional[str] = None) -> dic
     return json.loads(content)
 
 
+def _safe_topic(value: object, domain: str) -> str:
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+    if domain:
+        return domain.replace(".", "-")
+    return "misc"
+
+
+def _safe_kind(value: object) -> str:
+    allowed = {"video", "repo", "paper", "docs", "article", "tool", "misc", "local", "auth", "internal"}
+    if isinstance(value, str):
+        v = value.strip().lower()
+        if v in allowed:
+            return v
+    return "misc"
+
+
+def _safe_action(value: object) -> str:
+    allowed = {"read", "watch", "reference", "build", "triage", "ignore"}
+    if isinstance(value, str):
+        v = value.strip().lower()
+        if v in allowed:
+            return v
+    return "triage"
+
+
+def _safe_score(value: object) -> Optional[int]:
+    if value is None:
+        return None
+    try:
+        v = int(value)
+    except Exception:
+        return None
+    if v < 0:
+        v = 0
+    if v > 5:
+        v = 5
+    return v
+
+
+def _safe_prio(value: object) -> Optional[str]:
+    if isinstance(value, str):
+        v = value.strip().lower()
+        if v in {"p1", "p2", "p3"}:
+            return v
+    return None
+
+
+def _extract_created_ts(src_path: Path, fallback: str) -> str:
+    try:
+        head = src_path.read_text(encoding="utf-8", errors="replace").splitlines()[:30]
+    except Exception:
+        return fallback
+    for line in head:
+        m = re.match(r'^created:\s*"?(.+?)"?$', line.strip())
+        if m:
+            return m.group(1)
+    return fallback
+
+
+def _chunked(items: List[Item], size: int) -> List[List[Item]]:
+    if size <= 0:
+        return [items]
+    return [items[i : i + size] for i in range(0, len(items), size)]
+
+
+def _call_with_retries(system: str, user: str, tries: int = 3, backoff_sec: float = 1.5) -> dict:
+    last_err: Optional[Exception] = None
+    for attempt in range(tries):
+        try:
+            return openai_chat_json(system=system, user=user)
+        except Exception as e:
+            last_err = e
+            if attempt == tries - 1:
+                raise
+            time.sleep(backoff_sec * (attempt + 1))
+    if last_err is not None:
+        raise last_err
+    raise RuntimeError("LLM call failed with unknown error")
+
+
 def build_clean_note(src_path: Path, items: List[Item]) -> Tuple[str, dict]:
     # Dedup by normalized URL (keep first title)
     seen = set()
@@ -148,87 +247,84 @@ def build_clean_note(src_path: Path, items: List[Item]) -> Tuple[str, dict]:
         seen.add(it.norm_url)
         dedup.append(it)
 
-    # Group by domain
-    by_domain: Dict[str, List[Item]] = {}
-    for it in dedup:
-        by_domain.setdefault(it.domain, []).append(it)
-
-    # Ask LLM for topic tags per item
+    # Ask LLM for enrichment
     system = (
-        "You are a strict classifier that assigns concise topic tags to browser tabs. "
+        "You are a strict classifier for browser tabs. "
         "Return ONLY valid JSON."
     )
 
-    # Keep prompt compact: domain + title + url
-    domain_blocks = []
-    for dom, arr in sorted(by_domain.items()):
-        lines = [f"- {a.title} | {a.clean_url}" for a in arr[:80]]  # guard
-        domain_blocks.append(f"DOMAIN: {dom}\n" + "\n".join(lines))
+    cls_map: Dict[str, dict] = {}
+    chunk_size = int(os.environ.get("TABDUMP_CLASSIFY_CHUNK", "30"))
+    for chunk in _chunked(dedup, chunk_size):
+        lines = [f"- {it.title} | {it.clean_url} | {it.domain}" for it in chunk]
+        user = (
+            "For each tab, provide:\n"
+            "- topic: short, lowercase, kebab-case (e.g. distributed-systems, postgres, llm)\n"
+            "- kind: one of [video, repo, paper, docs, article, tool, misc, local, auth, internal]\n"
+            "- action: one of [read, watch, reference, build, triage, ignore]\n"
+            "- score: integer 1-5 (importance)\n\n"
+            "Return JSON like:\n"
+            "{\n"
+            "  \"items\": [\n"
+            "    {\"url\": \"...\", \"topic\": \"...\", \"kind\": \"...\", \"action\": \"...\", \"score\": 3}\n"
+            "  ]\n"
+            "}\n\n"
+            + "\n".join(lines)
+        )
+        try:
+            out = _call_with_retries(system=system, user=user)
+        except Exception as e:
+            print(f"LLM classify failed (chunk size {len(chunk)}): {e}", file=sys.stderr)
+            out = {"items": []}
 
-    user = (
-        "Given these browser tabs grouped by domain, assign topic tags.\n\n"
-        "Rules:\n"
-        "- Tags must be short, lowercase, kebab-case (e.g. distributed-systems, postgres, llm, video).\n"
-        "- Provide 1-3 tags per item.\n"
-        "- Also provide a small set of globalTags (max 12) that summarize the whole dump.\n\n"
-        "Return JSON like:\n"
-        "{\n"
-        "  \"globalTags\": [..],\n"
-        "  \"items\": [{\"url\": \"...\", \"tags\": [..]}]\n"
-        "}\n\n"
-        + "\n\n".join(domain_blocks)
-    )
+        for x in out.get("items", []):
+            if not isinstance(x, dict):
+                continue
+            url = x.get("url")
+            if not url:
+                continue
+            cls_map[normalize_url(url)] = x
 
-    out = openai_chat_json(system=system, user=user)
-    tag_map = {normalize_url(x["url"]): x.get("tags", []) for x in out.get("items", []) if isinstance(x, dict) and x.get("url")}
-    global_tags = out.get("globalTags", [])
-
-    # Build topic buckets
-    topic_buckets: Dict[str, List[Item]] = {}
+    enriched: List[dict] = []
     for it in dedup:
-        tags = tag_map.get(it.norm_url, [])
-        primary = tags[0] if tags else it.domain.replace(".", "-")
-        topic_buckets.setdefault(primary, []).append(it)
+        cls = cls_map.get(it.norm_url, {})
+        topic = _safe_topic(cls.get("topic"), it.domain)
+        kind = _safe_kind(cls.get("kind"))
+        action = _safe_action(cls.get("action"))
+        score = _safe_score(cls.get("score"))
+        prio = _safe_prio(cls.get("prio"))
 
-    ts = time.strftime("%Y-%m-%d %H-%M-%S")
+        entry = {
+            "title": it.title,
+            "url": it.clean_url,
+            "topic": topic,
+            "kind": kind,
+            "action": action,
+            "domain": it.domain,
+            "browser": it.browser,
+        }
+        if score is not None:
+            entry["score"] = score
+        if prio is not None:
+            entry["prio"] = prio
+        enriched.append(entry)
 
-    fm = {
-        "created": ts,
-        "tags": ["tabs", "dump", "clean"] + [t for t in global_tags if isinstance(t, str)],
-        "source": src_path.name,
+    ts = _extract_created_ts(src_path, fallback=time.strftime("%Y-%m-%d %H-%M-%S"))
+    meta = {
+        "ts": ts,
+        "sourceFile": src_path.name,
+        "counts": {
+            "total": len(enriched),
+            "dumped": len(enriched),
+            "closed": 0,
+            "kept": 0,
+        },
+        "allowlistPatterns": [],
+        "skipPrefixes": [],
     }
 
-    # YAML frontmatter (simple)
-    front = ["---"]
-    for k, v in fm.items():
-        if isinstance(v, list):
-            vv = ", ".join(v)
-            front.append(f"{k}: [{vv}]")
-        else:
-            front.append(f"{k}: {v}")
-    front.append("---")
-
-    lines: List[str] = []
-    lines.extend(front)
-    lines.append("")
-    lines.append(f"# Tab dump (clean) — {ts}")
-    lines.append("")
-
-    for topic, arr in sorted(topic_buckets.items(), key=lambda x: (-len(x[1]), x[0])):
-        lines.append(f"## {topic}")
-        # within topic, sub-group by domain
-        sub: Dict[str, List[Item]] = {}
-        for it in arr:
-            sub.setdefault(it.domain, []).append(it)
-        for dom, darr in sorted(sub.items()):
-            lines.append(f"### {dom}")
-            for it in darr:
-                tags = tag_map.get(it.norm_url, [])
-                tag_str = (" " + " ".join([f"#{t}" for t in tags])) if tags else ""
-                lines.append(f"- [{it.title}]({it.clean_url}){tag_str}")
-            lines.append("")
-
-    return "\n".join(lines).rstrip() + "\n", fm
+    md = render_markdown(enriched, meta, cfg={})
+    return md, meta
 
 
 def main(argv: List[str]) -> int:
