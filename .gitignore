@@ -3,6 +3,9 @@
 *.iml
 out
 gen
+__pycache__/
+.pytest_cache/
+*.pyc
 
 ### macOS template
 # General
@@ -31,4 +34,3 @@ Icon
 Network Trash Folder
 Temporary Items
 .apdisk
-
