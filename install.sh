@@ -6,6 +6,7 @@ CONFIG_PATH="${CONFIG_DIR}/config.json"
 ENGINE_SOURCE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/macos/configurable-tabDump.scpt"
 ENGINE_DEST="${CONFIG_DIR}/TabDump.scpt"
 APP_PATH="${HOME}/Applications/TabDump.app"
+BUNDLE_ID="io.orc-visioner.tabdump"
 BIN_DIR="${HOME}/.local/bin"
 CLI_PATH="${BIN_DIR}/tabdump"
 
@@ -83,11 +84,35 @@ with open(config_path, "w", encoding="utf-8") as f:
   f.write("\n")
 PY
 
+read -r -p "Set dryRun=false now? (y/N): " SET_DRY_RUN
+if [[ "${SET_DRY_RUN}" == "y" || "${SET_DRY_RUN}" == "Y" ]]; then
+  CONFIG_PATH="${CONFIG_PATH}" python3 - <<'PY'
+import json, os
+config_path = os.environ["CONFIG_PATH"]
+with open(config_path, "r", encoding="utf-8") as f:
+  data = json.load(f)
+data["dryRun"] = False
+with open(config_path, "w", encoding="utf-8") as f:
+  json.dump(data, f, indent=2)
+  f.write("\n")
+PY
+fi
+
 echo
 echo "Wrote config: ${CONFIG_PATH}"
 echo "Vault Inbox:  ${VAULT_INBOX}"
 
 osacompile -o "${APP_PATH}" "${ENGINE_DEST}"
+
+PLIST_PATH="${APP_PATH}/Contents/Info.plist"
+if /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "${PLIST_PATH}" >/dev/null 2>&1; then
+  /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier ${BUNDLE_ID}" "${PLIST_PATH}"
+else
+  /usr/libexec/PlistBuddy -c "Add :CFBundleIdentifier string ${BUNDLE_ID}" "${PLIST_PATH}"
+fi
+
+# add-hoc re-sigh step required for the TCC
+codesign --force --deep --sign - "${APP_PATH}"
 
 cat > "${CLI_PATH}" <<'SH'
 #!/usr/bin/env bash
@@ -99,7 +124,11 @@ chmod +x "${CLI_PATH}"
 echo
 echo "Installed engine: ${ENGINE_DEST}"
 echo "Installed app:    ${APP_PATH}"
+echo "Bundle id:        ${BUNDLE_ID}"
 echo "Installed CLI:    ${CLI_PATH}"
 echo
 echo "OpenClaw command:"
 echo "  open ~/Applications/TabDump.app"
+echo
+echo "If Automation prompts do not reappear, reset with:"
+echo "  tccutil reset AppleEvents ${BUNDLE_ID}"
