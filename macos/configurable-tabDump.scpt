@@ -48,7 +48,7 @@ property OUTPUT_INCLUDE_METADATA : false
 -- Safety: if true, don’t close anything, only dump (dry run)
 property DRY_RUN : true
 
--- Optional: JSON config file. If empty, uses tabdump.json next to this script.
+-- Optional: JSON config file. If empty, resolves via default locations.
 property CONFIG_PATH : ""
 
 -- =========================
@@ -142,28 +142,52 @@ on applyConfig(cfg)
   end try
 end applyConfig
 
-set configPathResolved to CONFIG_PATH
-if configPathResolved is "" then
-  set configPathResolved to my defaultConfigPath()
-end if
-
+set configPathResolved to my resolveConfigPath()
 set cfg to my loadJsonConfig(configPathResolved)
 if cfg is not missing value then
   my applyConfig(cfg)
+else
+  error "Config not found at: " & configPathResolved & " — run install.sh or set CONFIG_PATH."
 end if
 set VAULT_INBOX to my normalizeDirPath(VAULT_INBOX)
 
 
 -- ---------- Helpers ----------
-on defaultConfigPath()
+on resolveConfigPath()
+  if CONFIG_PATH is not "" then return CONFIG_PATH
+
+  set appSupportPath to my appSupportConfigPath()
+  if my fileExists(appSupportPath) then return appSupportPath
+
+  set scriptPath to my scriptDirConfigPath()
+  if scriptPath is not "" and my fileExists(scriptPath) then return scriptPath
+
+  return appSupportPath
+end resolveConfigPath
+
+on appSupportConfigPath()
+  set homePath to do shell script "printf %s \"$HOME\""
+  return homePath & "/Library/Application Support/TabDump/config.json"
+end appSupportConfigPath
+
+on scriptDirConfigPath()
   try
     set scriptPath to POSIX path of (path to me)
     set scriptDir to do shell script "dirname " & quoted form of scriptPath
-    return scriptDir & "/tabdump.json"
+    return scriptDir & "/config.json"
   on error
     return ""
   end try
-end defaultConfigPath
+end scriptDirConfigPath
+
+on fileExists(pathStr)
+  try
+    do shell script "test -f " & quoted form of pathStr
+    return true
+  on error
+    return false
+  end try
+end fileExists
 
 on normalizeDirPath(pathStr)
   set p to pathStr as text

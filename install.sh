@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG_PATH="${SCRIPT_DIR}/macos/tabdump.json"
+CONFIG_DIR="${HOME}/Library/Application Support/TabDump"
+CONFIG_PATH="${CONFIG_DIR}/config.json"
 
 echo "TabDump installer"
 echo "This will create/update: ${CONFIG_PATH}"
@@ -31,6 +31,7 @@ PY
 }
 
 mkdir -p "${VAULT_INBOX}"
+mkdir -p "${CONFIG_DIR}"
 
 VAULT_INBOX="${VAULT_INBOX}" CONFIG_PATH="${CONFIG_PATH}" python3 - <<'PY'
 import json, os
