@@ -20,7 +20,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from pretty_renderer import render_markdown
+ROOT = Path(__file__).resolve().parent.parent
+if str(ROOT) not in sys.path:
+    sys.path.append(str(ROOT))
+
+from renderer_v3 import render_markdown  # type: ignore
 LINK_RE = re.compile(r"^-\s+\[(?P<title>[^\]]+)\]\((?P<url>[^\)]+)\)\s*$")
 TRACKING_PARAMS = {
     "fbclid",
@@ -238,15 +242,6 @@ def _call_with_retries(system: str, user: str, tries: int = 3, backoff_sec: floa
 
 
 def build_clean_note(src_path: Path, items: List[Item]) -> Tuple[str, dict]:
-    # Dedup by normalized URL (keep first title)
-    seen = set()
-    dedup: List[Item] = []
-    for it in items:
-        if it.norm_url in seen:
-            continue
-        seen.add(it.norm_url)
-        dedup.append(it)
-
     # Ask LLM for enrichment
     system = (
         "You are a strict classifier for browser tabs. "
@@ -255,7 +250,7 @@ def build_clean_note(src_path: Path, items: List[Item]) -> Tuple[str, dict]:
 
     cls_map: Dict[str, dict] = {}
     chunk_size = int(os.environ.get("TABDUMP_CLASSIFY_CHUNK", "30"))
-    for chunk in _chunked(dedup, chunk_size):
+    for chunk in _chunked(items, chunk_size):
         lines = [f"- {it.title} | {it.clean_url} | {it.domain}" for it in chunk]
         user = (
             "For each tab, provide:\n"
@@ -286,44 +281,45 @@ def build_clean_note(src_path: Path, items: List[Item]) -> Tuple[str, dict]:
             cls_map[normalize_url(url)] = x
 
     enriched: List[dict] = []
-    for it in dedup:
+    for it in items:
         cls = cls_map.get(it.norm_url, {})
         topic = _safe_topic(cls.get("topic"), it.domain)
         kind = _safe_kind(cls.get("kind"))
         action = _safe_action(cls.get("action"))
         score = _safe_score(cls.get("score"))
-        prio = _safe_prio(cls.get("prio"))
 
         entry = {
             "title": it.title,
             "url": it.clean_url,
-            "topic": topic,
-            "kind": kind,
-            "action": action,
             "domain": it.domain,
             "browser": it.browser,
+            "kind": kind,
+            "topics": [{"slug": topic, "title": topic.replace('-', ' ').title(), "confidence": 0.8}],
+            "intent": {"action": action, "confidence": (score or 3) / 5},
+            "flags": {},
         }
-        if score is not None:
-            entry["score"] = score
-        if prio is not None:
-            entry["prio"] = prio
         enriched.append(entry)
 
     ts = _extract_created_ts(src_path, fallback=time.strftime("%Y-%m-%d %H-%M-%S"))
     meta = {
-        "ts": ts,
-        "sourceFile": src_path.name,
-        "counts": {
-            "total": len(enriched),
-            "dumped": len(enriched),
-            "closed": 0,
-            "kept": 0,
-        },
+        "created": ts,
+        "source": src_path.name,
         "allowlistPatterns": [],
         "skipPrefixes": [],
     }
+    counts = {
+        "total": len(enriched),
+        "dumped": len(enriched),
+        "closed": 0,
+        "kept": 0,
+    }
+    payload = {
+        "meta": meta,
+        "counts": counts,
+        "items": enriched,
+    }
 
-    md = render_markdown(enriched, meta, cfg={})
+    md = render_markdown(payload, cfg={})
     return md, meta
 
 

@@ -1,0 +1,225 @@
+{
+  "meta": {
+    "created": "2026-02-01 21-10-00",
+    "source": "TabDump 2026-02-01 21-10-00.raw.json",
+    "allowlistPatterns": [
+      "mail.google.com",
+      "calendar.google.com",
+      "slack.com"
+    ],
+    "skipPrefixes": [
+      "chrome://",
+      "about:",
+      "safari://"
+    ]
+  },
+  "counts": {
+    "total": 10,
+    "dumped": 10,
+    "closed": 10,
+    "kept": 0
+  },
+  "cfg": {
+    "rendererVersion": "3.0.0",
+    "nowLimit": 3,
+    "titleMaxLen": 80,
+    "stripWwwForGrouping": true,
+    "focusTopN": 2,
+    "topListN": 6,
+    "includeQuickWins": true,
+    "quickWinsMaxItems": 30,
+    "showDedupedInSummary": true,
+    "chatDomains": [
+      "chatgpt.com",
+      "gemini.google.com"
+    ]
+  },
+  "items": [
+    {
+      "url": "http://nms.csail.mit.edu/~stavros/pubs/hstore.pdf",
+      "title": "Microsoft Word - vldb-07-final.doc",
+      "browser": "chrome",
+      "window_id": "101",
+      "kind": "paper",
+      "topics": [
+        {
+          "slug": "postgres",
+          "title": "Postgres",
+          "confidence": 0.88
+        }
+      ],
+      "intent": {
+        "action": "learn",
+        "confidence": 0.78
+      }
+    },
+    {
+      "url": "https://www.pgbouncer.org/config.html",
+      "title": "PgBouncer config",
+      "browser": "safari",
+      "window_id": "1",
+      "kind": "docs",
+      "topics": [
+        {
+          "slug": "postgres",
+          "title": "Postgres",
+          "confidence": 0.82
+        }
+      ],
+      "intent": {
+        "action": "reference",
+        "confidence": 0.74
+      }
+    },
+    {
+      "url": "https://pganalyze.com/blog/5mins-postgres-partition-pruning-prepared-statements-generic-vs-custom-query-plans",
+      "title": "5mins of Postgres E18: Partition pruning, prepared statements and generic vs custom query plans",
+      "browser": "chrome",
+      "window_id": "102",
+      "kind": "article",
+      "topics": [
+        {
+          "slug": "postgres",
+          "title": "Postgres",
+          "confidence": 0.86
+        }
+      ],
+      "intent": {
+        "action": "debug",
+        "confidence": 0.82
+      }
+    },
+    {
+      "url": "https://platform.openai.com/docs/api-reference/responses",
+      "title": "OpenAI API Reference — Responses",
+      "browser": "chrome",
+      "window_id": "103",
+      "kind": "docs",
+      "topics": [
+        {
+          "slug": "llm",
+          "title": "LLM",
+          "confidence": 0.83
+        }
+      ],
+      "intent": {
+        "action": "reference",
+        "confidence": 0.73
+      }
+    },
+    {
+      "url": "https://github.com/neondatabase/neon",
+      "title": "GitHub - neondatabase/neon: Neon: Serverless Postgres",
+      "browser": "chrome",
+      "window_id": "104",
+      "kind": "repo",
+      "topics": [
+        {
+          "slug": "postgres",
+          "title": "Postgres",
+          "confidence": 0.81
+        }
+      ],
+      "intent": {
+        "action": "explore",
+        "confidence": 0.70
+      }
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=MIJFyUPG4Z4",
+      "title": "Design a Distributed Rate Limiter... - YouTube",
+      "browser": "safari",
+      "window_id": "2",
+      "kind": "video",
+      "topics": [
+        {
+          "slug": "distributed-systems",
+          "title": "Distributed Systems",
+          "confidence": 0.79
+        }
+      ],
+      "intent": {
+        "action": "learn",
+        "confidence": 0.76
+      }
+    },
+    {
+      "url": "https://example.org/skim",
+      "title": "Short blog post to skim quickly",
+      "browser": "chrome",
+      "window_id": "105",
+      "kind": "article",
+      "topics": [
+        {
+          "slug": "llm",
+          "title": "LLM",
+          "confidence": 0.60
+        }
+      ],
+      "intent": {
+        "action": "learn",
+        "confidence": 0.60
+      }
+    },
+    {
+      "url": "https://platform.openai.com/api-keys",
+      "title": "API keys - OpenAI API",
+      "browser": "chrome",
+      "window_id": "106",
+      "kind": "auth",
+      "topics": [
+        {
+          "slug": "llm",
+          "title": "LLM",
+          "confidence": 0.77
+        }
+      ],
+      "intent": {
+        "action": "reference",
+        "confidence": 0.65
+      },
+      "flags": {
+        "is_auth": true
+      }
+    },
+    {
+      "url": "http://localhost:15433/",
+      "title": "localhost",
+      "browser": "chrome",
+      "window_id": "107",
+      "kind": "local",
+      "topics": [
+        {
+          "slug": "local-dev",
+          "title": "Local dev",
+          "confidence": 0.60
+        }
+      ],
+      "intent": {
+        "action": "ephemeral",
+        "confidence": 0.60
+      },
+      "flags": {
+        "is_local": true
+      }
+    },
+    {
+      "url": "https://pganalyze.com/blog/5mins-postgres-partition-pruning-prepared-statements-generic-vs-custom-query-plans",
+      "title": "Duplicate of pganalyze link (should be deduped)",
+      "browser": "chrome",
+      "window_id": "999",
+      "kind": "article",
+      "topics": [
+        {
+          "slug": "postgres",
+          "title": "Postgres",
+          "confidence": 0.50
+        }
+      ],
+      "intent": {
+        "action": "learn",
+        "confidence": 0.50
+      }
+    }
+  ]
+}
