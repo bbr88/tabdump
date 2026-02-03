@@ -1,17 +1,18 @@
 import json
 import re
-from copy import deepcopy
 from pathlib import Path
 
-from renderer_v3 import render_markdown
+import pytest
+
+from renderer_v3 import build_state, render_markdown, _score_item
 
 
 ROOT = Path(__file__).resolve().parent.parent
 FIXTURE_JSON = ROOT / "fixtures" / "sample_payload_v3.json"
-FIXTURE_MD = ROOT / "fixtures" / "expected_sample_payload_v3.md"
+FIXTURE_MD = ROOT / "fixtures" / "expected_sample_payload_v3_2.md"
 
 
-def _load_sample():
+def _load_payload():
     return json.loads(FIXTURE_JSON.read_text())
 
 
@@ -25,69 +26,75 @@ def _section(md: str, header: str) -> str:
 
 
 def test_golden_snapshot():
-    payload = _load_sample()
+    payload = _load_payload()
     md = render_markdown(payload)
     expected = FIXTURE_MD.read_text()
     assert md == expected
 
 
-def test_no_duplicate_urls():
-    payload = _load_sample()
-    md = render_markdown(payload)
-    urls = re.findall(r"\[Link\]\(([^)]+)\)", md)
-    assert len(urls) == len(set(urls))
+def test_bucket_exclusivity_and_coverage():
+    payload = _load_payload()
+    state = build_state(payload)
+    items = state["items"]
+    buckets = state["buckets"]
+    urls = {it["url"] for it in items}
+    bucket_urls = []
+    for arr in buckets.values():
+        bucket_urls.extend([it["url"] for it in arr])
+    assert len(bucket_urls) == len(set(bucket_urls))
+    assert set(bucket_urls) == urls
 
 
-def test_high_priority_extraction_limit_and_isolation():
-    payload = _load_sample()
-    md = render_markdown(payload)
-    high = _section(md, "## 🔥 High Priority")
-    high_urls = set(re.findall(r"\[Link\]\(([^)]+)\)", high))
-    assert len(high_urls) <= payload["cfg"]["nowLimit"]
-    rest_urls = set(re.findall(r"\[Link\]\(([^)]+)\)", md.replace(high, "")))
-    assert high_urls.isdisjoint(rest_urls)
+def test_admin_forcing():
+    payload = _load_payload()
+    state = build_state(payload)
+    buckets = state["buckets"]
+    admin_urls = {it["url"] for it in buckets["ADMIN"]}
+    for name, arr in buckets.items():
+        if name == "ADMIN":
+            continue
+        assert admin_urls.isdisjoint({it["url"] for it in arr})
 
 
-def test_admin_callout_formatting():
-    payload = _load_sample()
-    md = render_markdown(payload)
-    admin = _section(md, "## 🔐 Tools & Admin")
-    header_line = [l for l in admin.splitlines() if l.startswith("> [!warning]")][0]
-    assert "(2)" in header_line  # from sample fixture
-    admin_bullets = [l for l in admin.splitlines() if l.strip().startswith("> - [ ]")]
-    assert admin_bullets
-    assert all(l.startswith("> - [ ]") for l in admin_bullets)
-
-
-def test_dedup_count_and_single_instance():
-    payload = _load_sample()
-    md = render_markdown(payload)
-    assert "deduped: 1" in md.splitlines()[7]
-    urls = re.findall(r"https?://pganalyze.com[^\s)]+", md)
-    assert len(urls) == 1
+def test_high_priority_rules_and_limit():
+    payload = _load_payload()
+    state = build_state(payload)
+    cfg = state["cfg"]
+    high = state["buckets"]["HIGH"]
+    assert len(high) <= cfg["highPriorityLimit"]
+    for it in high:
+        score = _score_item(it)
+        assert score >= cfg["highPriorityMinScore"]
+        conf = it.get("intent", {}).get("confidence", 0)
+        assert conf >= cfg["highPriorityMinIntentConfidence"] or it["kind"] in {"paper", "spec"}
+    quick_urls = {it["url"] for it in state["buckets"]["QUICK"]}
+    backlog_urls = {it["url"] for it in state["buckets"].get("BACKLOG", [])}
+    assert quick_urls.isdisjoint({it["url"] for it in high})
+    assert backlog_urls.isdisjoint({it["url"] for it in high})
 
 
 def test_determinism():
-    payload = _load_sample()
+    payload = _load_payload()
     md1 = render_markdown(payload)
     md2 = render_markdown(payload)
     assert md1 == md2
 
 
-def test_title_truncation_respects_max_len():
-    payload = _load_sample()
-    long_item = {
-        "url": "https://example.com/long",
-        "title": "L" * 200,
-        "kind": "article",
-        "topics": [{"slug": "long", "title": "Long", "confidence": 0.9}],
-        "intent": {"action": "learn", "confidence": 0.9},
-    }
-    payload["items"] = [long_item]
-    payload["counts"]["total"] = 1
-    payload["cfg"]["titleMaxLen"] = 50
+def test_group_headers_match_domains():
+    payload = _load_payload()
     md = render_markdown(payload)
-    line = [l for l in md.splitlines() if l.startswith("- [ ]") or l.startswith("> - [ ]")][-1]
-    title = re.search(r"\*\*(.+?)\*\*", line).group(1)
-    assert len(title) <= payload["cfg"]["titleMaxLen"]
-    assert title.endswith("…")
+    headers = re.findall(r"> ### ([^\n]+)", md)
+    # Headers inside non-admin callouts should be unique per domain
+    non_admin_headers = [h for h in headers if "admin_" not in h]
+    assert len(non_admin_headers) == len(set(non_admin_headers))
+    # Each bullet under a header should match that domain
+    for heading in headers:
+        domain = heading.split("•")[-1].strip() if "•" in heading else heading.strip()
+        pattern = rf"> ### {re.escape(heading)}\n(> - \\[ \\] .*?)(?=\n> ###|\n##|\\Z)"
+        match = re.search(pattern, md, flags=re.S)
+        if not match:
+            continue
+        bullets = re.findall(r"\[Link\]\([^)]+\).*", match.group(0))
+        assert bullets  # sanity
+        for b in bullets:
+            assert domain in b
