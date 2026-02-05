@@ -1,20 +1,19 @@
 ---
-dump_date: 2026-02-03
-tab_count: 1
-top_domains: github.com
-top_kinds: repo
-status: 📥 Inbox
-renderer: tabdump-pretty-v3.2.3
-source: title_cleanup_github.raw.json
-deduped: 0
+Dump Date: 2026-02-03
+Tab Count: 1
+Top Domains: github.com
+Top Kinds: repo
+Renderer: tabdump-pretty-v3.2.4.1
+Source: title_cleanup_github.raw.json
+Deduped: 0
 ---
 
 # 📑 Tab Dump: 2026-02-03
 > **Focus:** Mostly repos across github.com.
 
 ## 🔥 High Priority
-*Auto-selected “do next” items (no manual priority).*
-- [ ] **owner/repo** ([Link](https://github.com/owner/repo)) *(kind:: repo • dom:: github.com)*
+*Auto-selected “do next” items.*
+- [ ] **owner/repo** ([Link](https://github.com/owner/repo)) · repo
 
 ## 📺 Media Queue
 > [!video]- Expand Watch List (0)

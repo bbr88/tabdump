@@ -1,4 +1,4 @@
-"""TabDump Pretty Renderer v3.2 — domain-first Markdown dashboard."""
+"""TabDump Pretty Renderer v3.2.4.1 — domain-first Markdown dashboard."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from urllib.parse import urlparse
 # ------------------------------ Config ------------------------------ #
 
 DEFAULT_CFG: Dict = {
-    "rendererVersion": "3.2.3",
+    "rendererVersion": "3.2.4.1",
     "titleMaxLen": 96,
     "stripWwwForGrouping": True,
     "includeFocusLine": True,
@@ -90,6 +90,18 @@ DEFAULT_CFG: Dict = {
     "quickWinsEnableMiniCategories": True,
     "quickWinsMiniCategories": ["leisure", "shopping", "misc"],
     "quickWinsDomainSuffixMatching": True,
+    "render": {
+        "badges": {
+            "enabled": True,
+            "maxPerBullet": 3,
+            "includeTopicInHighPriority": True,
+            "includeQuickWinsWhy": True,
+        },
+        "ordering": {
+            "domains": {"byCountThenAlpha": True, "pinned": []},
+            "items": {"alphaByTitleThenUrl": True},
+        },
+    },
 }
 
 ALLOWED_KINDS = {"admin", "paper", "docs", "spec", "article", "video", "repo", "tool", "misc"}
@@ -574,7 +586,8 @@ def _render_md(state: Dict) -> str:
     items = state["items"]
     deduped = state["deduped_count"]
     multi_browser = len({it.get("browser") for it in items if it.get("browser")}) > 1
-    show_dom_grouped, show_kind_sections = _render_controls(cfg)
+    badge_cfg = _badge_cfg(cfg)
+    ordering_cfg = _ordering_cfg(cfg)
 
     fm_lines = _frontmatter(meta, counts, items, deduped, cfg)
     dump_date = _dump_date(meta)
@@ -587,7 +600,7 @@ def _render_md(state: Dict) -> str:
         lines.append(f"> **Focus:** {_focus_line(items)}")
     lines.append("")
 
-    lines.extend(_render_sections(buckets, cfg, multi_browser, show_dom_grouped, show_kind_sections))
+    lines.extend(_render_sections(buckets, cfg, multi_browser, badge_cfg, ordering_cfg))
 
     md = "\n".join(lines).rstrip() + "\n"
     _validate_rendered(md, buckets)
@@ -597,22 +610,25 @@ def _render_md(state: Dict) -> str:
 def _frontmatter(meta: Dict, counts: Dict, items: List[dict], deduped: int, cfg: Dict) -> List[str]:
     fields = []
     include = cfg.get("frontmatterInclude", [])
-    if "dump_date" in include:
-        fields.append(("dump_date", _dump_date(meta)))
-    if "tab_count" in include:
-        fields.append(("tab_count", int(counts.get("total") or len(items))))
-    if "top_domains" in include:
-        fields.append(("top_domains", ", ".join(_top_domains(items, 5))))
-    if "top_kinds" in include:
-        fields.append(("top_kinds", ", ".join(_top_kinds(items, 3))))
-    if "status" in include:
-        fields.append(("status", "📥 Inbox"))
-    if "renderer" in include:
-        fields.append(("renderer", "tabdump-pretty-v3.2.3"))
-    if "source" in include:
-        fields.append(("source", str(meta.get("source") or "")))
-    if "deduped" in include:
-        fields.append(("deduped", deduped))
+    include_set = {str(x) for x in include}
+
+    def _has(*keys: str) -> bool:
+        return any(k in include_set for k in keys)
+
+    if _has("dump_date", "Dump Date"):
+        fields.append(("Dump Date", _dump_date(meta)))
+    if _has("tab_count", "Tab Count"):
+        fields.append(("Tab Count", int(counts.get("total") or len(items))))
+    if _has("top_domains", "Top Domains"):
+        fields.append(("Top Domains", ", ".join(_top_domains(items, 5))))
+    if _has("top_kinds", "Top Kinds"):
+        fields.append(("Top Kinds", ", ".join(_top_kinds(items, 3))))
+    if _has("renderer", "Renderer"):
+        fields.append(("Renderer", "tabdump-pretty-v3.2.4.1"))
+    if _has("source", "Source"):
+        fields.append(("Source", str(meta.get("source") or "")))
+    if _has("deduped", "Deduped"):
+        fields.append(("Deduped", deduped))
 
     lines = ["---"]
     for key, val in fields:
@@ -641,15 +657,15 @@ def _render_sections(
     buckets: Dict[str, List[dict]],
     cfg: Dict,
     multi_browser: bool,
-    show_dom_grouped: bool,
-    show_kind_sections: Dict,
+    badge_cfg: Dict,
+    ordering_cfg: Dict,
 ) -> List[str]:
     lines: List[str] = []
     for name in SECTION_ORDER:
         start_len = len(lines)
         items = buckets.get(name, [])
         if name == "HIGH":
-            lines.extend(_render_high(items, cfg, multi_browser))
+            lines.extend(_render_high(items, cfg, badge_cfg))
         elif name == "MEDIA":
             lines.extend(
                 _render_callout(
@@ -657,9 +673,8 @@ def _render_sections(
                     "[!video]- Expand Watch List",
                     items,
                     cfg,
-                    multi_browser,
-                    omit_dom=not show_dom_grouped,
-                    omit_kind_for=_omit_kind_for_section(show_kind_sections, "media"),
+                    badge_cfg,
+                    ordering_cfg,
                 )
             )
         elif name == "REPOS":
@@ -669,9 +684,8 @@ def _render_sections(
                     "[!code]- View Repositories",
                     items,
                     cfg,
-                    multi_browser,
-                    omit_dom=not show_dom_grouped,
-                    omit_kind_for=_omit_kind_for_section(show_kind_sections, "repos"),
+                    badge_cfg,
+                    ordering_cfg,
                 )
             )
         elif name == "TOOLS":
@@ -681,9 +695,8 @@ def _render_sections(
                     "[!note]- Expand Tools",
                     items,
                     cfg,
-                    multi_browser,
-                    omit_dom=not show_dom_grouped,
-                    omit_kind_for=_omit_kind_for_section(show_kind_sections, "tools"),
+                    badge_cfg,
+                    ordering_cfg,
                 )
             )
         elif name == "DOCS":
@@ -693,9 +706,8 @@ def _render_sections(
                     "[!info]- View Documentation",
                     items,
                     cfg,
-                    multi_browser,
-                    show_dom_grouped,
-                    show_kind_sections,
+                    badge_cfg,
+                    ordering_cfg,
                 )
             )
         elif name == "QUICK":
@@ -706,8 +718,8 @@ def _render_sections(
                         "[!tip]- Expand Quick Wins",
                         items,
                         cfg,
-                        multi_browser,
-                        omit_dom=not show_dom_grouped,
+                        badge_cfg,
+                        ordering_cfg,
                     )
                 )
             else:
@@ -720,12 +732,22 @@ def _render_sections(
                         "[!quote]- Expand Backlog",
                         items,
                         cfg,
-                        multi_browser,
-                        omit_dom=not show_dom_grouped,
+                        badge_cfg,
+                        ordering_cfg,
                     )
                 )
         elif name == "ADMIN":
-            lines.extend(_render_callout("🔐 Tools & Admin", "[!warning]- Sensitive/Administrative", items, cfg, multi_browser, admin=True))
+            lines.extend(
+                _render_callout(
+                    "🔐 Tools & Admin",
+                    "[!warning]- Sensitive/Administrative",
+                    items,
+                    cfg,
+                    badge_cfg,
+                    ordering_cfg,
+                    admin=True,
+                )
+            )
         if len(lines) > start_len:
             lines.append("")
     if lines and lines[-1] == "":
@@ -733,13 +755,13 @@ def _render_sections(
     return lines
 
 
-def _render_high(items: List[dict], cfg: Dict, multi_browser: bool) -> List[str]:
-    lines = ["## 🔥 High Priority", "*Auto-selected “do next” items (no manual priority).*"]
+def _render_high(items: List[dict], cfg: Dict, badge_cfg: Dict) -> List[str]:
+    lines = ["## 🔥 High Priority", "*Auto-selected “do next” items.*"]
     if not items:
         lines.append(cfg.get("emptyBucketMessage", "_(empty)_"))
         return lines
-    for it in _sort_items(items, admin=False):
-        lines.append(_format_bullet(it, prefix="", admin=False, cfg=cfg, in_callout=False, multi_browser=multi_browser))
+    for it in items:
+        lines.append(_format_bullet(it, prefix="", cfg=cfg, badges_cfg=badge_cfg, context="high"))
     return lines
 
 
@@ -748,10 +770,9 @@ def _render_callout(
     callout: str,
     items: List[dict],
     cfg: Dict,
-    multi_browser: bool,
+    badge_cfg: Dict,
+    ordering_cfg: Dict,
     admin: bool = False,
-    omit_dom: bool = False,
-    omit_kind_for: set | None = None,
 ) -> List[str]:
     count = len(items)
     lines = [f"## {title}", f"> {callout} ({count})"]
@@ -759,22 +780,11 @@ def _render_callout(
         lines.append(f"> {cfg.get('emptyBucketMessage', '_(empty)_')}")
         return lines
 
-    grouped = _group_items(items, admin)
+    grouped = _group_items(items, admin, ordering_cfg)
     for heading, group_items in grouped:
         lines.append(f"> ### {heading}")
-        for it in _sort_items(group_items, admin=admin):
-            lines.append(
-                _format_bullet(
-                    it,
-                    prefix="> ",
-                    admin=admin,
-                    cfg=cfg,
-                    in_callout=True,
-                    multi_browser=multi_browser,
-                    omit_dom=omit_dom,
-                    omit_kind_for=omit_kind_for,
-                )
-            )
+        for it in _sort_items_alpha(group_items):
+            lines.append(_format_bullet(it, prefix="> ", cfg=cfg, badges_cfg=badge_cfg, context="admin" if admin else "group"))
     return lines
 
 
@@ -783,9 +793,8 @@ def _render_docs_callout(
     callout: str,
     items: List[dict],
     cfg: Dict,
-    multi_browser: bool,
-    show_dom_grouped: bool,
-    show_kind_sections: Dict,
+    badge_cfg: Dict,
+    ordering_cfg: Dict,
 ) -> List[str]:
     count = len(items)
     lines = [f"## {title}", f"> {callout} ({count})"]
@@ -793,33 +802,14 @@ def _render_docs_callout(
         lines.append(f"> {cfg.get('emptyBucketMessage', '_(empty)_')}")
         return lines
 
-    grouped = _group_items(items, admin=False)
+    grouped = _group_items(items, admin=False, ordering_cfg=ordering_cfg)
     threshold = int(cfg.get("docsSubgroupByIntentWhenDomainCountGte", 4))
     order = cfg.get("docsSubgroupOrder", [])
-    show_kind_docs = _show_kind_in_section(show_kind_sections, "docs")
-    omit_dom = not show_dom_grouped or cfg.get("docsOmitDomInBullets", True)
-    if show_kind_docs:
-        omit_kind_for = set(cfg.get("docsOmitKindFor", []))
-    else:
-        omit_kind_for = set(ALLOWED_KINDS) - {"paper"}
-    include_src = cfg.get("docsIncludeSrcWhenMultiBrowser", False) and multi_browser
     for heading, group_items in grouped:
         lines.append(f"> ### {heading}")
         if len(group_items) < threshold:
-            for it in _sort_items(group_items, admin=False):
-                lines.append(
-                    _format_bullet(
-                        it,
-                        prefix="> ",
-                        admin=False,
-                        cfg=cfg,
-                        in_callout=True,
-                        multi_browser=multi_browser,
-                        omit_dom=omit_dom,
-                        omit_kind_for=omit_kind_for,
-                        include_src=include_src,
-                    )
-                )
+            for it in _sort_items_alpha(group_items):
+                lines.append(_format_bullet(it, prefix="> ", cfg=cfg, badges_cfg=badge_cfg, context="docs"))
             continue
 
         # subgroup by intent
@@ -831,39 +821,15 @@ def _render_docs_callout(
             if subgroup not in buckets:
                 continue
             lines.append(f"> #### {subgroup.capitalize()}")
-            for it in _sort_items(buckets[subgroup], admin=False):
-                lines.append(
-                    _format_bullet(
-                        it,
-                        prefix="> ",
-                        admin=False,
-                        cfg=cfg,
-                        in_callout=True,
-                        multi_browser=multi_browser,
-                        omit_dom=omit_dom,
-                        omit_kind_for=omit_kind_for,
-                        include_src=include_src,
-                    )
-                )
+            for it in _sort_items_alpha(buckets[subgroup]):
+                lines.append(_format_bullet(it, prefix="> ", cfg=cfg, badges_cfg=badge_cfg, context="docs"))
         # leftover
         for subgroup, arr in buckets.items():
             if subgroup in order:
                 continue
             lines.append(f"> #### {subgroup.capitalize()}")
-            for it in _sort_items(arr, admin=False):
-                lines.append(
-                    _format_bullet(
-                        it,
-                        prefix="> ",
-                        admin=False,
-                        cfg=cfg,
-                        in_callout=True,
-                        multi_browser=multi_browser,
-                        omit_dom=omit_dom,
-                        omit_kind_for=omit_kind_for,
-                        include_src=include_src,
-                    )
-                )
+            for it in _sort_items_alpha(arr):
+                lines.append(_format_bullet(it, prefix="> ", cfg=cfg, badges_cfg=badge_cfg, context="docs"))
     return lines
 
 
@@ -872,11 +838,11 @@ def _render_quick_callout(
     callout: str,
     items: List[dict],
     cfg: Dict,
-    multi_browser: bool,
-    omit_dom: bool = False,
+    badge_cfg: Dict,
+    ordering_cfg: Dict,
 ) -> List[str]:
     if not cfg.get("quickWinsEnableMiniCategories", True):
-        return _render_callout(title, callout, items, cfg, multi_browser, omit_dom=omit_dom)
+        return _render_callout(title, callout, items, cfg, badge_cfg, ordering_cfg)
 
     count = len(items)
     lines = [f"## {title}", f"> {callout} ({count})"]
@@ -886,7 +852,8 @@ def _render_quick_callout(
 
     cats = {name: [] for name in cfg.get("quickWinsMiniCategories", ["leisure", "shopping", "misc"])}
     for it in items:
-        cat = _quick_mini_category(it, cfg)
+        cat, reason = _quick_mini_classify(it, cfg)
+        it["quick_why"] = reason
         cats.setdefault(cat, []).append(it)
 
     order = ["leisure", "shopping", "misc"]
@@ -895,32 +862,28 @@ def _render_quick_callout(
         if not arr:
             continue
         lines.append(f"> ### {cat.capitalize()}")
-        for it in _sort_items(arr, admin=False):
-            lines.append(
-                _format_bullet(
-                    it,
-                    prefix="> ",
-                    admin=False,
-                    cfg=cfg,
-                    in_callout=True,
-                    multi_browser=multi_browser,
-                    omit_dom=omit_dom,
-                )
-            )
+        for it in _sort_items_alpha(arr):
+            lines.append(_format_bullet(it, prefix="> ", cfg=cfg, badges_cfg=badge_cfg, context="quick"))
     return lines
 
 
-def _group_items(items: List[dict], admin: bool) -> List[Tuple[str, List[dict]]]:
+def _group_items(items: List[dict], admin: bool, ordering_cfg: Dict) -> List[Tuple[str, List[dict]]]:
     grouped: Dict[Tuple[str, str], List[dict]] = {}
     for it in items:
         key = (it.get("domain_category"), it.get("domain"))
         grouped.setdefault(key, []).append(it)
 
+    pinned = ordering_cfg.get("domains", {}).get("pinned", []) or []
+    pin_index = {d.lower(): i for i, d in enumerate(pinned)}
+
     def key_sort(kv):
         (domain_cat, domain_disp) = kv[0]
-        order_map = ADMIN_CATEGORY_ORDER if admin else DOMAIN_CATEGORY_ORDER
-        idx = order_map.index(domain_cat) if domain_cat in order_map else len(order_map)
-        return (idx, domain_disp or "", domain_cat or "")
+        group = kv[1]
+        count = len(group)
+        dom = (domain_disp or "").lower()
+        if dom in pin_index:
+            return (0, pin_index[dom], 0, dom)
+        return (1, -count, dom, (domain_cat or "").lower())
 
     result = []
     for key, group in sorted(grouped.items(), key=key_sort):
@@ -930,70 +893,18 @@ def _group_items(items: List[dict], admin: bool) -> List[Tuple[str, List[dict]]]
     return result
 
 
-def _format_bullet(
-    it: dict,
-    prefix: str,
-    admin: bool,
-    cfg: Dict,
-    in_callout: bool,
-    multi_browser: bool,
-    omit_dom: bool = False,
-    omit_kind_for: set | None = None,
-    include_src: bool = False,
-) -> str:
+def _format_bullet(it: dict, prefix: str, cfg: Dict, badges_cfg: Dict, context: str) -> str:
     display_title = it.get("canonical_title") or it.get("title_render") or it.get("title") or ""
     url = it.get("url") or ""
-    domain = it.get("domain") or "unknown"
-    kind = it.get("kind") or "misc"
-    browser = it.get("browser") or "unknown"
-    domain_category = it.get("domain_category") or ""
-
-    if admin and cfg.get("adminVerboseBullets", True):
-        chips = [
-            f"(kind:: {kind})",
-            f"(src:: {browser})",
-            f"(dom:: {domain})",
-            f"(cat:: {domain_category})",
-        ]
-        return f"{prefix}- [ ] **{display_title}** ([Link]({url})) • " + " • ".join(chips)
-
-    if admin:
-        chips = [f"(cat:: {domain_category})"]
-        if cfg.get("adminIncludeSrcWhenMultiBrowser", True) and multi_browser:
-            chips.append(f"(src:: {browser})")
-        return f"{prefix}- [ ] **{display_title}** ([Link]({url})) • " + " • ".join(chips)
-
-    # Non-admin / compact bullets
-    parts = []
-    omit_kind_for = omit_kind_for or set()
-    if cfg.get("includeInlineBadges", True):
-        if kind not in omit_kind_for:
-            parts.append(f"kind:: {kind}")
-        if not omit_dom:
-            parts.append(f"dom:: {domain}")
-    if cfg.get("includeInlineTopicIfAvailable", False) and it.get("topics"):
-        slug = _tagify((it["topics"][0] or {}).get("slug") or "")
-        parts.append(f"topic:: #{slug}")
-    if include_src:
-        parts.append(f"src:: {browser}")
-
-    badge = ""
-    if parts:
-        badge = " *(" + " • ".join(parts) + ")*"
-
-    return f"{prefix}- [ ] **{display_title}** ([Link]({url}))" + badge
+    badges = _build_badges(it, cfg, badges_cfg, context)
+    return f"{prefix}- [ ] **{display_title}** ([Link]({url})) · {badges}"
 
 
-def _sort_items(items: List[dict], admin: bool) -> List[dict]:
-    order_map = ADMIN_CATEGORY_ORDER if admin else DOMAIN_CATEGORY_ORDER
-
+def _sort_items_alpha(items: List[dict]) -> List[dict]:
     def key(it: dict):
-        domain_cat = it.get("domain_category") or ""
-        domain = it.get("domain") or ""
-        conf = float((it.get("intent") or {}).get("confidence", -1.0))
-        title = it.get("title_render") or it.get("title") or ""
-        idx = order_map.index(domain_cat) if domain_cat in order_map else len(order_map)
-        return (idx, domain.lower(), -conf, title.lower())
+        title = it.get("canonical_title") or it.get("title_render") or it.get("title") or ""
+        url = it.get("url") or ""
+        return (title.lower(), url)
 
     return sorted(items, key=key)
 
@@ -1058,26 +969,49 @@ def _intent_subgroup(action: str, order: List[str]) -> str:
     bucket = mapping.get(action, "other")
     return bucket if bucket in order else "other"
 
-def _render_controls(cfg: Dict) -> Tuple[bool, Dict]:
+def _badge_cfg(cfg: Dict) -> Dict:
     render_cfg = cfg.get("render") or {}
-    show_dom_grouped = render_cfg.get(
-        "showDomChipInDomainGroupedSections",
-        cfg.get("showDomChipInDomainGroupedSections", False),
-    )
-    show_kind_sections = render_cfg.get("showKindChipInSections", cfg.get("showKindChipInSections", {})) or {}
-    return show_dom_grouped, show_kind_sections
+    defaults = DEFAULT_CFG.get("render", {}).get("badges", {})
+    merged = dict(defaults)
+    merged.update(render_cfg.get("badges") or {})
+    return merged
 
 
-def _show_kind_in_section(show_kind_sections: Dict, section: str) -> bool:
-    if section in show_kind_sections:
-        return bool(show_kind_sections.get(section))
-    return False
+def _ordering_cfg(cfg: Dict) -> Dict:
+    render_cfg = cfg.get("render") or {}
+    defaults = DEFAULT_CFG.get("render", {}).get("ordering", {})
+    merged = dict(defaults)
+    merged.update(render_cfg.get("ordering") or {})
+    return merged
 
 
-def _omit_kind_for_section(show_kind_sections: Dict, section: str) -> set:
-    if _show_kind_in_section(show_kind_sections, section):
-        return set()
-    return set(ALLOWED_KINDS)
+def _primary_badge(item: dict) -> str:
+    domain_category = item.get("domain_category") or ""
+    if domain_category.startswith("admin_") or item.get("kind") == "admin":
+        return "admin"
+    kind = (item.get("kind") or "misc").lower()
+    return kind
+
+
+def _build_badges(item: dict, cfg: Dict, badges_cfg: Dict, context: str) -> str:
+    max_badges = int(badges_cfg.get("maxPerBullet", 3))
+    include_topic = bool(badges_cfg.get("includeTopicInHighPriority", True))
+    include_why = bool(badges_cfg.get("includeQuickWinsWhy", True))
+
+    badges: List[str] = [_primary_badge(item)]
+
+    if context == "quick" and include_why:
+        reason = (item.get("quick_why") or "fallback_misc").lower()
+        badges.append(f"why:{reason}")
+
+    if context == "high" and include_topic and item.get("topics"):
+        slug = _tagify((item["topics"][0] or {}).get("slug") or "")
+        badges.append(f"#{slug}")
+
+    badges = [b.lower() for b in badges if b]
+    if not badges:
+        badges = ["misc"]
+    return " · ".join(badges[:max_badges])
 
 
 LEISURE_DOMAINS = {
@@ -1193,12 +1127,15 @@ def _host_matches_base(host: str, base: str, enable_suffix: bool) -> bool:
     return enable_suffix and host_norm.endswith("." + base_norm)
 
 
-def _quick_mini_category(it: dict, cfg: Dict) -> str:
+def _quick_mini_classify(it: dict, cfg: Dict) -> Tuple[str, str]:
     domain = (it.get("domain") or "").lower()
     title = (it.get("canonical_title") or it.get("title_render") or it.get("title") or "").lower()
     url_blob = (it.get("url") or "").lower()
     text_blob = f"{title} {url_blob}"
     suffix_ok = cfg.get("quickWinsDomainSuffixMatching", True)
+
+    if (it.get("domain_category") or "").startswith("admin_"):
+        return "misc", "admin_path"
 
     leisure_domain_hit = any(_host_matches_base(domain, base, suffix_ok) for base in LEISURE_DOMAINS)
     shopping_domain_hit = any(_host_matches_base(domain, base, suffix_ok) for base in SHOPPING_DOMAINS)
@@ -1207,14 +1144,14 @@ def _quick_mini_category(it: dict, cfg: Dict) -> str:
     shopping_kw_hit = any(k in text_blob for k in SHOPPING_KEYWORDS)
 
     if shopping_domain_hit:
-        return "shopping"
+        return "shopping", "shopping_domain"
     if leisure_domain_hit:
-        return "leisure"
+        return "leisure", "leisure_domain"
     if shopping_kw_hit:
-        return "shopping"
+        return "shopping", "shopping_keyword"
     if leisure_kw_hit:
-        return "leisure"
-    return "misc"
+        return "leisure", "leisure_keyword"
+    return "misc", "fallback_misc"
 
 
 # ------------------------------ Validation ------------------------------ #

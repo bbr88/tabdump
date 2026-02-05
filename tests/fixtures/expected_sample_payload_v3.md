@@ -1,47 +1,51 @@
 ---
-dump_date: 2026-02-01
-tab_count: 10
-top_topics: #postgres, #llm, #distributed-systems, #local-dev
-status: 📥 Inbox
-renderer: tabdump-pretty-v3
-source: "TabDump 2026-02-01 21-10-00.raw.json"
-deduped: 1
+Dump Date: 2026-02-01
+Tab Count: 10
+Top Domains: example.org, github.com, nms.csail.mit.edu, pganalyze.com, pgbouncer.org
+Top Kinds: docs, article, paper
+Renderer: tabdump-pretty-v3.2.4.1
+Source: TabDump 2026-02-01 21-10-00.raw.json
+Deduped: 1
 ---
 
 # 📑 Tab Dump: 2026-02-01
-> **Focus:** High concentration of (topic:: #postgres) and (topic:: #llm) research.
-
----
+> **Focus:** Mostly browsing + reading across example.org and github.com.
 
 ## 🔥 High Priority
-*Auto-selected “do next” items (no manual priority).*
-- [ ] **Short blog post to skim quickly** ([Link](https://example.org/skim)) • (kind:: article) • (intent:: learn) • (topic:: #llm) • (domain:: example.org) • (src:: chrome)
-- [ ] **Microsoft Word - vldb-07-final.doc** ([Link](http://nms.csail.mit.edu/~stavros/pubs/hstore.pdf)) • (kind:: paper) • (intent:: learn) • (topic:: #postgres) • (domain:: nms.csail.mit.edu) • (src:: chrome)
-- [ ] **5mins of Postgres E18: Partition pruning, prepared statements and generic vs cu…** ([Link](https://pganalyze.com/blog/5mins-postgres-partition-pruning-prepared-statements-generic-vs-custom-query-plans)) • (kind:: article) • (intent:: debug) • (topic:: #postgres) • (domain:: pganalyze.com) • (src:: chrome)
+*Auto-selected “do next” items.*
+- [ ] **5mins of Postgres E18: Partition pruning, prepared statements and generic vs custom que…** ([Link](https://pganalyze.com/blog/5mins-postgres-partition-pruning-prepared-statements-generic-vs-custom-query-plans)) · docs · #postgres
+- [ ] **OpenAI API Reference — Responses** ([Link](https://platform.openai.com/docs/api-reference/responses)) · docs · #llm
+- [ ] **neondatabase/neon** ([Link](https://github.com/neondatabase/neon)) · repo · #postgres
 
 ## 📺 Media Queue
-*Videos from YouTube and other platforms.*
 > [!video]- Expand Watch List (1)
-> - [ ] **Design a Distributed Rate Limiter... - YouTube** ([Link](https://www.youtube.com/watch?v=MIJFyUPG4Z4)) • (kind:: video) • (intent:: learn) • (topic:: #distributed-systems) • (domain:: youtube.com) • (src:: safari)
+> ### youtube.com
+> - [ ] **Design a Distributed Rate Limiter...** ([Link](https://www.youtube.com/watch?v=MIJFyUPG4Z4)) · video
 
-## 🏗 Projects & Repos
-*GitHub repositories and technical specs.*
-> [!code]- View Repositories (1)
-> - [ ] **GitHub - neondatabase/neon: Neon: Serverless Postgres** ([Link](https://github.com/neondatabase/neon)) • (kind:: repo) • (intent:: explore) • (topic:: #postgres) • (domain:: github.com) • (src:: chrome)
+## 🏗 Repos
+> [!code]- View Repositories (0)
+> _(empty)_
 
-## 📚 Technical Reference (Docs)
-*Manuals, API specs, and blog deep-dives.*
-> [!info]- View Documentation (2)
-> - [ ] **OpenAI API Reference — Responses** ([Link](https://platform.openai.com/docs/api-reference/responses)) • (kind:: docs) • (intent:: reference) • (topic:: #llm) • (domain:: platform.openai.com) • (src:: chrome)
-> - [ ] **PgBouncer config** ([Link](https://www.pgbouncer.org/config.html)) • (kind:: docs) • (intent:: reference) • (topic:: #postgres) • (domain:: pgbouncer.org) • (src:: safari)
+## 🧰 Tools
+> [!note]- Expand Tools (0)
+> _(empty)_
+
+## 📚 Docs & Reading
+> [!info]- View Documentation (3)
+> ### example.org
+> - [ ] **Short blog post to skim quickly** ([Link](https://example.org/skim)) · article
+> ### nms.csail.mit.edu
+> - [ ] **Microsoft Word - vldb-07-final.doc** ([Link](http://nms.csail.mit.edu/~stavros/pubs/hstore.pdf)) · paper
+> ### pgbouncer.org
+> - [ ] **PgBouncer config** ([Link](https://www.pgbouncer.org/config.html)) · docs
 
 ## 🧹 Quick Wins
-*Low-effort items: skim / decide later.*
 > [!tip]- Expand Quick Wins (0)
 > _(empty)_
 
 ## 🔐 Tools & Admin
-*Auth keys, config pages, chats, localhosts.*
 > [!warning]- Sensitive/Administrative (2)
-> - [ ] **API keys - OpenAI API** ([Link](https://platform.openai.com/api-keys)) • (kind:: auth) • (intent:: reference) • (topic:: #llm) • (domain:: platform.openai.com) • (src:: chrome)
-> - [ ] **localhost** ([Link](http://localhost:15433/)) • (kind:: local) • (intent:: ephemeral) • (topic:: #local-dev) • (domain:: localhost) • (src:: chrome)
+> ### admin_local • localhost
+> - [ ] **localhost** ([Link](http://localhost:15433/)) · admin
+> ### admin_auth • platform.openai.com
+> - [ ] **API keys - OpenAI API** ([Link](https://platform.openai.com/api-keys)) · admin

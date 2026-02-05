@@ -10,7 +10,7 @@ from core.renderer.renderer_v3 import build_state, render_markdown, _score_item,
 TESTS_DIR = Path(__file__).resolve().parent
 FIXTURES_DIR = TESTS_DIR / "fixtures"
 FIXTURE_JSON = FIXTURES_DIR / "sample_payload_v3.json"
-FIXTURE_MD = FIXTURES_DIR / "expected_sample_payload_v3_2.md"
+FIXTURE_MD = FIXTURES_DIR / "expected_sample_payload_v3.md"
 FIXTURE_YT_JSON = FIXTURES_DIR / "title_cleanup_youtube.json"
 FIXTURE_GH_JSON = FIXTURES_DIR / "title_cleanup_github.json"
 FIXTURE_ADMIN_AUTH_JSON = FIXTURES_DIR / "admin_auth_false_positive.json"
@@ -96,17 +96,15 @@ def test_group_headers_match_domains():
     # Headers inside non-admin callouts should be unique per domain
     non_admin_headers = [h for h in headers if "admin_" not in h]
     assert len(non_admin_headers) == len(set(non_admin_headers))
-    # Each bullet under a header should match that domain
+    # Each header should have at least one bullet
     for heading in headers:
-        domain = heading.split("•")[-1].strip() if "•" in heading else heading.strip()
         pattern = rf"> ### {re.escape(heading)}\n(> - \\[ \\] .*?)(?=\n> ###|\n##|\\Z)"
         match = re.search(pattern, md, flags=re.S)
         if not match:
             continue
         bullets = re.findall(r"\[Link\]\([^)]+\).*", match.group(0))
         assert bullets  # sanity
-        for b in bullets:
-            assert domain in b
+        assert all("dom::" not in b for b in bullets)
 
 
 # ---- v3.2.x additions ----
@@ -149,11 +147,11 @@ def test_admin_compact_bullets_default():
     payload = _load_payload()
     md = render_markdown(payload)
     admin_section = _section(md, "## 🔐 Tools & Admin")
-    # Should not show dom/kind when adminVerboseBullets is false by default
+    # Should show admin badge and no dom:: chips
     for line in admin_section.splitlines():
         if line.strip().startswith("> - [ ]"):
-            assert "(dom::" not in line
-            assert "(kind::" not in line
+            assert " · admin" in line
+            assert "dom::" not in line
 
 
 def test_docs_denoise_omit_dom_and_kind():
@@ -164,7 +162,7 @@ def test_docs_denoise_omit_dom_and_kind():
     assert bullet_lines
     for line in bullet_lines:
         assert "dom::" not in line
-        assert "kind:: docs" not in line
+        assert " · " in line
 
 
 def test_quickwins_suffix_matching_disneyplus():
@@ -172,7 +170,7 @@ def test_quickwins_suffix_matching_disneyplus():
     md = render_markdown(payload)
     quick = _section(md, "## 🧹 Quick Wins")
     assert "### Leisure" in quick
-    assert "disneyplus" in quick.lower()
+    assert "why:leisure_domain" in quick
 
 
 def test_quickwins_leisure_4chan():
@@ -180,7 +178,7 @@ def test_quickwins_leisure_4chan():
     md = render_markdown(payload)
     quick = _section(md, "## 🧹 Quick Wins")
     assert "### Leisure" in quick
-    assert "4chan" in quick
+    assert "why:leisure_domain" in quick
 
 
 def test_quickwins_no_best_vs_keyword_only():
@@ -190,6 +188,7 @@ def test_quickwins_no_best_vs_keyword_only():
     # Should fall into Misc (not Shopping)
     assert "### Shopping" not in quick
     assert "### Misc" in quick
+    assert "why:fallback_misc" in quick
 
 
 def test_suffix_match_helper():
@@ -204,7 +203,7 @@ def test_docs_dom_chip_suppression_and_paper_kind():
     docs_section = _section(md, "## 📚 Docs & Reading")
     # paper retains kind, but no dom chip
     paper_line = [l for l in docs_section.splitlines() if "hstore.pdf" in l][0]
-    assert "kind:: paper" in paper_line
+    assert " · paper" in paper_line
     assert "dom::" not in paper_line
 
 
@@ -215,6 +214,51 @@ def test_media_queue_omits_dom_chip():
     media_lines = [l for l in media_section.splitlines() if l.strip().startswith("> - [ ]")]
     assert media_lines
     assert all("dom::" not in l for l in media_lines)
+    assert all(" · video" in l for l in media_lines)
+
+
+def test_bullets_have_badges_and_no_dom():
+    payload = _load_payload()
+    md = render_markdown(payload)
+    bullet_lines = [l for l in md.splitlines() if l.strip().startswith("- [ ]") or l.strip().startswith("> - [ ]")]
+    assert bullet_lines
+    for line in bullet_lines:
+        assert " · " in line
+        assert "dom::" not in line
+        m = re.search(r"\)\s·\s(.+)$", line)
+        assert m
+        badges = m.group(1)
+        assert badges == badges.lower()
+
+
+def test_domain_ordering_and_item_alpha():
+    payload = {
+        "meta": {"created": "2026-02-07T02:00:00Z", "source": "ordering.raw.json"},
+        "counts": {"total": 5, "dumped": 5, "closed": 5, "kept": 0},
+        "cfg": {"highPriorityLimit": 0},
+        "items": [
+            {"url": "https://b.com/docs/one", "title": "Gamma", "kind": "docs"},
+            {"url": "https://b.com/docs/two", "title": "Beta", "kind": "docs"},
+            {"url": "https://a.com/docs/one", "title": "Zeta", "kind": "docs"},
+            {"url": "https://a.com/docs/two", "title": "Alpha", "kind": "docs"},
+            {"url": "https://c.com/docs/one", "title": "Only", "kind": "docs"},
+        ],
+    }
+    md = render_markdown(payload)
+    docs = _section(md, "## 📚 Docs & Reading")
+    headers = re.findall(r"> ### ([^\n]+)", docs)
+    assert headers[:3] == ["a.com", "b.com", "c.com"]
+    # a.com items should be alpha by title
+    lines = docs.splitlines()
+    start = lines.index("> ### a.com")
+    a_lines = []
+    for line in lines[start + 1 :]:
+        if line.startswith("> ###") or line.startswith("## "):
+            break
+        if line.strip().startswith("> - [ ]"):
+            a_lines.append(line)
+    assert a_lines
+    assert "Alpha" in a_lines[0]
 
 
 def test_keyword_exclusions_domain_wins():
@@ -234,6 +278,7 @@ def test_keyword_exclusions_domain_wins():
     md = render_markdown(payload)
     quick = _section(md, "## 🧹 Quick Wins")
     assert "### Shopping" in quick
+    assert "why:shopping_domain" in quick
 
 
 def test_classification_precedence_admin_over_keywords():

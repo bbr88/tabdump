@@ -1,19 +1,18 @@
 ---
-dump_date: 2026-02-06
-tab_count: 1
-top_domains: apps.disneyplus.com
-top_kinds: misc
-status: 📥 Inbox
-renderer: tabdump-pretty-v3.2.3
-source: quickwins_suffix_disneyplus.raw.json
-deduped: 0
+Dump Date: 2026-02-06
+Tab Count: 1
+Top Domains: apps.disneyplus.com
+Top Kinds: misc
+Renderer: tabdump-pretty-v3.2.4.1
+Source: quickwins_suffix_disneyplus.raw.json
+Deduped: 0
 ---
 
 # 📑 Tab Dump: 2026-02-06
 > **Focus:** Mostly browsing across apps.disneyplus.com.
 
 ## 🔥 High Priority
-*Auto-selected “do next” items (no manual priority).*
+*Auto-selected “do next” items.*
 _(empty)_
 
 ## 📺 Media Queue
@@ -35,7 +34,7 @@ _(empty)_
 ## 🧹 Quick Wins
 > [!tip]- Expand Quick Wins (1)
 > ### Leisure
-> - [ ] **Catalog home** ([Link](https://apps.disneyplus.com/watch/xyz)) *(kind:: misc)*
+> - [ ] **Catalog home** ([Link](https://apps.disneyplus.com/watch/xyz)) · misc · why:leisure_domain
 
 ## 🔐 Tools & Admin
 > [!warning]- Sensitive/Administrative (0)

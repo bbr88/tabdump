@@ -1,19 +1,18 @@
 ---
-dump_date: 2026-02-06
-tab_count: 1
-top_domains: example.net
-top_kinds: misc
-status: 📥 Inbox
-renderer: tabdump-pretty-v3.2.3
-source: quickwins_no_best_vs.raw.json
-deduped: 0
+Dump Date: 2026-02-06
+Tab Count: 1
+Top Domains: example.net
+Top Kinds: misc
+Renderer: tabdump-pretty-v3.2.4.1
+Source: quickwins_no_best_vs.raw.json
+Deduped: 0
 ---
 
 # 📑 Tab Dump: 2026-02-06
 > **Focus:** Mostly browsing across example.net.
 
 ## 🔥 High Priority
-*Auto-selected “do next” items (no manual priority).*
+*Auto-selected “do next” items.*
 _(empty)_
 
 ## 📺 Media Queue
@@ -35,7 +34,7 @@ _(empty)_
 ## 🧹 Quick Wins
 > [!tip]- Expand Quick Wins (1)
 > ### Misc
-> - [ ] **best laptops vs tablets 2026** ([Link](https://example.net/article)) *(kind:: misc)*
+> - [ ] **best laptops vs tablets 2026** ([Link](https://example.net/article)) · misc · why:fallback_misc
 
 ## 🔐 Tools & Admin
 > [!warning]- Sensitive/Administrative (0)

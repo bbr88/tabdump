@@ -1,19 +1,18 @@
 ---
-dump_date: 2026-02-04
-tab_count: 1
-top_domains: example.com
-top_kinds: docs
-status: 📥 Inbox
-renderer: tabdump-pretty-v3.2.3
-source: admin_auth_false_positive.raw.json
-deduped: 0
+Dump Date: 2026-02-04
+Tab Count: 1
+Top Domains: example.com
+Top Kinds: docs
+Renderer: tabdump-pretty-v3.2.4.1
+Source: admin_auth_false_positive.raw.json
+Deduped: 0
 ---
 
 # 📑 Tab Dump: 2026-02-04
 > **Focus:** Mostly docs across example.com.
 
 ## 🔥 High Priority
-*Auto-selected “do next” items (no manual priority).*
+*Auto-selected “do next” items.*
 _(empty)_
 
 ## 📺 Media Queue
@@ -31,7 +30,7 @@ _(empty)_
 ## 📚 Docs & Reading
 > [!info]- View Documentation (1)
 > ### example.com
-> - [ ] **Using token-based pagination safely** ([Link](https://example.com/docs/usage-token))
+> - [ ] **Using token-based pagination safely** ([Link](https://example.com/docs/usage-token)) · docs
 
 ## 🧹 Quick Wins
 > [!tip]- Expand Quick Wins (0)

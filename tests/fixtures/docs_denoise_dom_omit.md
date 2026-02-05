@@ -1,19 +1,18 @@
 ---
-dump_date: 2026-02-06
-tab_count: 2
-top_domains: example.com
-top_kinds: docs
-status: 📥 Inbox
-renderer: tabdump-pretty-v3.2.3
-source: docs_denoise_dom_omit.raw.json
-deduped: 0
+Dump Date: 2026-02-06
+Tab Count: 2
+Top Domains: example.com
+Top Kinds: docs
+Renderer: tabdump-pretty-v3.2.4.1
+Source: docs_denoise_dom_omit.raw.json
+Deduped: 0
 ---
 
 # 📑 Tab Dump: 2026-02-06
 > **Focus:** Mostly reading + docs across example.com.
 
 ## 🔥 High Priority
-*Auto-selected “do next” items (no manual priority).*
+*Auto-selected “do next” items.*
 _(empty)_
 
 ## 📺 Media Queue
@@ -31,9 +30,9 @@ _(empty)_
 ## 📚 Docs & Reading
 > [!info]- View Documentation (2)
 > ### example.com
-> - [ ] **Intro Documentation** ([Link](https://example.com/docs/intro))
+> - [ ] **Article about docs** ([Link](https://example.com/blog/article)) · docs
 > ### example.com
-> - [ ] **Article about docs** ([Link](https://example.com/blog/article))
+> - [ ] **Intro Documentation** ([Link](https://example.com/docs/intro)) · docs
 
 ## 🧹 Quick Wins
 > [!tip]- Expand Quick Wins (0)
