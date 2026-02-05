@@ -1,0 +1,26 @@
+{
+  "meta": {
+    "created": "2026-02-06T11:00:00Z",
+    "source": "quickwins_suffix_disneyplus.raw.json"
+  },
+  "counts": {
+    "total": 1,
+    "dumped": 1,
+    "closed": 1,
+    "kept": 0
+  },
+  "cfg": {
+    "highPriorityLimit": 0
+  },
+  "items": [
+    {
+      "url": "https://apps.disneyplus.com/watch/xyz",
+      "title": "Watch new episode",
+      "kind": "misc",
+      "intent": {
+        "action": "relax",
+        "confidence": 0.6
+      }
+    }
+  ]
+}

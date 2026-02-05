@@ -1,0 +1,24 @@
+{
+  "meta": {
+    "created": "2026-02-02T00:00:00Z",
+    "source": "title_cleanup_youtube.raw.json"
+  },
+  "counts": {
+    "total": 1,
+    "dumped": 1,
+    "closed": 1,
+    "kept": 0
+  },
+  "items": [
+    {
+      "url": "https://www.youtube.com/watch?v=abc123",
+      "title": "(773) Amazing Cats - YouTube",
+      "browser": "chrome",
+      "kind": "video",
+      "intent": {
+        "action": "learn",
+        "confidence": 0.82
+      }
+    }
+  ]
+}

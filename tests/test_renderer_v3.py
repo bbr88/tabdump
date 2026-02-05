@@ -10,6 +10,14 @@ from renderer_v3 import build_state, render_markdown, _score_item
 ROOT = Path(__file__).resolve().parent.parent
 FIXTURE_JSON = ROOT / "fixtures" / "sample_payload_v3.json"
 FIXTURE_MD = ROOT / "fixtures" / "expected_sample_payload_v3_2.md"
+FIXTURE_YT_JSON = ROOT / "fixtures" / "title_cleanup_youtube.json"
+FIXTURE_GH_JSON = ROOT / "fixtures" / "title_cleanup_github.json"
+FIXTURE_ADMIN_AUTH_JSON = ROOT / "fixtures" / "admin_auth_false_positive.json"
+FIXTURE_DOCS_SUBGROUP_JSON = ROOT / "fixtures" / "docs_subgroup_intent.json"
+FIXTURE_DOCS_DENOISE_JSON = ROOT / "fixtures" / "docs_denoise_dom_omit.json"
+FIXTURE_QW_SUFFIX_JSON = ROOT / "fixtures" / "quickwins_suffix_disneyplus.json"
+FIXTURE_QW_4CHAN_JSON = ROOT / "fixtures" / "quickwins_leisure_4chan.json"
+FIXTURE_QW_NO_BEST_VS_JSON = ROOT / "fixtures" / "quickwins_no_best_vs.json"
 
 
 def _load_payload():
@@ -98,3 +106,86 @@ def test_group_headers_match_domains():
         assert bullets  # sanity
         for b in bullets:
             assert domain in b
+
+
+# ---- v3.2.1 additions ----
+
+
+def test_canonical_title_cleanup_youtube():
+    payload = json.loads(FIXTURE_YT_JSON.read_text())
+    md = render_markdown(payload)
+    assert "Amazing Cats" in md
+    bullet_lines = [l for l in md.splitlines() if l.strip().startswith("> - [ ]")]
+    assert bullet_lines
+    assert all("YouTube" not in l for l in bullet_lines)
+
+
+def test_github_slug_preference():
+    payload = json.loads(FIXTURE_GH_JSON.read_text())
+    md = render_markdown(payload)
+    assert re.search(r"\*\*owner/repo\*\*", md)
+    assert "GitHub -" not in md
+
+
+def test_admin_auth_false_positive_not_classified():
+    payload = json.loads(FIXTURE_ADMIN_AUTH_JSON.read_text())
+    state = build_state(payload)
+    admin_urls = {it["url"] for it in state["buckets"]["ADMIN"]}
+    assert "https://example.com/docs/usage-token" not in admin_urls
+
+
+def test_docs_intent_subgrouping():
+    payload = json.loads(FIXTURE_DOCS_SUBGROUP_JSON.read_text())
+    md = render_markdown(payload)
+    docs_section = _section(md, "## 📚 Docs & Reading")
+    assert "#### Implement" in docs_section
+    assert "#### Debug" in docs_section
+    assert "#### Reference" in docs_section
+    assert "#### Learn" in docs_section
+
+
+def test_admin_compact_bullets_default():
+    payload = _load_payload()
+    md = render_markdown(payload)
+    admin_section = _section(md, "## 🔐 Tools & Admin")
+    # Should not show dom/kind when adminVerboseBullets is false by default
+    for line in admin_section.splitlines():
+        if line.strip().startswith("> - [ ]"):
+            assert "(dom::" not in line
+            assert "(kind::" not in line
+
+
+def test_docs_denoise_omit_dom_and_kind():
+    payload = json.loads(FIXTURE_DOCS_DENOISE_JSON.read_text())
+    md = render_markdown(payload)
+    docs_section = _section(md, "## 📚 Docs & Reading")
+    bullet_lines = [l for l in docs_section.splitlines() if l.strip().startswith("> - [ ]")]
+    assert bullet_lines
+    for line in bullet_lines:
+        assert "dom::" not in line
+        assert "kind:: docs" not in line
+
+
+def test_quickwins_suffix_matching_disneyplus():
+    payload = json.loads(FIXTURE_QW_SUFFIX_JSON.read_text())
+    md = render_markdown(payload)
+    quick = _section(md, "## 🧹 Quick Wins")
+    assert "### Leisure" in quick
+    assert "disneyplus" in quick.lower()
+
+
+def test_quickwins_leisure_4chan():
+    payload = json.loads(FIXTURE_QW_4CHAN_JSON.read_text())
+    md = render_markdown(payload)
+    quick = _section(md, "## 🧹 Quick Wins")
+    assert "### Leisure" in quick
+    assert "4chan" in quick
+
+
+def test_quickwins_no_best_vs_keyword_only():
+    payload = json.loads(FIXTURE_QW_NO_BEST_VS_JSON.read_text())
+    md = render_markdown(payload)
+    quick = _section(md, "## 🧹 Quick Wins")
+    # Should fall into Misc (not Shopping)
+    assert "### Shopping" not in quick
+    assert "### Misc" in quick

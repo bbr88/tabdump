@@ -1,0 +1,26 @@
+{
+  "meta": {
+    "created": "2026-02-06T13:00:00Z",
+    "source": "quickwins_no_best_vs.raw.json"
+  },
+  "counts": {
+    "total": 1,
+    "dumped": 1,
+    "closed": 1,
+    "kept": 0
+  },
+  "cfg": {
+    "highPriorityLimit": 0
+  },
+  "items": [
+    {
+      "url": "https://example.net/compare",
+      "title": "best laptops vs tablets 2026",
+      "kind": "misc",
+      "intent": {
+        "action": "explore",
+        "confidence": 0.6
+      }
+    }
+  ]
+}

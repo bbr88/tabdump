@@ -1,0 +1,53 @@
+{
+  "meta": {
+    "created": "2026-02-05T15:00:00Z",
+    "source": "docs_subgroup_intent.raw.json"
+  },
+  "counts": {
+    "total": 4,
+    "dumped": 4,
+    "closed": 4,
+    "kept": 0
+  },
+  "cfg": {
+    "highPriorityLimit": 0
+  },
+  "items": [
+    {
+      "url": "https://docs.example.com/guide/start",
+      "title": "Getting Started",
+      "kind": "docs",
+      "intent": {
+        "action": "learn",
+        "confidence": 0.8
+      }
+    },
+    {
+      "url": "https://docs.example.com/guide/implement",
+      "title": "Implement feature X",
+      "kind": "docs",
+      "intent": {
+        "action": "implement",
+        "confidence": 0.9
+      }
+    },
+    {
+      "url": "https://docs.example.com/troubleshoot",
+      "title": "Debugging common issues",
+      "kind": "docs",
+      "intent": {
+        "action": "debug",
+        "confidence": 0.85
+      }
+    },
+    {
+      "url": "https://docs.example.com/reference/api",
+      "title": "API Reference",
+      "kind": "docs",
+      "intent": {
+        "action": "reference",
+        "confidence": 0.88
+      }
+    }
+  ]
+}

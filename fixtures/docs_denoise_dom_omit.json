@@ -1,0 +1,35 @@
+{
+  "meta": {
+    "created": "2026-02-06T10:00:00Z",
+    "source": "docs_denoise_dom_omit.raw.json"
+  },
+  "counts": {
+    "total": 2,
+    "dumped": 2,
+    "closed": 2,
+    "kept": 0
+  },
+  "cfg": {
+    "highPriorityLimit": 0
+  },
+  "items": [
+    {
+      "url": "https://example.com/docs/intro",
+      "title": "Intro Documentation",
+      "kind": "docs",
+      "intent": {
+        "action": "reference",
+        "confidence": 0.7
+      }
+    },
+    {
+      "url": "https://example.com/blog/article",
+      "title": "Article about docs",
+      "kind": "article",
+      "intent": {
+        "action": "learn",
+        "confidence": 0.7
+      }
+    }
+  ]
+}

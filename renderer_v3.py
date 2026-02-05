@@ -11,7 +11,7 @@ from urllib.parse import urlparse
 # ------------------------------ Config ------------------------------ #
 
 DEFAULT_CFG: Dict = {
-    "rendererVersion": "3.2.0",
+    "rendererVersion": "3.2.2",
     "titleMaxLen": 96,
     "stripWwwForGrouping": True,
     "includeFocusLine": True,
@@ -34,7 +34,8 @@ DEFAULT_CFG: Dict = {
     "quickWinsOverflowToBacklog": True,
     "backlogMaxItems": 50,
     "adminAlwaysLast": True,
-    "adminVerboseBullets": True,
+    "adminVerboseBullets": False,
+    "adminIncludeSrcWhenMultiBrowser": True,
     "groupingMode": "domain_first",
     "groupWithinSectionsBy": ["domain_category", "domain_display"],
     "compactBullets": True,
@@ -55,21 +56,38 @@ DEFAULT_CFG: Dict = {
     "docsDomainPrefix": "docs.",
     "docsPathHints": ["/docs/", "/documentation/", "/reference/", "/guides/"],
     "blogPathHints": ["/blog/", "/posts/", "/articles/"],
-    "authPathHints": [
-        "/api-keys",
-        "apikey",
-        "api_key",
-        "token",
-        "oauth",
-        "signin",
-        "sign-in",
-        "login",
-        "sso",
-        "session",
-        "/credentials",
+    "authPathRegex": [
+        "(?i)(^|/)(login|signin|sign-in|sso|oauth)(/|$)",
+        "(?i)(^|/)(api-keys|credentials)(/|$)",
     ],
+    "authContainsHintsSoft": ["apikey", "api_key", "token", "session"],
+    "adminAuthRequiresStrongSignal": True,
     "consoleDomains": ["console.aws.amazon.com", "console.cloud.google.com", "portal.azure.com"],
     "emptyBucketMessage": "_(empty)_",
+    "canonicalTitleEnabled": True,
+    "canonicalTitleMaxLen": 88,
+    "canonicalTitleStripSuffixes": [
+        " - YouTube",
+        " | YouTube",
+        " · GitHub",
+        " - GitHub",
+        " | GitHub",
+    ],
+    "canonicalTitleStripPrefixesRegex": [
+        "^\\(\\d+\\)\\s+",
+    ],
+    "canonicalTitleHostRules": {
+        "youtube.com": {"stripSuffixes": [" - YouTube", " | YouTube"]},
+        "github.com": {"preferRepoSlug": True},
+    },
+    "docsSubgroupByIntentWhenDomainCountGte": 4,
+    "docsSubgroupOrder": ["implement", "debug", "decide", "build", "reference", "learn", "explore", "skim", "other"],
+    "docsOmitDomInBullets": True,
+    "docsOmitKindFor": ["docs", "article"],
+    "docsIncludeSrcWhenMultiBrowser": False,
+    "quickWinsEnableMiniCategories": True,
+    "quickWinsMiniCategories": ["leisure", "shopping", "misc"],
+    "quickWinsDomainSuffixMatching": True,
 }
 
 ALLOWED_KINDS = {"admin", "paper", "docs", "spec", "article", "video", "repo", "tool", "misc"}
@@ -192,11 +210,13 @@ def _normalize_items(items_raw: List[dict], cfg: Dict) -> Tuple[List[dict], int]
             cfg,
         )
         kind_norm = _derive_kind(domain_category, provided_kind, url)
+        canonical_title = _canonical_title(title_norm, domain_display, path, cfg)
 
         normalized.append(
             {
                 "url": url,
                 "title": title_norm,
+                "canonical_title": canonical_title,
                 "title_render": title_render,
                 "domain": domain_display,
                 "domain_raw": hostname or "unknown",
@@ -225,6 +245,63 @@ def _truncate(text: str, max_len: int) -> str:
         return text
     truncated = text[: max_len - 1].rstrip()
     return f"{truncated}…" if truncated else "…"
+
+
+def _canonical_title(title_norm: str, domain_display: str, path: str, cfg: Dict) -> str:
+    if not cfg.get("canonicalTitleEnabled", True):
+        return title_norm
+
+    title = title_norm
+
+    def strip_suffixes(txt: str, suffixes: List[str]) -> str:
+        changed = True
+        while changed:
+            changed = False
+            for s in suffixes:
+                if txt.endswith(s):
+                    txt = txt[: -len(s)].rstrip()
+                    changed = True
+        return txt
+
+    # Global suffix stripping
+    title = strip_suffixes(title, cfg.get("canonicalTitleStripSuffixes", []))
+
+    # Prefix regex stripping
+    for rx in cfg.get("canonicalTitleStripPrefixesRegex", []):
+        title = re.sub(rx, "", title)
+
+    host_rules = cfg.get("canonicalTitleHostRules", {}) or {}
+    host_rule = host_rules.get(domain_display)
+    if host_rule:
+        title = strip_suffixes(title, host_rule.get("stripSuffixes", []))
+
+    # GitHub repo slug preference
+    if host_rule and host_rule.get("preferRepoSlug"):
+        slug_title = _github_repo_slug_title(path, title_norm)
+        if slug_title:
+            title = slug_title
+
+    title = re.sub(r"\s+", " ", title).strip()
+    title = _truncate(title or title_norm, int(cfg.get("canonicalTitleMaxLen", 88)))
+    return title or title_norm
+
+
+def _github_repo_slug_title(path: str, title_norm: str) -> str:
+    parts = [p for p in (path or "").split("/") if p]
+    if len(parts) < 2:
+        return ""
+    slug = f"{parts[0]}/{parts[1]}"
+    if len(parts) >= 3:
+        third = parts[2]
+        if third in {"issues", "pull", "pulls", "discussions", "wiki", "releases"}:
+            slug = f"{slug} — {third}"
+        elif third == "blob":
+            slug = f"{slug} — file"
+        elif third == "tree":
+            slug = f"{slug} — tree"
+    if len(title_norm) <= 50 and not title_norm.lower().startswith("github -"):
+        return ""
+    return slug
 
 
 def _normalize_intent(intent_val) -> Dict:
@@ -271,7 +348,14 @@ def _classify_domain(
         return "admin_internal"
     if flags.get("is_chat") or hostname in {d.lower() for d in cfg.get("chatDomains", [])}:
         return "admin_chat"
-    if flags.get("is_auth") or hostname == "accounts.google.com" or _contains_any(lower_url, cfg.get("authPathHints", [])):
+
+    # Admin auth strict detection
+    auth_strong = flags.get("is_auth") or hostname == "accounts.google.com" or _matches_any_regex(
+        parsed.path or "", cfg.get("authPathRegex", [])
+    )
+    auth_soft = _contains_any(lower_url, cfg.get("authContainsHintsSoft", []))
+    require_strong = cfg.get("adminAuthRequiresStrongSignal", True)
+    if auth_strong or (auth_soft and not require_strong):
         return "admin_auth"
 
     # Non-admin categories
@@ -294,6 +378,16 @@ def _contains_any(text: str, patterns: Iterable[str]) -> bool:
     for p in patterns or []:
         if p.lower() in text:
             return True
+    return False
+
+
+def _matches_any_regex(text: str, patterns: Iterable[str]) -> bool:
+    for rx in patterns or []:
+        try:
+            if re.search(rx, text):
+                return True
+        except re.error:
+            continue
     return False
 
 
@@ -477,6 +571,7 @@ def _render_md(state: Dict) -> str:
     counts = state["counts"]
     items = state["items"]
     deduped = state["deduped_count"]
+    multi_browser = len({it.get("browser") for it in items if it.get("browser")}) > 1
 
     fm_lines = _frontmatter(meta, counts, items, deduped, cfg)
     dump_date = _dump_date(meta)
@@ -489,7 +584,7 @@ def _render_md(state: Dict) -> str:
         lines.append(f"> **Focus:** {_focus_line(items)}")
     lines.append("")
 
-    lines.extend(_render_sections(buckets, cfg))
+    lines.extend(_render_sections(buckets, cfg, multi_browser))
 
     md = "\n".join(lines).rstrip() + "\n"
     _validate_rendered(md, buckets)
@@ -510,7 +605,7 @@ def _frontmatter(meta: Dict, counts: Dict, items: List[dict], deduped: int, cfg:
     if "status" in include:
         fields.append(("status", "📥 Inbox"))
     if "renderer" in include:
-        fields.append(("renderer", "tabdump-pretty-v3.2"))
+        fields.append(("renderer", "tabdump-pretty-v3.2.2"))
     if "source" in include:
         fields.append(("source", str(meta.get("source") or "")))
     if "deduped" in include:
@@ -539,31 +634,31 @@ def _dump_date(meta: Dict) -> str:
         return created.split("T")[0].split(" ")[0]
 
 
-def _render_sections(buckets: Dict[str, List[dict]], cfg: Dict) -> List[str]:
+def _render_sections(buckets: Dict[str, List[dict]], cfg: Dict, multi_browser: bool) -> List[str]:
     lines: List[str] = []
     for name in SECTION_ORDER:
         start_len = len(lines)
         items = buckets.get(name, [])
         if name == "HIGH":
-            lines.extend(_render_high(items, cfg))
+            lines.extend(_render_high(items, cfg, multi_browser))
         elif name == "MEDIA":
-            lines.extend(_render_callout("📺 Media Queue", "[!video]- Expand Watch List", items, cfg))
+            lines.extend(_render_callout("📺 Media Queue", "[!video]- Expand Watch List", items, cfg, multi_browser))
         elif name == "REPOS":
-            lines.extend(_render_callout("🏗 Repos", "[!code]- View Repositories", items, cfg))
+            lines.extend(_render_callout("🏗 Repos", "[!code]- View Repositories", items, cfg, multi_browser))
         elif name == "TOOLS":
-            lines.extend(_render_callout("🧰 Tools", "[!note]- Expand Tools", items, cfg))
+            lines.extend(_render_callout("🧰 Tools", "[!note]- Expand Tools", items, cfg, multi_browser))
         elif name == "DOCS":
-            lines.extend(_render_callout("📚 Docs & Reading", "[!info]- View Documentation", items, cfg))
+            lines.extend(_render_docs_callout("📚 Docs & Reading", "[!info]- View Documentation", items, cfg, multi_browser))
         elif name == "QUICK":
             if cfg.get("includeQuickWins", True):
-                lines.extend(_render_callout("🧹 Quick Wins", "[!tip]- Expand Quick Wins", items, cfg))
+                lines.extend(_render_quick_callout("🧹 Quick Wins", "[!tip]- Expand Quick Wins", items, cfg, multi_browser))
             else:
                 continue
         elif name == "BACKLOG":
             if items:
-                lines.extend(_render_callout("🗃 Backlog", "[!quote]- Expand Backlog", items, cfg))
+                lines.extend(_render_callout("🗃 Backlog", "[!quote]- Expand Backlog", items, cfg, multi_browser))
         elif name == "ADMIN":
-            lines.extend(_render_callout("🔐 Tools & Admin", "[!warning]- Sensitive/Administrative", items, cfg, admin=True))
+            lines.extend(_render_callout("🔐 Tools & Admin", "[!warning]- Sensitive/Administrative", items, cfg, multi_browser, admin=True))
         if len(lines) > start_len:
             lines.append("")
     if lines and lines[-1] == "":
@@ -571,17 +666,17 @@ def _render_sections(buckets: Dict[str, List[dict]], cfg: Dict) -> List[str]:
     return lines
 
 
-def _render_high(items: List[dict], cfg: Dict) -> List[str]:
+def _render_high(items: List[dict], cfg: Dict, multi_browser: bool) -> List[str]:
     lines = ["## 🔥 High Priority", "*Auto-selected “do next” items (no manual priority).*"]
     if not items:
         lines.append(cfg.get("emptyBucketMessage", "_(empty)_"))
         return lines
     for it in _sort_items(items, admin=False):
-        lines.append(_format_bullet(it, prefix="", admin=False, cfg=cfg, in_callout=False))
+        lines.append(_format_bullet(it, prefix="", admin=False, cfg=cfg, in_callout=False, multi_browser=multi_browser))
     return lines
 
 
-def _render_callout(title: str, callout: str, items: List[dict], cfg: Dict, admin: bool = False) -> List[str]:
+def _render_callout(title: str, callout: str, items: List[dict], cfg: Dict, multi_browser: bool, admin: bool = False) -> List[str]:
     count = len(items)
     lines = [f"## {title}", f"> {callout} ({count})"]
     if not items:
@@ -592,7 +687,107 @@ def _render_callout(title: str, callout: str, items: List[dict], cfg: Dict, admi
     for heading, group_items in grouped:
         lines.append(f"> ### {heading}")
         for it in _sort_items(group_items, admin=admin):
-            lines.append(_format_bullet(it, prefix='> ', admin=admin, cfg=cfg, in_callout=True))
+            lines.append(_format_bullet(it, prefix='> ', admin=admin, cfg=cfg, in_callout=True, multi_browser=multi_browser))
+    return lines
+
+
+def _render_docs_callout(title: str, callout: str, items: List[dict], cfg: Dict, multi_browser: bool) -> List[str]:
+    count = len(items)
+    lines = [f"## {title}", f"> {callout} ({count})"]
+    if not items:
+        lines.append(f"> {cfg.get('emptyBucketMessage', '_(empty)_')}")
+        return lines
+
+    grouped = _group_items(items, admin=False)
+    threshold = int(cfg.get("docsSubgroupByIntentWhenDomainCountGte", 4))
+    order = cfg.get("docsSubgroupOrder", [])
+    for heading, group_items in grouped:
+        lines.append(f"> ### {heading}")
+        if len(group_items) < threshold:
+            for it in _sort_items(group_items, admin=False):
+                lines.append(
+                    _format_bullet(
+                        it,
+                        prefix="> ",
+                        admin=False,
+                        cfg=cfg,
+                        in_callout=True,
+                        multi_browser=multi_browser,
+                        omit_dom=cfg.get("docsOmitDomInBullets", True),
+                        omit_kind_for=set(cfg.get("docsOmitKindFor", [])),
+                        include_src=cfg.get("docsIncludeSrcWhenMultiBrowser", False) and multi_browser,
+                    )
+                )
+            continue
+
+        # subgroup by intent
+        buckets: Dict[str, List[dict]] = {}
+        for it in group_items:
+            bucket = _intent_subgroup((it.get("intent") or {}).get("action"), order)
+            buckets.setdefault(bucket, []).append(it)
+        for subgroup in order:
+            if subgroup not in buckets:
+                continue
+            lines.append(f"> #### {subgroup.capitalize()}")
+            for it in _sort_items(buckets[subgroup], admin=False):
+                lines.append(
+                    _format_bullet(
+                        it,
+                        prefix="> ",
+                        admin=False,
+                        cfg=cfg,
+                        in_callout=True,
+                        multi_browser=multi_browser,
+                        omit_dom=cfg.get("docsOmitDomInBullets", True),
+                        omit_kind_for=set(cfg.get("docsOmitKindFor", [])),
+                        include_src=cfg.get("docsIncludeSrcWhenMultiBrowser", False) and multi_browser,
+                    )
+                )
+        # leftover
+        for subgroup, arr in buckets.items():
+            if subgroup in order:
+                continue
+            lines.append(f"> #### {subgroup.capitalize()}")
+            for it in _sort_items(arr, admin=False):
+                lines.append(
+                    _format_bullet(
+                        it,
+                        prefix="> ",
+                        admin=False,
+                        cfg=cfg,
+                        in_callout=True,
+                        multi_browser=multi_browser,
+                        omit_dom=cfg.get("docsOmitDomInBullets", True),
+                        omit_kind_for=set(cfg.get("docsOmitKindFor", [])),
+                        include_src=cfg.get("docsIncludeSrcWhenMultiBrowser", False) and multi_browser,
+                    )
+                )
+    return lines
+
+
+def _render_quick_callout(title: str, callout: str, items: List[dict], cfg: Dict, multi_browser: bool) -> List[str]:
+    if not cfg.get("quickWinsEnableMiniCategories", True):
+        return _render_callout(title, callout, items, cfg, multi_browser)
+
+    count = len(items)
+    lines = [f"## {title}", f"> {callout} ({count})"]
+    if not items:
+        lines.append(f"> {cfg.get('emptyBucketMessage', '_(empty)_')}")
+        return lines
+
+    cats = {name: [] for name in cfg.get("quickWinsMiniCategories", ["leisure", "shopping", "misc"])}
+    for it in items:
+        cat = _quick_mini_category(it, cfg)
+        cats.setdefault(cat, []).append(it)
+
+    order = ["leisure", "shopping", "misc"]
+    for cat in order:
+        arr = cats.get(cat, [])
+        if not arr:
+            continue
+        lines.append(f"> ### {cat.capitalize()}")
+        for it in _sort_items(arr, admin=False):
+            lines.append(_format_bullet(it, prefix="> ", admin=False, cfg=cfg, in_callout=True, multi_browser=multi_browser))
     return lines
 
 
@@ -616,8 +811,18 @@ def _group_items(items: List[dict], admin: bool) -> List[Tuple[str, List[dict]]]
     return result
 
 
-def _format_bullet(it: dict, prefix: str, admin: bool, cfg: Dict, in_callout: bool) -> str:
-    title = it.get("title_render") or it.get("title") or ""
+def _format_bullet(
+    it: dict,
+    prefix: str,
+    admin: bool,
+    cfg: Dict,
+    in_callout: bool,
+    multi_browser: bool,
+    omit_dom: bool = False,
+    omit_kind_for: set | None = None,
+    include_src: bool = False,
+) -> str:
+    display_title = it.get("canonical_title") or it.get("title_render") or it.get("title") or ""
     url = it.get("url") or ""
     domain = it.get("domain") or "unknown"
     kind = it.get("kind") or "misc"
@@ -631,22 +836,33 @@ def _format_bullet(it: dict, prefix: str, admin: bool, cfg: Dict, in_callout: bo
             f"(dom:: {domain})",
             f"(cat:: {domain_category})",
         ]
-        return f"{prefix}- [ ] **{title}** ([Link]({url})) • " + " • ".join(chips)
+        return f"{prefix}- [ ] **{display_title}** ([Link]({url})) • " + " • ".join(chips)
+
+    if admin:
+        chips = [f"(cat:: {domain_category})"]
+        if cfg.get("adminIncludeSrcWhenMultiBrowser", True) and multi_browser:
+            chips.append(f"(src:: {browser})")
+        return f"{prefix}- [ ] **{display_title}** ([Link]({url})) • " + " • ".join(chips)
 
     # Non-admin / compact bullets
     parts = []
+    omit_kind_for = omit_kind_for or set()
     if cfg.get("includeInlineBadges", True):
-        parts.append(f"kind:: {kind}")
-        parts.append(f"dom:: {domain}")
+        if kind not in omit_kind_for:
+            parts.append(f"kind:: {kind}")
+        if not omit_dom:
+            parts.append(f"dom:: {domain}")
     if cfg.get("includeInlineTopicIfAvailable", False) and it.get("topics"):
         slug = _tagify((it["topics"][0] or {}).get("slug") or "")
         parts.append(f"topic:: #{slug}")
+    if include_src:
+        parts.append(f"src:: {browser}")
 
     badge = ""
     if parts:
         badge = " *(" + " • ".join(parts) + ")*"
 
-    return f"{prefix}- [ ] **{title}** ([Link]({url}))" + badge
+    return f"{prefix}- [ ] **{display_title}** ([Link]({url}))" + badge
 
 
 def _sort_items(items: List[dict], admin: bool) -> List[dict]:
@@ -706,6 +922,128 @@ def _tagify(slug: str) -> str:
     tag = re.sub(r"[^a-zA-Z0-9]+", "-", (slug or "").lower())
     tag = re.sub(r"-+", "-", tag).strip("-")
     return tag or "other"
+
+
+def _intent_subgroup(action: str, order: List[str]) -> str:
+    action = (action or "").lower()
+    mapping = {
+        "implement": "implement",
+        "build": "implement",
+        "debug": "debug",
+        "decide": "decide",
+        "reference": "reference",
+        "learn": "learn",
+        "explore": "learn",
+        "skim": "skim",
+    }
+    bucket = mapping.get(action, "other")
+    return bucket if bucket in order else "other"
+
+
+LEISURE_DOMAINS = {
+    "disneyplus.com",
+    "netflix.com",
+    "youtube.com",
+    "youtu.be",
+    "twitch.tv",
+    "spotify.com",
+    "primevideo.com",
+    "hulu.com",
+    "max.com",
+    "hbomax.com",
+    "paramountplus.com",
+    "peacocktv.com",
+    "crunchyroll.com",
+    "funimation.com",
+    "tv.apple.com",
+    "music.apple.com",
+    "soundcloud.com",
+    "bandcamp.com",
+    "reddit.com",
+    "9gag.com",
+    "4chan.org",
+}
+SHOPPING_DOMAINS = {
+    "amazon.com",
+    "noon.com",
+    "aliexpress.com",
+    "ebay.com",
+    "walmart.com",
+    "target.com",
+    "bestbuy.com",
+    "ikea.com",
+    "etsy.com",
+    "camelcamelcamel.com",
+    "slickdeals.net",
+    "shein.com",
+    "temu.com",
+    "alibaba.com",
+}
+LEISURE_KEYWORDS = {
+    "episode",
+    "episodes",
+    "watch",
+    "watching",
+    "trailer",
+    "series",
+    "season",
+    "movie",
+    "film",
+    "stream",
+    "streaming",
+    "playlist",
+    "album",
+    "listen",
+    "soundtrack",
+    "cast",
+    "imdb",
+}
+SHOPPING_KEYWORDS = {
+    "buy",
+    "price",
+    "review",
+    "reviews",
+    "deal",
+    "deals",
+    "discount",
+    "coupon",
+    "shipping",
+    "order",
+    "cart",
+    "checkout",
+    "sale",
+    "compare",
+}
+
+
+def _host_matches_base(host: str, base: str, enable_suffix: bool) -> bool:
+    if not host or not base:
+        return False
+    if host == base:
+        return True
+    return enable_suffix and host.endswith("." + base)
+
+
+def _quick_mini_category(it: dict, cfg: Dict) -> str:
+    domain = (it.get("domain") or "").lower()
+    title = (it.get("canonical_title") or it.get("title_render") or it.get("title") or "").lower()
+    suffix_ok = cfg.get("quickWinsDomainSuffixMatching", True)
+
+    leisure_domain_hit = any(_host_matches_base(domain, base, suffix_ok) for base in LEISURE_DOMAINS)
+    shopping_domain_hit = any(_host_matches_base(domain, base, suffix_ok) for base in SHOPPING_DOMAINS)
+
+    leisure_kw_hit = any(k in title for k in LEISURE_KEYWORDS)
+    shopping_kw_hit = any(k in title for k in SHOPPING_KEYWORDS)
+
+    if shopping_domain_hit:
+        return "shopping"
+    if leisure_domain_hit:
+        return "leisure"
+    if shopping_kw_hit:
+        return "shopping"
+    if leisure_kw_hit:
+        return "leisure"
+    return "misc"
 
 
 # ------------------------------ Validation ------------------------------ #

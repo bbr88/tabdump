@@ -1,0 +1,27 @@
+{
+  "meta": {
+    "created": "2026-02-04T09:30:00Z",
+    "source": "admin_auth_false_positive.raw.json"
+  },
+  "counts": {
+    "total": 1,
+    "dumped": 1,
+    "closed": 1,
+    "kept": 0
+  },
+  "cfg": {
+    "highPriorityLimit": 0
+  },
+  "items": [
+    {
+      "url": "https://example.com/docs/usage-token",
+      "title": "Using token-based pagination safely",
+      "browser": "firefox",
+      "kind": "article",
+      "intent": {
+        "action": "reference",
+        "confidence": 0.7
+      }
+    }
+  ]
+}

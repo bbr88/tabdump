@@ -1,0 +1,26 @@
+{
+  "meta": {
+    "created": "2026-02-06T12:00:00Z",
+    "source": "quickwins_leisure_4chan.raw.json"
+  },
+  "counts": {
+    "total": 1,
+    "dumped": 1,
+    "closed": 1,
+    "kept": 0
+  },
+  "cfg": {
+    "highPriorityLimit": 0
+  },
+  "items": [
+    {
+      "url": "https://boards.4chan.org/g/thread/123",
+      "title": "Interesting thread",
+      "kind": "misc",
+      "intent": {
+        "action": "explore",
+        "confidence": 0.5
+      }
+    }
+  ]
+}
