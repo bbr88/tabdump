@@ -1,25 +1,24 @@
 ---
-dump_date: 2026-02-02
+dump_date: 2026-02-03
 tab_count: 1
-top_domains: youtube.com
-top_kinds: video
+top_domains: github.com
+top_kinds: repo
 status: 📥 Inbox
-renderer: tabdump-pretty-v3.2.1
-source: title_cleanup_youtube.raw.json
+renderer: tabdump-pretty-v3.2.3
+source: title_cleanup_github.raw.json
 deduped: 0
 ---
 
-# 📑 Tab Dump: 2026-02-02
-> **Focus:** Mostly media across youtube.com.
+# 📑 Tab Dump: 2026-02-03
+> **Focus:** Mostly repos across github.com.
 
 ## 🔥 High Priority
 *Auto-selected “do next” items (no manual priority).*
-_(empty)_
+- [ ] **owner/repo** ([Link](https://github.com/owner/repo)) *(kind:: repo • dom:: github.com)*
 
 ## 📺 Media Queue
-> [!video]- Expand Watch List (1)
-> ### youtube.com
-> - [ ] **Amazing Cats** ([Link](https://www.youtube.com/watch?v=abc123)) *(kind:: video • dom:: youtube.com)*
+> [!video]- Expand Watch List (0)
+> _(empty)_
 
 ## 🏗 Repos
 > [!code]- View Repositories (0)

@@ -1,16 +1,16 @@
 ---
 dump_date: 2026-02-06
 tab_count: 1
-top_domains: apps.disneyplus.com
+top_domains: boards.4chan.org
 top_kinds: misc
 status: 📥 Inbox
-renderer: tabdump-pretty-v3.2.2
-source: quickwins_suffix_disneyplus.raw.json
+renderer: tabdump-pretty-v3.2.3
+source: quickwins_leisure_4chan.raw.json
 deduped: 0
 ---
 
 # 📑 Tab Dump: 2026-02-06
-> **Focus:** Mostly browsing across apps.disneyplus.com.
+> **Focus:** Mostly browsing across boards.4chan.org.
 
 ## 🔥 High Priority
 *Auto-selected “do next” items (no manual priority).*
@@ -35,7 +35,7 @@ _(empty)_
 ## 🧹 Quick Wins
 > [!tip]- Expand Quick Wins (1)
 > ### Leisure
-> - [ ] **Watch new episode** ([Link](https://apps.disneyplus.com/watch/xyz)) *(kind:: misc • dom:: apps.disneyplus.com)*
+> - [ ] **Interesting thread** ([Link](https://boards.4chan.org/g/thread/123)) *(kind:: misc)*
 
 ## 🔐 Tools & Admin
 > [!warning]- Sensitive/Administrative (0)

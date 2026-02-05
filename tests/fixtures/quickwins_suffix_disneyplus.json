@@ -15,7 +15,7 @@
   "items": [
     {
       "url": "https://apps.disneyplus.com/watch/xyz",
-      "title": "Watch new episode",
+      "title": "Catalog home",
       "kind": "misc",
       "intent": {
         "action": "relax",

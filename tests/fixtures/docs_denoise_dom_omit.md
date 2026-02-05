@@ -4,7 +4,7 @@ tab_count: 2
 top_domains: example.com
 top_kinds: docs
 status: 📥 Inbox
-renderer: tabdump-pretty-v3.2.2
+renderer: tabdump-pretty-v3.2.3
 source: docs_denoise_dom_omit.raw.json
 deduped: 0
 ---

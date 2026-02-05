@@ -1,16 +1,16 @@
 ---
 dump_date: 2026-02-06
 tab_count: 1
-top_domains: example.net
+top_domains: apps.disneyplus.com
 top_kinds: misc
 status: 📥 Inbox
-renderer: tabdump-pretty-v3.2.2
-source: quickwins_no_best_vs.raw.json
+renderer: tabdump-pretty-v3.2.3
+source: quickwins_suffix_disneyplus.raw.json
 deduped: 0
 ---
 
 # 📑 Tab Dump: 2026-02-06
-> **Focus:** Mostly browsing across example.net.
+> **Focus:** Mostly browsing across apps.disneyplus.com.
 
 ## 🔥 High Priority
 *Auto-selected “do next” items (no manual priority).*
@@ -34,8 +34,8 @@ _(empty)_
 
 ## 🧹 Quick Wins
 > [!tip]- Expand Quick Wins (1)
-> ### Misc
-> - [ ] **best laptops vs tablets 2026** ([Link](https://example.net/compare)) *(kind:: misc • dom:: example.net)*
+> ### Leisure
+> - [ ] **Catalog home** ([Link](https://apps.disneyplus.com/watch/xyz)) *(kind:: misc)*
 
 ## 🔐 Tools & Admin
 > [!warning]- Sensitive/Administrative (0)

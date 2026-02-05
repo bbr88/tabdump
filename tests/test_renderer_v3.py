@@ -4,20 +4,21 @@ from pathlib import Path
 
 import pytest
 
-from renderer_v3 import build_state, render_markdown, _score_item
+from core.renderer.renderer_v3 import build_state, render_markdown, _score_item, _host_matches_base
 
 
-ROOT = Path(__file__).resolve().parent.parent
-FIXTURE_JSON = ROOT / "fixtures" / "sample_payload_v3.json"
-FIXTURE_MD = ROOT / "fixtures" / "expected_sample_payload_v3_2.md"
-FIXTURE_YT_JSON = ROOT / "fixtures" / "title_cleanup_youtube.json"
-FIXTURE_GH_JSON = ROOT / "fixtures" / "title_cleanup_github.json"
-FIXTURE_ADMIN_AUTH_JSON = ROOT / "fixtures" / "admin_auth_false_positive.json"
-FIXTURE_DOCS_SUBGROUP_JSON = ROOT / "fixtures" / "docs_subgroup_intent.json"
-FIXTURE_DOCS_DENOISE_JSON = ROOT / "fixtures" / "docs_denoise_dom_omit.json"
-FIXTURE_QW_SUFFIX_JSON = ROOT / "fixtures" / "quickwins_suffix_disneyplus.json"
-FIXTURE_QW_4CHAN_JSON = ROOT / "fixtures" / "quickwins_leisure_4chan.json"
-FIXTURE_QW_NO_BEST_VS_JSON = ROOT / "fixtures" / "quickwins_no_best_vs.json"
+TESTS_DIR = Path(__file__).resolve().parent
+FIXTURES_DIR = TESTS_DIR / "fixtures"
+FIXTURE_JSON = FIXTURES_DIR / "sample_payload_v3.json"
+FIXTURE_MD = FIXTURES_DIR / "expected_sample_payload_v3_2.md"
+FIXTURE_YT_JSON = FIXTURES_DIR / "title_cleanup_youtube.json"
+FIXTURE_GH_JSON = FIXTURES_DIR / "title_cleanup_github.json"
+FIXTURE_ADMIN_AUTH_JSON = FIXTURES_DIR / "admin_auth_false_positive.json"
+FIXTURE_DOCS_SUBGROUP_JSON = FIXTURES_DIR / "docs_subgroup_intent.json"
+FIXTURE_DOCS_DENOISE_JSON = FIXTURES_DIR / "docs_denoise_dom_omit.json"
+FIXTURE_QW_SUFFIX_JSON = FIXTURES_DIR / "quickwins_suffix_disneyplus.json"
+FIXTURE_QW_4CHAN_JSON = FIXTURES_DIR / "quickwins_leisure_4chan.json"
+FIXTURE_QW_NO_BEST_VS_JSON = FIXTURES_DIR / "quickwins_no_best_vs.json"
 
 
 def _load_payload():
@@ -108,7 +109,7 @@ def test_group_headers_match_domains():
             assert domain in b
 
 
-# ---- v3.2.1 additions ----
+# ---- v3.2.x additions ----
 
 
 def test_canonical_title_cleanup_youtube():
@@ -189,3 +190,67 @@ def test_quickwins_no_best_vs_keyword_only():
     # Should fall into Misc (not Shopping)
     assert "### Shopping" not in quick
     assert "### Misc" in quick
+
+
+def test_suffix_match_helper():
+    assert _host_matches_base("apps.disneyplus.com", "disneyplus.com", True)
+    assert _host_matches_base("www.netflix.com", "netflix.com", True)
+    assert not _host_matches_base("notnetflix.com", "netflix.com", True)
+
+
+def test_docs_dom_chip_suppression_and_paper_kind():
+    payload = _load_payload()
+    md = render_markdown(payload)
+    docs_section = _section(md, "## 📚 Docs & Reading")
+    # paper retains kind, but no dom chip
+    paper_line = [l for l in docs_section.splitlines() if "hstore.pdf" in l][0]
+    assert "kind:: paper" in paper_line
+    assert "dom::" not in paper_line
+
+
+def test_media_queue_omits_dom_chip():
+    payload = _load_payload()
+    md = render_markdown(payload)
+    media_section = _section(md, "## 📺 Media Queue")
+    media_lines = [l for l in media_section.splitlines() if l.strip().startswith("> - [ ]")]
+    assert media_lines
+    assert all("dom::" not in l for l in media_lines)
+
+
+def test_keyword_exclusions_domain_wins():
+    payload = {
+        "meta": {"created": "2026-02-07T00:00:00Z", "source": "domain_wins.raw.json"},
+        "counts": {"total": 1, "dumped": 1, "closed": 1, "kept": 0},
+        "cfg": {"highPriorityLimit": 0},
+        "items": [
+            {
+                "url": "https://amazon.com/best-ssd-vs-hdd",
+                "title": "Best SSD vs HDD",
+                "kind": "misc",
+                "intent": {"action": "explore", "confidence": 0.6},
+            }
+        ],
+    }
+    md = render_markdown(payload)
+    quick = _section(md, "## 🧹 Quick Wins")
+    assert "### Shopping" in quick
+
+
+def test_classification_precedence_admin_over_keywords():
+    payload = {
+        "meta": {"created": "2026-02-07T01:00:00Z", "source": "admin_over_keywords.raw.json"},
+        "counts": {"total": 1, "dumped": 1, "closed": 1, "kept": 0},
+        "cfg": {"highPriorityLimit": 0},
+        "items": [
+            {
+                "url": "https://platform.openai.com/api-keys?buy=1",
+                "title": "API keys buy now",
+                "kind": "docs",
+                "intent": {"action": "reference", "confidence": 0.8},
+                "flags": {"is_auth": True},
+            }
+        ],
+    }
+    state = build_state(payload)
+    assert state["buckets"]["ADMIN"]
+    assert not state["buckets"]["QUICK"]

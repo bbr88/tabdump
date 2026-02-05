@@ -7,6 +7,9 @@ ENGINE_DEST="${CONFIG_DIR}/TabDump.scpt"
 CONFIG_PATH="${CONFIG_DIR}/config.json"
 MONITOR_DEST="${CONFIG_DIR}/monitor_tabs.py"
 POSTPROCESS_DEST="${CONFIG_DIR}/postprocess_tabdump.py"
+CORE_PKG_DIR="${CONFIG_DIR}/core"
+RENDERER_DIR="${CORE_PKG_DIR}/renderer"
+CORE_INIT_PATH="${CORE_PKG_DIR}/__init__.py"
 LOG_DIR="${CONFIG_DIR}/logs"
 MONITOR_STATE_PATH="${CONFIG_DIR}/monitor_state.json"
 MONITOR_LOCK_PATH="${CONFIG_DIR}/monitor_state.lock"
@@ -30,6 +33,8 @@ echo "  - ${POSTPROCESS_DEST}"
 echo "  - ${APP_PATH}"
 echo "  - ${CLI_PATH}"
 echo "  - ${LAUNCH_AGENT_PATH}"
+echo "  - ${RENDERER_DIR}"
+echo "  - ${CORE_PKG_DIR}"
 echo "  - ${LOG_DIR}"
 echo "  - ${MONITOR_STATE_PATH}"
 echo "  - ${MONITOR_LOCK_PATH}"
@@ -88,6 +93,18 @@ fi
 
 if [[ -e "${POSTPROCESS_DEST}" ]]; then
   rm -f "${POSTPROCESS_DEST}"
+fi
+
+if [[ -d "${RENDERER_DIR}" ]]; then
+  rm -rf "${RENDERER_DIR}"
+fi
+
+if [[ -e "${CORE_INIT_PATH}" ]]; then
+  rm -f "${CORE_INIT_PATH}"
+fi
+
+if [[ -d "${CORE_PKG_DIR}" ]]; then
+  rmdir "${CORE_PKG_DIR}" 2>/dev/null || true
 fi
 
 if [[ -e "${MONITOR_STATE_PATH}" ]]; then

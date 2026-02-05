@@ -14,7 +14,7 @@
   },
   "items": [
     {
-      "url": "https://example.net/compare",
+      "url": "https://example.net/article",
       "title": "best laptops vs tablets 2026",
       "kind": "misc",
       "intent": {

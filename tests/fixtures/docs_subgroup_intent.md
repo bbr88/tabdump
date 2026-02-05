@@ -4,7 +4,7 @@ tab_count: 4
 top_domains: docs.example.com
 top_kinds: docs
 status: 📥 Inbox
-renderer: tabdump-pretty-v3.2.1
+renderer: tabdump-pretty-v3.2.3
 source: docs_subgroup_intent.raw.json
 deduped: 0
 ---
@@ -32,13 +32,13 @@ _(empty)_
 > [!info]- View Documentation (4)
 > ### docs.example.com
 > #### Implement
-> - [ ] **Implement feature X** ([Link](https://docs.example.com/guide/implement)) *(kind:: docs • dom:: docs.example.com)*
+> - [ ] **Implement feature X** ([Link](https://docs.example.com/guide/implement))
 > #### Debug
-> - [ ] **Debugging common issues** ([Link](https://docs.example.com/troubleshoot)) *(kind:: docs • dom:: docs.example.com)*
+> - [ ] **Debugging common issues** ([Link](https://docs.example.com/troubleshoot))
 > #### Reference
-> - [ ] **API Reference** ([Link](https://docs.example.com/reference/api)) *(kind:: docs • dom:: docs.example.com)*
+> - [ ] **API Reference** ([Link](https://docs.example.com/reference/api))
 > #### Learn
-> - [ ] **Getting Started** ([Link](https://docs.example.com/guide/start)) *(kind:: docs • dom:: docs.example.com)*
+> - [ ] **Getting Started** ([Link](https://docs.example.com/guide/start))
 
 ## 🧹 Quick Wins
 > [!tip]- Expand Quick Wins (0)

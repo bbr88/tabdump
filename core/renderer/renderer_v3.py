@@ -11,7 +11,7 @@ from urllib.parse import urlparse
 # ------------------------------ Config ------------------------------ #
 
 DEFAULT_CFG: Dict = {
-    "rendererVersion": "3.2.2",
+    "rendererVersion": "3.2.3",
     "titleMaxLen": 96,
     "stripWwwForGrouping": True,
     "includeFocusLine": True,
@@ -85,6 +85,8 @@ DEFAULT_CFG: Dict = {
     "docsOmitDomInBullets": True,
     "docsOmitKindFor": ["docs", "article"],
     "docsIncludeSrcWhenMultiBrowser": False,
+    "showDomChipInDomainGroupedSections": False,
+    "showKindChipInSections": {"media": False, "repos": False, "tools": False, "docs": False},
     "quickWinsEnableMiniCategories": True,
     "quickWinsMiniCategories": ["leisure", "shopping", "misc"],
     "quickWinsDomainSuffixMatching": True,
@@ -572,6 +574,7 @@ def _render_md(state: Dict) -> str:
     items = state["items"]
     deduped = state["deduped_count"]
     multi_browser = len({it.get("browser") for it in items if it.get("browser")}) > 1
+    show_dom_grouped, show_kind_sections = _render_controls(cfg)
 
     fm_lines = _frontmatter(meta, counts, items, deduped, cfg)
     dump_date = _dump_date(meta)
@@ -584,7 +587,7 @@ def _render_md(state: Dict) -> str:
         lines.append(f"> **Focus:** {_focus_line(items)}")
     lines.append("")
 
-    lines.extend(_render_sections(buckets, cfg, multi_browser))
+    lines.extend(_render_sections(buckets, cfg, multi_browser, show_dom_grouped, show_kind_sections))
 
     md = "\n".join(lines).rstrip() + "\n"
     _validate_rendered(md, buckets)
@@ -605,7 +608,7 @@ def _frontmatter(meta: Dict, counts: Dict, items: List[dict], deduped: int, cfg:
     if "status" in include:
         fields.append(("status", "📥 Inbox"))
     if "renderer" in include:
-        fields.append(("renderer", "tabdump-pretty-v3.2.2"))
+        fields.append(("renderer", "tabdump-pretty-v3.2.3"))
     if "source" in include:
         fields.append(("source", str(meta.get("source") or "")))
     if "deduped" in include:
@@ -634,7 +637,13 @@ def _dump_date(meta: Dict) -> str:
         return created.split("T")[0].split(" ")[0]
 
 
-def _render_sections(buckets: Dict[str, List[dict]], cfg: Dict, multi_browser: bool) -> List[str]:
+def _render_sections(
+    buckets: Dict[str, List[dict]],
+    cfg: Dict,
+    multi_browser: bool,
+    show_dom_grouped: bool,
+    show_kind_sections: Dict,
+) -> List[str]:
     lines: List[str] = []
     for name in SECTION_ORDER:
         start_len = len(lines)
@@ -642,21 +651,79 @@ def _render_sections(buckets: Dict[str, List[dict]], cfg: Dict, multi_browser: b
         if name == "HIGH":
             lines.extend(_render_high(items, cfg, multi_browser))
         elif name == "MEDIA":
-            lines.extend(_render_callout("📺 Media Queue", "[!video]- Expand Watch List", items, cfg, multi_browser))
+            lines.extend(
+                _render_callout(
+                    "📺 Media Queue",
+                    "[!video]- Expand Watch List",
+                    items,
+                    cfg,
+                    multi_browser,
+                    omit_dom=not show_dom_grouped,
+                    omit_kind_for=_omit_kind_for_section(show_kind_sections, "media"),
+                )
+            )
         elif name == "REPOS":
-            lines.extend(_render_callout("🏗 Repos", "[!code]- View Repositories", items, cfg, multi_browser))
+            lines.extend(
+                _render_callout(
+                    "🏗 Repos",
+                    "[!code]- View Repositories",
+                    items,
+                    cfg,
+                    multi_browser,
+                    omit_dom=not show_dom_grouped,
+                    omit_kind_for=_omit_kind_for_section(show_kind_sections, "repos"),
+                )
+            )
         elif name == "TOOLS":
-            lines.extend(_render_callout("🧰 Tools", "[!note]- Expand Tools", items, cfg, multi_browser))
+            lines.extend(
+                _render_callout(
+                    "🧰 Tools",
+                    "[!note]- Expand Tools",
+                    items,
+                    cfg,
+                    multi_browser,
+                    omit_dom=not show_dom_grouped,
+                    omit_kind_for=_omit_kind_for_section(show_kind_sections, "tools"),
+                )
+            )
         elif name == "DOCS":
-            lines.extend(_render_docs_callout("📚 Docs & Reading", "[!info]- View Documentation", items, cfg, multi_browser))
+            lines.extend(
+                _render_docs_callout(
+                    "📚 Docs & Reading",
+                    "[!info]- View Documentation",
+                    items,
+                    cfg,
+                    multi_browser,
+                    show_dom_grouped,
+                    show_kind_sections,
+                )
+            )
         elif name == "QUICK":
             if cfg.get("includeQuickWins", True):
-                lines.extend(_render_quick_callout("🧹 Quick Wins", "[!tip]- Expand Quick Wins", items, cfg, multi_browser))
+                lines.extend(
+                    _render_quick_callout(
+                        "🧹 Quick Wins",
+                        "[!tip]- Expand Quick Wins",
+                        items,
+                        cfg,
+                        multi_browser,
+                        omit_dom=not show_dom_grouped,
+                    )
+                )
             else:
                 continue
         elif name == "BACKLOG":
             if items:
-                lines.extend(_render_callout("🗃 Backlog", "[!quote]- Expand Backlog", items, cfg, multi_browser))
+                lines.extend(
+                    _render_callout(
+                        "🗃 Backlog",
+                        "[!quote]- Expand Backlog",
+                        items,
+                        cfg,
+                        multi_browser,
+                        omit_dom=not show_dom_grouped,
+                    )
+                )
         elif name == "ADMIN":
             lines.extend(_render_callout("🔐 Tools & Admin", "[!warning]- Sensitive/Administrative", items, cfg, multi_browser, admin=True))
         if len(lines) > start_len:
@@ -676,7 +743,16 @@ def _render_high(items: List[dict], cfg: Dict, multi_browser: bool) -> List[str]
     return lines
 
 
-def _render_callout(title: str, callout: str, items: List[dict], cfg: Dict, multi_browser: bool, admin: bool = False) -> List[str]:
+def _render_callout(
+    title: str,
+    callout: str,
+    items: List[dict],
+    cfg: Dict,
+    multi_browser: bool,
+    admin: bool = False,
+    omit_dom: bool = False,
+    omit_kind_for: set | None = None,
+) -> List[str]:
     count = len(items)
     lines = [f"## {title}", f"> {callout} ({count})"]
     if not items:
@@ -687,11 +763,30 @@ def _render_callout(title: str, callout: str, items: List[dict], cfg: Dict, mult
     for heading, group_items in grouped:
         lines.append(f"> ### {heading}")
         for it in _sort_items(group_items, admin=admin):
-            lines.append(_format_bullet(it, prefix='> ', admin=admin, cfg=cfg, in_callout=True, multi_browser=multi_browser))
+            lines.append(
+                _format_bullet(
+                    it,
+                    prefix="> ",
+                    admin=admin,
+                    cfg=cfg,
+                    in_callout=True,
+                    multi_browser=multi_browser,
+                    omit_dom=omit_dom,
+                    omit_kind_for=omit_kind_for,
+                )
+            )
     return lines
 
 
-def _render_docs_callout(title: str, callout: str, items: List[dict], cfg: Dict, multi_browser: bool) -> List[str]:
+def _render_docs_callout(
+    title: str,
+    callout: str,
+    items: List[dict],
+    cfg: Dict,
+    multi_browser: bool,
+    show_dom_grouped: bool,
+    show_kind_sections: Dict,
+) -> List[str]:
     count = len(items)
     lines = [f"## {title}", f"> {callout} ({count})"]
     if not items:
@@ -701,6 +796,13 @@ def _render_docs_callout(title: str, callout: str, items: List[dict], cfg: Dict,
     grouped = _group_items(items, admin=False)
     threshold = int(cfg.get("docsSubgroupByIntentWhenDomainCountGte", 4))
     order = cfg.get("docsSubgroupOrder", [])
+    show_kind_docs = _show_kind_in_section(show_kind_sections, "docs")
+    omit_dom = not show_dom_grouped or cfg.get("docsOmitDomInBullets", True)
+    if show_kind_docs:
+        omit_kind_for = set(cfg.get("docsOmitKindFor", []))
+    else:
+        omit_kind_for = set(ALLOWED_KINDS) - {"paper"}
+    include_src = cfg.get("docsIncludeSrcWhenMultiBrowser", False) and multi_browser
     for heading, group_items in grouped:
         lines.append(f"> ### {heading}")
         if len(group_items) < threshold:
@@ -713,9 +815,9 @@ def _render_docs_callout(title: str, callout: str, items: List[dict], cfg: Dict,
                         cfg=cfg,
                         in_callout=True,
                         multi_browser=multi_browser,
-                        omit_dom=cfg.get("docsOmitDomInBullets", True),
-                        omit_kind_for=set(cfg.get("docsOmitKindFor", [])),
-                        include_src=cfg.get("docsIncludeSrcWhenMultiBrowser", False) and multi_browser,
+                        omit_dom=omit_dom,
+                        omit_kind_for=omit_kind_for,
+                        include_src=include_src,
                     )
                 )
             continue
@@ -738,9 +840,9 @@ def _render_docs_callout(title: str, callout: str, items: List[dict], cfg: Dict,
                         cfg=cfg,
                         in_callout=True,
                         multi_browser=multi_browser,
-                        omit_dom=cfg.get("docsOmitDomInBullets", True),
-                        omit_kind_for=set(cfg.get("docsOmitKindFor", [])),
-                        include_src=cfg.get("docsIncludeSrcWhenMultiBrowser", False) and multi_browser,
+                        omit_dom=omit_dom,
+                        omit_kind_for=omit_kind_for,
+                        include_src=include_src,
                     )
                 )
         # leftover
@@ -757,17 +859,24 @@ def _render_docs_callout(title: str, callout: str, items: List[dict], cfg: Dict,
                         cfg=cfg,
                         in_callout=True,
                         multi_browser=multi_browser,
-                        omit_dom=cfg.get("docsOmitDomInBullets", True),
-                        omit_kind_for=set(cfg.get("docsOmitKindFor", [])),
-                        include_src=cfg.get("docsIncludeSrcWhenMultiBrowser", False) and multi_browser,
+                        omit_dom=omit_dom,
+                        omit_kind_for=omit_kind_for,
+                        include_src=include_src,
                     )
                 )
     return lines
 
 
-def _render_quick_callout(title: str, callout: str, items: List[dict], cfg: Dict, multi_browser: bool) -> List[str]:
+def _render_quick_callout(
+    title: str,
+    callout: str,
+    items: List[dict],
+    cfg: Dict,
+    multi_browser: bool,
+    omit_dom: bool = False,
+) -> List[str]:
     if not cfg.get("quickWinsEnableMiniCategories", True):
-        return _render_callout(title, callout, items, cfg, multi_browser)
+        return _render_callout(title, callout, items, cfg, multi_browser, omit_dom=omit_dom)
 
     count = len(items)
     lines = [f"## {title}", f"> {callout} ({count})"]
@@ -787,7 +896,17 @@ def _render_quick_callout(title: str, callout: str, items: List[dict], cfg: Dict
             continue
         lines.append(f"> ### {cat.capitalize()}")
         for it in _sort_items(arr, admin=False):
-            lines.append(_format_bullet(it, prefix="> ", admin=False, cfg=cfg, in_callout=True, multi_browser=multi_browser))
+            lines.append(
+                _format_bullet(
+                    it,
+                    prefix="> ",
+                    admin=False,
+                    cfg=cfg,
+                    in_callout=True,
+                    multi_browser=multi_browser,
+                    omit_dom=omit_dom,
+                )
+            )
     return lines
 
 
@@ -939,6 +1058,27 @@ def _intent_subgroup(action: str, order: List[str]) -> str:
     bucket = mapping.get(action, "other")
     return bucket if bucket in order else "other"
 
+def _render_controls(cfg: Dict) -> Tuple[bool, Dict]:
+    render_cfg = cfg.get("render") or {}
+    show_dom_grouped = render_cfg.get(
+        "showDomChipInDomainGroupedSections",
+        cfg.get("showDomChipInDomainGroupedSections", False),
+    )
+    show_kind_sections = render_cfg.get("showKindChipInSections", cfg.get("showKindChipInSections", {})) or {}
+    return show_dom_grouped, show_kind_sections
+
+
+def _show_kind_in_section(show_kind_sections: Dict, section: str) -> bool:
+    if section in show_kind_sections:
+        return bool(show_kind_sections.get(section))
+    return False
+
+
+def _omit_kind_for_section(show_kind_sections: Dict, section: str) -> set:
+    if _show_kind_in_section(show_kind_sections, section):
+        return set()
+    return set(ALLOWED_KINDS)
+
 
 LEISURE_DOMAINS = {
     "disneyplus.com",
@@ -948,16 +1088,24 @@ LEISURE_DOMAINS = {
     "twitch.tv",
     "spotify.com",
     "primevideo.com",
+    "hbomax.com",
     "hulu.com",
     "max.com",
-    "hbomax.com",
     "paramountplus.com",
     "peacocktv.com",
+    "soundcloud.com",
+    "music.apple.com",
+    "tv.apple.com",
+    "music.youtube.com",
+    "open.spotify.com",
+    "letterboxd.com",
+    "imdb.com",
+    "myanimelist.net",
     "crunchyroll.com",
     "funimation.com",
-    "tv.apple.com",
-    "music.apple.com",
-    "soundcloud.com",
+    "kick.com",
+    "vimeo.com",
+    "deezer.com",
     "bandcamp.com",
     "reddit.com",
     "9gag.com",
@@ -976,8 +1124,13 @@ SHOPPING_DOMAINS = {
     "camelcamelcamel.com",
     "slickdeals.net",
     "shein.com",
-    "temu.com",
+    "zalando.com",
+    "asos.com",
+    "newegg.com",
+    "flipkart.com",
+    "shopify.com",
     "alibaba.com",
+    "temu.com",
 }
 LEISURE_KEYWORDS = {
     "episode",
@@ -986,17 +1139,22 @@ LEISURE_KEYWORDS = {
     "watching",
     "trailer",
     "series",
-    "season",
     "movie",
     "film",
-    "stream",
-    "streaming",
+    "season",
     "playlist",
     "album",
+    "track",
+    "lyrics",
+    "stream",
+    "streaming",
     "listen",
+    "full episode",
+    "highlights",
+    "live stream",
     "soundtrack",
-    "cast",
     "imdb",
+    "anime",
 }
 SHOPPING_KEYWORDS = {
     "buy",
@@ -1007,33 +1165,46 @@ SHOPPING_KEYWORDS = {
     "deals",
     "discount",
     "coupon",
+    "promo",
     "shipping",
-    "order",
+    "free shipping",
     "cart",
     "checkout",
     "sale",
+    "order",
+    "product",
+    "specs",
     "compare",
+    "alternatives",
+    "shipping",
+    "order",
 }
 
 
 def _host_matches_base(host: str, base: str, enable_suffix: bool) -> bool:
     if not host or not base:
         return False
-    if host == base:
+    host_norm = host.lower()
+    if host_norm.startswith("www."):
+        host_norm = host_norm[4:]
+    base_norm = base.lower()
+    if host_norm == base_norm:
         return True
-    return enable_suffix and host.endswith("." + base)
+    return enable_suffix and host_norm.endswith("." + base_norm)
 
 
 def _quick_mini_category(it: dict, cfg: Dict) -> str:
     domain = (it.get("domain") or "").lower()
     title = (it.get("canonical_title") or it.get("title_render") or it.get("title") or "").lower()
+    url_blob = (it.get("url") or "").lower()
+    text_blob = f"{title} {url_blob}"
     suffix_ok = cfg.get("quickWinsDomainSuffixMatching", True)
 
     leisure_domain_hit = any(_host_matches_base(domain, base, suffix_ok) for base in LEISURE_DOMAINS)
     shopping_domain_hit = any(_host_matches_base(domain, base, suffix_ok) for base in SHOPPING_DOMAINS)
 
-    leisure_kw_hit = any(k in title for k in LEISURE_KEYWORDS)
-    shopping_kw_hit = any(k in title for k in SHOPPING_KEYWORDS)
+    leisure_kw_hit = any(k in text_blob for k in LEISURE_KEYWORDS)
+    shopping_kw_hit = any(k in text_blob for k in SHOPPING_KEYWORDS)
 
     if shopping_domain_hit:
         return "shopping"

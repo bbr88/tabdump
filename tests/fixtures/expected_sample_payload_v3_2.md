@@ -4,7 +4,7 @@ tab_count: 10
 top_domains: example.org, github.com, nms.csail.mit.edu, pganalyze.com, pgbouncer.org
 top_kinds: docs, article, paper
 status: 📥 Inbox
-renderer: tabdump-pretty-v3.2.2
+renderer: tabdump-pretty-v3.2.3
 source: TabDump 2026-02-01 21-10-00.raw.json
 deduped: 1
 ---
@@ -21,7 +21,7 @@ deduped: 1
 ## 📺 Media Queue
 > [!video]- Expand Watch List (1)
 > ### youtube.com
-> - [ ] **Design a Distributed Rate Limiter...** ([Link](https://www.youtube.com/watch?v=MIJFyUPG4Z4)) *(kind:: video • dom:: youtube.com)*
+> - [ ] **Design a Distributed Rate Limiter...** ([Link](https://www.youtube.com/watch?v=MIJFyUPG4Z4))
 
 ## 🏗 Repos
 > [!code]- View Repositories (0)

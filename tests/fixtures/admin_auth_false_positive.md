@@ -4,7 +4,7 @@ tab_count: 1
 top_domains: example.com
 top_kinds: docs
 status: 📥 Inbox
-renderer: tabdump-pretty-v3.2.1
+renderer: tabdump-pretty-v3.2.3
 source: admin_auth_false_positive.raw.json
 deduped: 0
 ---
@@ -31,7 +31,7 @@ _(empty)_
 ## 📚 Docs & Reading
 > [!info]- View Documentation (1)
 > ### example.com
-> - [ ] **Using token-based pagination safely** ([Link](https://example.com/docs/usage-token)) *(kind:: docs • dom:: example.com)*
+> - [ ] **Using token-based pagination safely** ([Link](https://example.com/docs/usage-token))
 
 ## 🧹 Quick Wins
 > [!tip]- Expand Quick Wins (0)

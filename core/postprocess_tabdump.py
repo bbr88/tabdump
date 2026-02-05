@@ -20,11 +20,23 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-ROOT = Path(__file__).resolve().parent.parent
+def _find_root(path: Path) -> Path:
+    candidates = [
+        path.parent,
+        path.parent.parent,
+        path.parent.parent.parent,
+    ]
+    for candidate in candidates:
+        if (candidate / "core" / "renderer" / "renderer_v3.py").exists():
+            return candidate
+    return path.parent.parent
+
+
+ROOT = _find_root(Path(__file__).resolve())
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 
-from renderer_v3 import render_markdown  # type: ignore
+from core.renderer.renderer_v3 import render_markdown  # type: ignore
 LINK_RE = re.compile(r"^-\s+\[(?P<title>[^\]]+)\]\((?P<url>[^\)]+)\)\s*$")
 TRACKING_PARAMS = {
     "fbclid",
