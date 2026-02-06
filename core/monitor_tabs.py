@@ -167,8 +167,27 @@ def main() -> int:
         save_state(state)
         return 0
 
+    def _env_bool(value: object, default: bool = False) -> str:
+        if value is None:
+            return "1" if default else "0"
+        if isinstance(value, bool):
+            return "1" if value else "0"
+        if isinstance(value, (int, float)):
+            return "1" if value else "0"
+        v = str(value).strip().lower()
+        if v in {"1", "true", "yes", "y", "on"}:
+            return "1"
+        if v in {"0", "false", "no", "n", "off"}:
+            return "0"
+        return "1" if default else "0"
+
     env = dict(os.environ)
     env["TABDUMP_TAG_MODEL"] = str(cfg.get("tagModel", "gpt-4.1-mini"))
+    env["TABDUMP_LLM_REDACT"] = _env_bool(cfg.get("llmRedact", True), default=True)
+    env["TABDUMP_LLM_REDACT_QUERY"] = _env_bool(cfg.get("llmRedactQuery", True), default=True)
+    env["TABDUMP_LLM_TITLE_MAX"] = str(cfg.get("llmTitleMax", 200))
+    env["TABDUMP_MAX_ITEMS"] = str(cfg.get("maxItems", 0))
+    env["TABDUMP_REQUIRE_PROVENANCE"] = _env_bool(cfg.get("requireProvenance", True), default=True)
     pp = subprocess.run([sys.executable, str(POSTPROCESS), str(newest)], capture_output=True, text=True, timeout=240,
                         env=env)
     if pp.returncode == 3:

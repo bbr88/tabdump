@@ -53,10 +53,12 @@ end safeTitle
 do shell script "mkdir -p " & quoted form of vaultInbox
 
 set ts to do shell script "date '+%Y-%m-%d %H-%M-%S'"
+set dumpId to do shell script "uuidgen"
 set outPath to vaultInbox & "TabDump " & ts & ".md"
 
 set md to "---" & linefeed & ¬
   "created: " & ts & linefeed & ¬
+  "tabdump_id: " & dumpId & linefeed & ¬
   "tags: [tabs, dump]" & linefeed & ¬
   "---" & linefeed & linefeed & ¬
   "# Tab dump " & ts & linefeed & linefeed

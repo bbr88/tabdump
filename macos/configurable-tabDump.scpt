@@ -442,6 +442,7 @@ end tell
 -- ---------- Prepare output ----------
 set ts to nowTimestamp()
 my ensureFolder(VAULT_INBOX)
+set dumpId to do shell script "uuidgen"
 
 set outName to replaceAll(OUTPUT_FILENAME_TEMPLATE, "{ts}", ts)
 set outPath to VAULT_INBOX & outName
@@ -449,6 +450,7 @@ set outPath to VAULT_INBOX & outName
 set mdLines to {}
 set end of mdLines to "---"
 set end of mdLines to "created: " & ts
+set end of mdLines to "tabdump_id: " & dumpId
 set end of mdLines to "tags: [tabs, dump]"
 set end of mdLines to "---"
 set end of mdLines to ""

@@ -51,6 +51,13 @@ TRACKING_PARAMS = {
     "spm",
     "yclid",
 }
+CONTROL_CHARS_RE = re.compile(r"[\x00-\x1f\x7f]")
+SENSITIVE_KV_RE = re.compile(r"(?i)\b(token|secret|api[-_]?key|auth|session|password|passwd|code|sig|signature)\s*[:=]\s*([^\s&]+)")
+REDACT_LLM = os.environ.get("TABDUMP_LLM_REDACT", "1").strip().lower() not in {"0", "false", "no"}
+REDACT_QUERY = os.environ.get("TABDUMP_LLM_REDACT_QUERY", "1").strip().lower() not in {"0", "false", "no"}
+MAX_LLM_TITLE = int(os.environ.get("TABDUMP_LLM_TITLE_MAX", "200") or 0)
+MAX_ITEMS = int(os.environ.get("TABDUMP_MAX_ITEMS", "0") or 0)
+REQUIRE_PROVENANCE = os.environ.get("TABDUMP_REQUIRE_PROVENANCE", "0").strip().lower() not in {"0", "false", "no"}
 
 
 def normalize_url(url: str) -> str:
@@ -83,6 +90,45 @@ def normalize_url(url: str) -> str:
         path = path[:-1]
 
     # drop fragment for dedup + cleaner output
+    return urllib.parse.urlunsplit((scheme, netloc, path, query, ""))
+
+
+def _strip_control_chars(value: str) -> str:
+    return CONTROL_CHARS_RE.sub("", value)
+
+
+def redact_text_for_llm(text: str) -> str:
+    text = _strip_control_chars(text)
+    text = SENSITIVE_KV_RE.sub(lambda m: f"{m.group(1)}=[REDACTED]", text)
+    if MAX_LLM_TITLE > 0 and len(text) > MAX_LLM_TITLE:
+        text = text[:MAX_LLM_TITLE] + "..."
+    return text
+
+
+def redact_url_for_llm(url: str) -> str:
+    url = url.strip()
+    try:
+        u = urllib.parse.urlsplit(url)
+    except Exception:
+        return url
+
+    if not u.netloc:
+        return url
+
+    scheme = (u.scheme or "https").lower()
+    netloc = u.netloc.lower()
+    path = u.path or "/"
+    if path != "/" and path.endswith("/"):
+        path = path[:-1]
+
+    query = ""
+    if u.query:
+        if REDACT_QUERY:
+            keys = [k for k, _ in urllib.parse.parse_qsl(u.query, keep_blank_values=True)]
+            query = urllib.parse.urlencode([(k, "REDACTED") for k in keys], doseq=True)
+        else:
+            query = u.query
+
     return urllib.parse.urlunsplit((scheme, netloc, path, query, ""))
 
 
@@ -232,7 +278,24 @@ def _extract_created_ts(src_path: Path, fallback: str) -> str:
     return fallback
 
 
-def _chunked(items: List[Item], size: int) -> List[List[Item]]:
+def _extract_frontmatter_value(src_path: Path, key: str) -> Optional[str]:
+    try:
+        head = src_path.read_text(encoding="utf-8", errors="replace").splitlines()[:80]
+    except Exception:
+        return None
+    if not head or head[0].strip() != "---":
+        return None
+    pattern = re.compile(rf"^{re.escape(key)}:\s*\"?(.+?)\"?\s*$")
+    for line in head[1:]:
+        if line.strip() == "---":
+            break
+        m = pattern.match(line.strip())
+        if m:
+            return m.group(1)
+    return None
+
+
+def _chunked(items: List, size: int) -> List[List]:
     if size <= 0:
         return [items]
     return [items[i : i + size] for i in range(0, len(items), size)]
@@ -253,17 +316,26 @@ def _call_with_retries(system: str, user: str, tries: int = 3, backoff_sec: floa
     raise RuntimeError("LLM call failed with unknown error")
 
 
-def build_clean_note(src_path: Path, items: List[Item]) -> Tuple[str, dict]:
+def build_clean_note(src_path: Path, items: List[Item], dump_id: Optional[str] = None) -> Tuple[str, dict]:
     # Ask LLM for enrichment
     system = (
         "You are a strict classifier for browser tabs. "
         "Return ONLY valid JSON."
     )
 
-    cls_map: Dict[str, dict] = {}
+    cls_map: Dict[int, dict] = {}
+    indexed_items = list(enumerate(items))
+    url_to_idx = {it.norm_url: idx for idx, it in indexed_items}
+    indexed_for_cls = indexed_items
+    if MAX_ITEMS > 0 and len(indexed_items) > MAX_ITEMS:
+        indexed_for_cls = indexed_items[:MAX_ITEMS]
     chunk_size = int(os.environ.get("TABDUMP_CLASSIFY_CHUNK", "30"))
-    for chunk in _chunked(items, chunk_size):
-        lines = [f"- {it.title} | {it.clean_url} | {it.domain}" for it in chunk]
+    for chunk in _chunked(indexed_for_cls, chunk_size):
+        lines = []
+        for idx, it in chunk:
+            title = redact_text_for_llm(it.title) if REDACT_LLM else it.title
+            url = redact_url_for_llm(it.clean_url) if REDACT_LLM else it.clean_url
+            lines.append(f"- {idx} | {title} | {url} | {it.domain}")
         user = (
             "For each tab, provide:\n"
             "- topic: short, lowercase, kebab-case (e.g. distributed-systems, postgres, llm)\n"
@@ -273,9 +345,10 @@ def build_clean_note(src_path: Path, items: List[Item]) -> Tuple[str, dict]:
             "Return JSON like:\n"
             "{\n"
             "  \"items\": [\n"
-            "    {\"url\": \"...\", \"topic\": \"...\", \"kind\": \"...\", \"action\": \"...\", \"score\": 3}\n"
+            "    {\"id\": 123, \"topic\": \"...\", \"kind\": \"...\", \"action\": \"...\", \"score\": 3}\n"
             "  ]\n"
             "}\n\n"
+            "Use the provided id as-is; do not invent ids.\n\n"
             + "\n".join(lines)
         )
         try:
@@ -287,14 +360,24 @@ def build_clean_note(src_path: Path, items: List[Item]) -> Tuple[str, dict]:
         for x in out.get("items", []):
             if not isinstance(x, dict):
                 continue
-            url = x.get("url")
-            if not url:
+            idx_raw = x.get("id")
+            idx: Optional[int] = None
+            if idx_raw is not None:
+                try:
+                    idx = int(idx_raw)
+                except Exception:
+                    idx = None
+            if idx is None:
+                url = x.get("url")
+                if url:
+                    idx = url_to_idx.get(normalize_url(str(url)))
+            if idx is None:
                 continue
-            cls_map[normalize_url(url)] = x
+            cls_map[idx] = x
 
     enriched: List[dict] = []
-    for it in items:
-        cls = cls_map.get(it.norm_url, {})
+    for idx, it in indexed_items:
+        cls = cls_map.get(idx, {})
         topic = _safe_topic(cls.get("topic"), it.domain)
         kind = _safe_kind(cls.get("kind"))
         action = _safe_action(cls.get("action"))
@@ -319,6 +402,8 @@ def build_clean_note(src_path: Path, items: List[Item]) -> Tuple[str, dict]:
         "allowlistPatterns": [],
         "skipPrefixes": [],
     }
+    if dump_id:
+        meta["tabdump_id"] = dump_id
     counts = {
         "total": len(enriched),
         "dumped": len(enriched),
@@ -342,12 +427,17 @@ def main(argv: List[str]) -> int:
 
     src = Path(argv[1]).expanduser().resolve()
     md = src.read_text(encoding="utf-8", errors="replace")
+    dump_id = _extract_frontmatter_value(src, "tabdump_id")
+    if REQUIRE_PROVENANCE and not dump_id:
+        print("Missing tabdump_id frontmatter; refusing to postprocess (set TABDUMP_REQUIRE_PROVENANCE=0 to override).",
+              file=sys.stderr)
+        return 4
     items = extract_items(md)
     if not items:
         print("No tab items found in the note; nothing to do.", file=sys.stderr)
         return 3
 
-    clean_text, _fm = build_clean_note(src, items)
+    clean_text, _fm = build_clean_note(src, items, dump_id=dump_id)
 
     clean_path = src.with_name(src.stem + " (clean)" + src.suffix)
     clean_path.write_text(clean_text, encoding="utf-8")

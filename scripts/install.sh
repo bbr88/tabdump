@@ -111,7 +111,12 @@ data = {
   "maxTabs": 30,
   "checkEveryMinutes": 5,
   "cooldownMinutes": 30,
-  "tagModel": "gpt-4.1-mini"
+  "tagModel": "gpt-4.1-mini",
+  "llmRedact": True,
+  "llmRedactQuery": True,
+  "llmTitleMax": 200,
+  "maxItems": 0,
+  "requireProvenance": True
 }
 
 with open(config_path, "w", encoding="utf-8") as f:

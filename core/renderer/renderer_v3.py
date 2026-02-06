@@ -893,8 +893,18 @@ def _group_items(items: List[dict], admin: bool, ordering_cfg: Dict) -> List[Tup
     return result
 
 
+def _escape_md(text: str) -> str:
+    if not text:
+        return ""
+    text = text.replace("\\", "\\\\")
+    for ch in ("`", "*", "_", "[", "]", "(", ")"):
+        text = text.replace(ch, "\\" + ch)
+    return text
+
+
 def _format_bullet(it: dict, prefix: str, cfg: Dict, badges_cfg: Dict, context: str) -> str:
     display_title = it.get("canonical_title") or it.get("title_render") or it.get("title") or ""
+    display_title = _escape_md(display_title)
     url = it.get("url") or ""
     badges = _build_badges(it, cfg, badges_cfg, context)
     return f"{prefix}- [ ] **{display_title}** ([Link]({url})) · {badges}"
