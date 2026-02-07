@@ -83,6 +83,10 @@ DEFAULT_CFG: Dict = {
     "docsOmitDomInBullets": True,
     "docsOmitKindFor": ["docs", "article"],
     "docsIncludeSrcWhenMultiBrowser": False,
+    "docsLargeSectionItemsGte": 20,
+    "docsLargeSectionDomainsGte": 10,
+    "docsMultiDomainMinItems": 2,
+    "docsOneOffGroupByKindWhenDomainsGt": 8,
     "showDomChipInDomainGroupedSections": False,
     "showKindChipInSections": {"media": False, "repos": False, "tools": False, "docs": False},
     "quickWinsEnableMiniCategories": True,
@@ -734,7 +738,7 @@ def _render_sections(
             lines.extend(
                 _render_docs_callout(
                     "📚 Docs & Reading",
-                    "[!info]- View Documentation",
+                    "[!info]- Reading Queue",
                     items,
                     cfg,
                     badge_cfg,
@@ -834,10 +838,77 @@ def _render_docs_callout(
         return lines
 
     grouped = _group_items(items, admin=False, ordering_cfg=ordering_cfg)
+    domain_count = len(grouped)
+    singleton_count = sum(1 for _, group_items in grouped if len(group_items) == 1)
+    multi_min = int(cfg.get("docsMultiDomainMinItems", 2))
+    main_items_count = count - singleton_count
+    is_large = count >= int(cfg.get("docsLargeSectionItemsGte", 20)) or domain_count >= int(
+        cfg.get("docsLargeSectionDomainsGte", 10)
+    )
+
+    if not is_large:
+        for heading, group_items in grouped:
+            lines.append(f"> ### {heading}")
+            for it in _sort_items_alpha(group_items):
+                lines.append(_format_bullet(it, prefix="> ", cfg=cfg, badges_cfg=badge_cfg, context="docs"))
+        return lines
+
+    # For large docs sections, make the primary callout represent the focused subset.
+    lines[1] = f"> [!info]- Main Sources ({main_items_count})"
+
+    one_off_domain_count = sum(1 for _, group_items in grouped if len(group_items) < multi_min)
+
+    multi_groups: List[Tuple[str, List[dict]]] = []
+    singleton_groups: List[Tuple[str, List[dict]]] = []
     for heading, group_items in grouped:
-        lines.append(f"> ### {heading}")
-        for it in _sort_items_alpha(group_items):
-            lines.append(_format_bullet(it, prefix="> ", cfg=cfg, badges_cfg=badge_cfg, context="docs"))
+        if len(group_items) >= multi_min:
+            multi_groups.append((heading, group_items))
+        else:
+            singleton_groups.append((heading, group_items))
+
+    if multi_groups:
+        for heading, group_items in multi_groups:
+            lines.append(f"> ### {heading} ({len(group_items)})")
+            for it in _sort_items_alpha(group_items):
+                lines.append(_format_bullet(it, prefix="> ", cfg=cfg, badges_cfg=badge_cfg, context="docs"))
+    else:
+        lines.append("> _(no main sources)_")
+
+    if singleton_groups:
+        lines.append("")
+        lines.append(f"> [!summary]- More Links ({singleton_count})")
+        flat_singletons: List[Tuple[str, dict]] = []
+        for heading, group_items in singleton_groups:
+            for it in _sort_items_alpha(group_items):
+                flat_singletons.append((heading, it))
+
+        if one_off_domain_count > int(cfg.get("docsOneOffGroupByKindWhenDomainsGt", 8)):
+            grouped_oneoffs = _group_oneoffs_by_kind(flat_singletons)
+            for label, arr in grouped_oneoffs:
+                lines.append(f"> #### {label} ({len(arr)})")
+                for source_domain, it in arr:
+                    lines.append(
+                        _format_bullet(
+                            it,
+                            prefix="> ",
+                            cfg=cfg,
+                            badges_cfg=badge_cfg,
+                            context="docs",
+                            source_domain=source_domain,
+                        )
+                    )
+        else:
+            for source_domain, it in flat_singletons:
+                lines.append(
+                    _format_bullet(
+                        it,
+                        prefix="> ",
+                        cfg=cfg,
+                        badges_cfg=badge_cfg,
+                        context="docs",
+                        source_domain=source_domain,
+                    )
+                )
     return lines
 
 
@@ -916,12 +987,20 @@ def _escape_md(text: str) -> str:
     return text
 
 
-def _format_bullet(it: dict, prefix: str, cfg: Dict, badges_cfg: Dict, context: str) -> str:
+def _format_bullet(
+    it: dict,
+    prefix: str,
+    cfg: Dict,
+    badges_cfg: Dict,
+    context: str,
+    source_domain: str | None = None,
+) -> str:
     display_title = it.get("canonical_title") or it.get("title_render") or it.get("title") or ""
     display_title = _escape_md(display_title)
     url = _escape_md_url(str(it.get("url") or ""))
     badges = _build_badges(it, cfg, badges_cfg, context)
-    return f"{prefix}- [ ] [{display_title}]({url}) · {badges}"
+    suffix = f" · {_escape_md(source_domain)}" if source_domain else ""
+    return f"{prefix}- [ ] [{display_title}]({url}) · {badges}{suffix}"
 
 
 def _escape_md_url(url: str) -> str:
@@ -938,6 +1017,48 @@ def _sort_items_alpha(items: List[dict]) -> List[dict]:
         return (title.lower(), url)
 
     return sorted(items, key=key)
+
+
+def _kind_display_label(kind: str) -> str:
+    k = (kind or "").lower()
+    if k == "docs":
+        return "Docs"
+    if k == "article":
+        return "Articles"
+    if k == "paper":
+        return "Papers"
+    if k == "spec":
+        return "Specs"
+    return "Other"
+
+
+def _group_oneoffs_by_kind(flat_singletons: List[Tuple[str, dict]]) -> List[Tuple[str, List[Tuple[str, dict]]]]:
+    grouped: Dict[str, List[Tuple[str, dict]]] = {}
+    for source_domain, it in flat_singletons:
+        label = _kind_display_label(it.get("kind") or "")
+        grouped.setdefault(label, []).append((source_domain, it))
+
+    order = ["Docs", "Articles", "Papers", "Specs", "Other"]
+    result: List[Tuple[str, List[Tuple[str, dict]]]] = []
+    for label in order:
+        arr = grouped.get(label, [])
+        if not arr:
+            continue
+        arr_sorted = sorted(
+            arr,
+            key=lambda pair: (
+                (
+                    pair[1].get("canonical_title")
+                    or pair[1].get("title_render")
+                    or pair[1].get("title")
+                    or ""
+                ).lower(),
+                pair[0].lower(),
+                pair[1].get("url") or "",
+            ),
+        )
+        result.append((label, arr_sorted))
+    return result
 
 
 # ------------------------------ Stats ------------------------------ #

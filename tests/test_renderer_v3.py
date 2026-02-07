@@ -144,6 +144,110 @@ def test_docs_no_intent_subgrouping():
     assert "Getting Started" in docs_section
 
 
+def test_docs_no_domain_numbering_even_when_many_domains():
+    payload = {
+        "meta": {"created": "2026-02-07T03:00:00Z", "source": "docs_many_domains.raw.json"},
+        "counts": {"total": 6, "dumped": 6, "closed": 6, "kept": 0},
+        "cfg": {"highPriorityLimit": 0},
+        "items": [
+            {"url": "https://a.com/docs/one", "title": "A", "kind": "docs"},
+            {"url": "https://b.com/docs/one", "title": "B", "kind": "docs"},
+            {"url": "https://c.com/docs/one", "title": "C", "kind": "docs"},
+            {"url": "https://d.com/docs/one", "title": "D", "kind": "docs"},
+            {"url": "https://e.com/docs/one", "title": "E", "kind": "docs"},
+            {"url": "https://f.com/docs/one", "title": "F", "kind": "docs"},
+        ],
+    }
+    md = render_markdown(payload)
+    docs = _section(md, "## 📚 Docs & Reading")
+    assert "> ### a.com" in docs
+    assert "> ### f.com" in docs
+    assert "[01]" not in docs
+
+
+def test_docs_no_item_numbering_even_when_entries_gte_5():
+    payload = {
+        "meta": {"created": "2026-02-07T04:00:00Z", "source": "docs_many_items.raw.json"},
+        "counts": {"total": 5, "dumped": 5, "closed": 5, "kept": 0},
+        "cfg": {"highPriorityLimit": 0},
+        "items": [
+            {"url": "https://x.com/docs/one", "title": "Epsilon", "kind": "docs"},
+            {"url": "https://x.com/docs/two", "title": "Delta", "kind": "docs"},
+            {"url": "https://x.com/docs/three", "title": "Gamma", "kind": "docs"},
+            {"url": "https://x.com/docs/four", "title": "Beta", "kind": "docs"},
+            {"url": "https://x.com/docs/five", "title": "Alpha", "kind": "docs"},
+        ],
+    }
+    md = render_markdown(payload)
+    docs = _section(md, "## 📚 Docs & Reading")
+    assert "> ### x.com" in docs
+    assert "> - [ ] [Alpha]" in docs
+    assert "> - [ ] [Beta]" in docs
+    assert "> - [ ] [Delta]" in docs
+    assert "> - [ ] [Epsilon]" in docs
+    assert "> - [ ] [Gamma]" in docs
+    assert "> - [ ] [01] [Alpha]" not in docs
+
+
+def test_docs_large_section_summary_and_singleton_split():
+    payload = {
+        "meta": {"created": "2026-02-07T05:00:00Z", "source": "docs_large_split.raw.json"},
+        "counts": {"total": 8, "dumped": 8, "closed": 8, "kept": 0},
+        "cfg": {"highPriorityLimit": 0, "docsLargeSectionDomainsGte": 6},
+        "items": [
+            {"url": "https://a.com/docs/1", "title": "A1", "kind": "docs"},
+            {"url": "https://a.com/docs/2", "title": "A2", "kind": "docs"},
+            {"url": "https://b.com/docs/1", "title": "B1", "kind": "docs"},
+            {"url": "https://b.com/docs/2", "title": "B2", "kind": "docs"},
+            {"url": "https://c.com/docs/1", "title": "C1", "kind": "docs"},
+            {"url": "https://d.com/docs/1", "title": "D1", "kind": "docs"},
+            {"url": "https://e.com/docs/1", "title": "E1", "kind": "docs"},
+            {"url": "https://f.com/docs/1", "title": "F1", "kind": "docs"},
+        ],
+    }
+    md = render_markdown(payload)
+    docs = _section(md, "## 📚 Docs & Reading")
+    assert "> [!info]- Main Sources (4)" in docs
+    assert "_8 total = 4 from main sources + 4 more links_" not in docs
+    assert "> #### Main Sources (4)" not in docs
+    assert "> ### a.com (2)" in docs
+    assert "> ### b.com (2)" in docs
+    assert "> [!summary]- More Links (4)" in docs
+    # singleton tail is flat and carries source domain hint
+    assert "> ### c.com" not in docs
+    assert " · c.com" in docs
+    assert " · f.com" in docs
+
+
+def test_docs_oneoffs_grouped_by_kind_when_many_oneoff_domains():
+    payload = {
+        "meta": {"created": "2026-02-07T06:00:00Z", "source": "docs_oneoff_kinds.raw.json"},
+        "counts": {"total": 12, "dumped": 12, "closed": 12, "kept": 0},
+        "cfg": {"highPriorityLimit": 0, "docsLargeSectionDomainsGte": 10, "docsOneOffGroupByKindWhenDomainsGt": 8},
+        "items": [
+            {"url": "https://a.com/docs/1", "title": "A1", "kind": "docs"},
+            {"url": "https://a.com/docs/2", "title": "A2", "kind": "docs"},
+            {"url": "https://b.com/article/1", "title": "B1", "kind": "article"},
+            {"url": "https://c.com/article/1", "title": "C1", "kind": "article"},
+            {"url": "https://d.com/docs/1", "title": "D1", "kind": "docs"},
+            {"url": "https://e.com/docs/1", "title": "E1", "kind": "docs"},
+            {"url": "https://f.com/paper/1.pdf", "title": "F1", "kind": "paper"},
+            {"url": "https://g.com/spec/1", "title": "G1", "kind": "spec"},
+            {"url": "https://h.com/misc/1", "title": "H1", "kind": "misc"},
+            {"url": "https://i.com/docs/1", "title": "I1", "kind": "docs"},
+            {"url": "https://j.com/docs/1", "title": "J1", "kind": "docs"},
+            {"url": "https://k.com/docs/1", "title": "K1", "kind": "docs"},
+        ],
+    }
+    md = render_markdown(payload)
+    docs = _section(md, "## 📚 Docs & Reading")
+    assert "> [!summary]- More Links (" in docs
+    assert "> #### Docs (" in docs
+    assert "> #### Articles (" in docs
+    assert "> #### Papers (" in docs
+    assert "> #### Specs (" in docs
+
+
 def test_admin_compact_bullets_default():
     payload = _load_payload()
     md = render_markdown(payload)

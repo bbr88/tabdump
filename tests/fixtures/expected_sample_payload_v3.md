@@ -31,7 +31,7 @@ Deduped: 1
 > _(empty)_
 
 ## 📚 Docs & Reading
-> [!info]- View Documentation (3)
+> [!info]- Reading Queue (3)
 > ### example.org
 > - [ ] [Short blog post to skim quickly](https://example.org/skim) · article
 > ### nms.csail.mit.edu
