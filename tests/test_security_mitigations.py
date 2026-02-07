@@ -1,5 +1,6 @@
 import json
 import os
+import plistlib
 import re
 import time
 from pathlib import Path
@@ -258,3 +259,63 @@ def test_monitor_passes_llm_env_from_config(tmp_path, monkeypatch):
     assert captured_env["TABDUMP_LLM_TITLE_MAX"] == "123"
     assert captured_env["TABDUMP_MAX_ITEMS"] == "7"
     assert captured_env["TABDUMP_REQUIRE_PROVENANCE"] == "1"
+
+
+def test_resolve_openai_api_key_prefers_keychain(monkeypatch):
+    monkeypatch.setattr(ppt, "_key_from_keychain", lambda: "keychain-value")
+    monkeypatch.setattr(ppt, "_key_from_launch_agent_plist", lambda: "plist-value")
+    monkeypatch.setenv("OPENAI_API_KEY", "env-value")
+
+    assert ppt.resolve_openai_api_key() == "keychain-value"
+
+
+def test_resolve_openai_api_key_falls_back_to_plist(monkeypatch):
+    monkeypatch.setattr(ppt, "_key_from_keychain", lambda: None)
+    monkeypatch.setattr(ppt, "_key_from_launch_agent_plist", lambda: "plist-value")
+    monkeypatch.setenv("OPENAI_API_KEY", "env-value")
+
+    assert ppt.resolve_openai_api_key() == "plist-value"
+
+
+def test_resolve_openai_api_key_falls_back_to_env(monkeypatch):
+    monkeypatch.setattr(ppt, "_key_from_keychain", lambda: None)
+    monkeypatch.setattr(ppt, "_key_from_launch_agent_plist", lambda: None)
+    monkeypatch.setenv("OPENAI_API_KEY", "  env-value  ")
+
+    assert ppt.resolve_openai_api_key() == "env-value"
+
+
+def test_resolve_openai_api_key_missing_everywhere(monkeypatch):
+    monkeypatch.setattr(ppt, "_key_from_keychain", lambda: None)
+    monkeypatch.setattr(ppt, "_key_from_launch_agent_plist", lambda: None)
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+    assert ppt.resolve_openai_api_key() is None
+
+
+def test_key_from_launch_agent_plist_reads_environment_value(tmp_path, monkeypatch):
+    plist_path = tmp_path / "io.orc-visioner.tabdump.monitor.plist"
+    plist_data = {
+        "Label": "io.orc-visioner.tabdump.monitor",
+        "EnvironmentVariables": {"OPENAI_API_KEY": "plist-value"},
+    }
+    with plist_path.open("wb") as fh:
+        plistlib.dump(plist_data, fh)
+
+    monkeypatch.setattr(ppt, "LAUNCH_AGENT_PLIST", str(plist_path))
+    assert ppt._key_from_launch_agent_plist() == "plist-value"
+
+
+def test_openai_chat_json_missing_key_message(monkeypatch):
+    monkeypatch.setattr(ppt, "KEYCHAIN_SERVICE", "Svc")
+    monkeypatch.setattr(ppt, "KEYCHAIN_ACCOUNT", "Acct")
+    monkeypatch.setattr(ppt, "LAUNCH_AGENT_PLIST", "/tmp/tabdump-test.plist")
+    monkeypatch.setattr(ppt, "resolve_openai_api_key", lambda: None)
+
+    with pytest.raises(RuntimeError) as exc:
+        ppt.openai_chat_json("sys", "user")
+
+    msg = str(exc.value)
+    assert "Keychain (service=Svc, account=Acct)" in msg
+    assert "LaunchAgent plist (/tmp/tabdump-test.plist)" in msg
+    assert "env OPENAI_API_KEY" in msg
