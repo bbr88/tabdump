@@ -184,7 +184,12 @@ def _parse_markdown_link_line(line: str) -> Optional[Tuple[str, str]]:
     if not s.startswith("- ["):
         return None
 
-    i = 3
+    i = 2
+    if i >= len(s) or s[i] != "[":
+        return None
+    i += 1
+
+    title_depth = 1
     title_chars: List[str] = []
     escaped = False
     while i < len(s):
@@ -198,13 +203,23 @@ def _parse_markdown_link_line(line: str) -> Optional[Tuple[str, str]]:
             escaped = True
             i += 1
             continue
+        if ch == "[":
+            title_depth += 1
+            title_chars.append(ch)
+            i += 1
+            continue
         if ch == "]":
-            break
+            title_depth -= 1
+            if title_depth == 0:
+                i += 1
+                break
+            title_chars.append(ch)
+            i += 1
+            continue
         title_chars.append(ch)
         i += 1
-    if i >= len(s) or s[i] != "]":
+    if title_depth != 0:
         return None
-    i += 1
 
     while i < len(s) and s[i].isspace():
         i += 1

@@ -361,6 +361,24 @@ def test_extract_items_parses_parentheses_in_urls():
     assert items[0].clean_url == "https://example.com/a_(b)"
 
 
+def test_extract_items_parses_nested_title_brackets_and_pdf_urls():
+    md = (
+        "---\n"
+        "created: 2026-02-07 00-00-00\n"
+        "tabdump_id: test-uuid\n"
+        "---\n\n"
+        "## Chrome\n\n"
+        "- [pdfs/SEDA - An Architecture for Well-Conditioned, Scalable Internet Services (seda-sosp01).pdf at master · tpn/pdfs · GitHub](https://github.com/tpn/pdfs/blob/master/SEDA%20-%20An%20Architecture%20for%20Well-Conditioned,%20Scalable%20Internet%20Services%20(seda-sosp01).pdf)\n"
+        "- [pdfs/Proving the Correctness of Nonblocking Data Structures - ACM (p30-desnoyers).pdf at master · tpn/pdfs · GitHub](https://github.com/tpn/pdfs/blob/master/Proving%20the%20Correctness%20of%20Nonblocking%20Data%20Structures%20-%20ACM%20(p30-desnoyers).pdf)\n"
+        "- [Versioning in an Event Sourced System [Leanpub PDF/iPad/Kindle]](https://leanpub.com/esversioning)\n"
+    )
+    items = ppt.extract_items(md)
+    assert len(items) == 3
+    assert items[0].clean_url.endswith("(seda-sosp01).pdf")
+    assert items[1].clean_url.endswith("(p30-desnoyers).pdf")
+    assert items[2].clean_url == "https://leanpub.com/esversioning"
+
+
 def test_renderer_encodes_markdown_sensitive_url_chars():
     payload = {
         "meta": {"created": "2026-02-07T00:00:00Z", "source": "escape-url.raw.json"},
