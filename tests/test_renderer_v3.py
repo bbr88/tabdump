@@ -423,3 +423,69 @@ def test_classification_precedence_admin_over_keywords():
     state = build_state(payload)
     assert state["buckets"]["ADMIN"]
     assert not state["buckets"]["QUICK"]
+
+
+def test_projects_section_collects_nontech_project_hubs():
+    payload = {
+        "meta": {"created": "2026-02-07T08:00:00Z", "source": "projects_hubs.raw.json"},
+        "counts": {"total": 5, "dumped": 5, "closed": 5, "kept": 0},
+        "cfg": {"highPriorityLimit": 0},
+        "items": [
+            {
+                "url": "https://acme.notion.so/Q1-Project-Plan-1a2b3c4d5e6f",
+                "title": "Q1 Project Plan",
+            },
+            {
+                "url": "https://trello.com/b/abcd1234/marketing-launch-board",
+                "title": "Marketing Launch Board",
+            },
+            {
+                "url": "https://acme.atlassian.net/jira/software/c/projects/APP/boards/42",
+                "title": "APP Sprint Board",
+            },
+            {
+                "url": "https://drive.google.com/drive/folders/1AbCdEfGhIjKlMnOp",
+                "title": "Campaign Assets Folder",
+            },
+            {
+                "url": "https://www.figma.com/file/ABCDEFG123/Product-Roadmap",
+                "title": "Product Roadmap",
+            },
+        ],
+    }
+    state = build_state(payload)
+    projects = state["buckets"]["PROJECTS"]
+    assert len(projects) == 5
+    project_urls = {it["url"] for it in projects}
+    assert project_urls.isdisjoint({it["url"] for it in state["buckets"]["DOCS"]})
+    assert project_urls.isdisjoint({it["url"] for it in state["buckets"]["TOOLS"]})
+    assert project_urls.isdisjoint({it["url"] for it in state["buckets"]["QUICK"]})
+    assert project_urls.isdisjoint({it["url"] for it in state["buckets"]["REPOS"]})
+
+    md = render_markdown(payload)
+    projects_section = _section(md, "## 🗂 Projects")
+    assert "Q1 Project Plan" in projects_section
+    assert "Marketing Launch Board" in projects_section
+    assert "APP Sprint Board" in projects_section
+    assert "Campaign Assets Folder" in projects_section
+    assert "Product Roadmap" in projects_section
+
+
+def test_notion_requires_project_hints_by_default():
+    payload = {
+        "meta": {"created": "2026-02-07T09:00:00Z", "source": "notion_non_project.raw.json"},
+        "counts": {"total": 1, "dumped": 1, "closed": 1, "kept": 0},
+        "cfg": {"highPriorityLimit": 0},
+        "items": [
+            {
+                "url": "https://acme.notion.so/Meeting-Notes-6f5e4d3c2b1a",
+                "title": "Meeting Notes",
+            }
+        ],
+    }
+    state = build_state(payload)
+    assert not state["buckets"]["PROJECTS"]
+    assert state["buckets"]["DOCS"]
+
+    md = render_markdown(payload)
+    assert "## 🗂 Projects" not in md

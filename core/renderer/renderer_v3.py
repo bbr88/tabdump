@@ -54,6 +54,46 @@ DEFAULT_CFG: Dict = {
     "chatDomains": ["chatgpt.com", "gemini.google.com", "claude.ai", "copilot.microsoft.com"],
     "codeHostDomains": ["github.com", "gitlab.com", "bitbucket.org"],
     "videoDomains": ["youtube.com", "www.youtube.com", "vimeo.com"],
+    "projectDomains": [
+        "notion.so",
+        "notion.site",
+        "trello.com",
+        "atlassian.net",
+        "jira.atlassian.com",
+        "drive.google.com",
+        "figma.com",
+    ],
+    "projectNotionDomains": ["notion.so", "notion.site"],
+    "projectJiraDomains": ["atlassian.net", "jira.atlassian.com"],
+    "projectNotionHints": [
+        "project",
+        "roadmap",
+        "sprint",
+        "backlog",
+        "kanban",
+        "task",
+        "milestone",
+        "okr",
+        "plan",
+        "planning",
+    ],
+    "projectTitleHints": [
+        "project",
+        "roadmap",
+        "sprint",
+        "backlog",
+        "kanban",
+        "task",
+        "milestone",
+        "okr",
+        "plan",
+        "planning",
+        "board",
+    ],
+    "projectJiraPathHints": ["/jira/software/", "/secure/rapidboard.jspa", "/boards/", "/browse/"],
+    "projectFigmaPathHints": ["/file/", "/design/", "/proto/", "/board/"],
+    "projectNotionRequireHint": True,
+    "projectDomainSuffixMatching": True,
     "docsDomainPrefix": "docs.",
     "docsPathHints": ["/docs/", "/documentation/", "/reference/", "/guides/"],
     "blogPathHints": ["/blog/", "/posts/", "/articles/"],
@@ -89,7 +129,7 @@ DEFAULT_CFG: Dict = {
     "docsMultiDomainMinItems": 2,
     "docsOneOffGroupByKindWhenDomainsGt": 8,
     "showDomChipInDomainGroupedSections": False,
-    "showKindChipInSections": {"media": False, "repos": False, "tools": False, "docs": False},
+    "showKindChipInSections": {"media": False, "repos": False, "projects": False, "tools": False, "docs": False},
     "quickWinsEnableMiniCategories": True,
     "quickWinsMiniCategories": ["leisure", "shopping"],
     "quickWinsLowEffortReasons": [
@@ -124,7 +164,7 @@ ADMIN_CATEGORY_ORDER = ["admin_auth", "admin_chat", "admin_local", "admin_intern
 AGGREGATOR_MARKERS = ["trending", "top", "best of", "weekly", "digest", "list of", "directory"]
 DEPTH_HINTS = ["/reference/", "/docs/", "/guide/", "/internals/", "/config", "/api-reference/"]
 
-SECTION_ORDER = ["HIGH", "MEDIA", "REPOS", "TOOLS", "DOCS", "QUICK", "BACKLOG", "ADMIN"]
+SECTION_ORDER = ["HIGH", "MEDIA", "REPOS", "PROJECTS", "TOOLS", "DOCS", "QUICK", "BACKLOG", "ADMIN"]
 
 
 # ------------------------------ Public API ------------------------------ #
@@ -502,6 +542,8 @@ def _bucket_for_item(item: dict, cfg: Dict) -> str:
         return "MEDIA"
     if domain_category == "code_host" and _looks_like_repo_path(path):
         return "REPOS"
+    if _is_project_workspace(item, cfg):
+        return "PROJECTS"
     if provided_kind == "tool" or domain_category == "console":
         return "TOOLS"
     if kind in {"paper", "docs", "spec", "article"}:
@@ -512,6 +554,43 @@ def _bucket_for_item(item: dict, cfg: Dict) -> str:
 def _looks_like_repo_path(path: str) -> bool:
     parts = [p for p in (path or "").split("/") if p]
     return len(parts) >= 2
+
+
+def _is_project_workspace(item: dict, cfg: Dict) -> bool:
+    domain = (item.get("domain") or "").lower()
+    path = (item.get("path") or "").lower()
+    title = (item.get("canonical_title") or item.get("title_render") or item.get("title") or "").lower()
+    text_blob = f"{title} {path}"
+    suffix_ok = bool(cfg.get("projectDomainSuffixMatching", True))
+
+    def _matches_any_base(bases: Iterable[str]) -> bool:
+        return any(_host_matches_base(domain, str(base).lower(), suffix_ok) for base in (bases or []))
+
+    if _matches_any_base(["trello.com"]) and (path.startswith("/b/") or path.startswith("/c/")):
+        return True
+
+    jira_hints = [str(h).lower() for h in cfg.get("projectJiraPathHints", [])]
+    if _matches_any_base(cfg.get("projectJiraDomains", [])) and any(h in path for h in jira_hints):
+        return True
+
+    figma_hints = [str(h).lower() for h in cfg.get("projectFigmaPathHints", [])]
+    if _matches_any_base(["figma.com"]) and any(h in path for h in figma_hints):
+        return True
+
+    if _matches_any_base(["drive.google.com"]) and "/folders/" in path:
+        return True
+
+    notion_hints = [str(h).lower() for h in cfg.get("projectNotionHints", [])]
+    if _matches_any_base(cfg.get("projectNotionDomains", [])):
+        if not cfg.get("projectNotionRequireHint", True):
+            return True
+        return any(h in text_blob for h in notion_hints)
+
+    generic_hints = [str(h).lower() for h in cfg.get("projectTitleHints", [])]
+    if _matches_any_base(cfg.get("projectDomains", [])) and any(h in text_blob for h in generic_hints):
+        return True
+
+    return False
 
 
 # ------------------------------ High Priority ------------------------------ #
@@ -723,6 +802,18 @@ def _render_sections(
                     _render_callout(
                         "🏗 Repos",
                         "[!code]- View Repositories",
+                        items,
+                        cfg,
+                        badge_cfg,
+                        ordering_cfg,
+                    )
+                )
+        elif name == "PROJECTS":
+            if should_render:
+                lines.extend(
+                    _render_callout(
+                        "🗂 Projects",
+                        "[!note]- View Project Workspaces",
                         items,
                         cfg,
                         badge_cfg,
@@ -1329,6 +1420,7 @@ def _validate_rendered(md: str, buckets: Dict[str, List[dict]], cfg: Dict) -> No
         ("## 🔥 High Priority", "HIGH"),
         ("## 📺 Media Queue", "MEDIA"),
         ("## 🏗 Repos", "REPOS"),
+        ("## 🗂 Projects", "PROJECTS"),
         ("## 🧰 Tools", "TOOLS"),
         ("## 📚 Docs & Reading", "DOCS"),
         ("## 🧹 Quick Wins / Low Effort", "QUICK"),
