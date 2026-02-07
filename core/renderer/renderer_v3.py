@@ -30,6 +30,7 @@ DEFAULT_CFG: Dict = {
     "highPriorityMinIntentConfidence": 0.70,
     "highPriorityEligibleCategories": ["docs_site", "blog", "code_host"],
     "includeQuickWins": True,
+    "includeEmptySections": False,
     "quickWinsMaxItems": 15,
     "quickWinsOverflowToBacklog": True,
     "backlogMaxItems": 50,
@@ -638,7 +639,7 @@ def _render_md(state: Dict) -> str:
     lines.extend(_render_sections(buckets, cfg, multi_browser, badge_cfg, ordering_cfg))
 
     md = "\n".join(lines).rstrip() + "\n"
-    _validate_rendered(md, buckets)
+    _validate_rendered(md, buckets, cfg)
     return md
 
 
@@ -696,57 +697,64 @@ def _render_sections(
     ordering_cfg: Dict,
 ) -> List[str]:
     lines: List[str] = []
+    include_empty = bool(cfg.get("includeEmptySections", False))
     for name in SECTION_ORDER:
         start_len = len(lines)
         items = buckets.get(name, [])
+        should_render = bool(items) or include_empty
         if name == "HIGH":
-            lines.extend(_render_high(items, cfg, badge_cfg))
+            if should_render:
+                lines.extend(_render_high(items, cfg, badge_cfg))
         elif name == "MEDIA":
-            lines.extend(
-                _render_callout(
-                    "📺 Media Queue",
-                    "[!video]- Expand Watch List",
-                    items,
-                    cfg,
-                    badge_cfg,
-                    ordering_cfg,
+            if should_render:
+                lines.extend(
+                    _render_callout(
+                        "📺 Media Queue",
+                        "[!video]- Expand Watch List",
+                        items,
+                        cfg,
+                        badge_cfg,
+                        ordering_cfg,
+                    )
                 )
-            )
         elif name == "REPOS":
-            lines.extend(
-                _render_callout(
-                    "🏗 Repos",
-                    "[!code]- View Repositories",
-                    items,
-                    cfg,
-                    badge_cfg,
-                    ordering_cfg,
+            if should_render:
+                lines.extend(
+                    _render_callout(
+                        "🏗 Repos",
+                        "[!code]- View Repositories",
+                        items,
+                        cfg,
+                        badge_cfg,
+                        ordering_cfg,
+                    )
                 )
-            )
         elif name == "TOOLS":
-            lines.extend(
-                _render_callout(
-                    "🧰 Tools",
-                    "[!note]- Expand Tools",
-                    items,
-                    cfg,
-                    badge_cfg,
-                    ordering_cfg,
+            if should_render:
+                lines.extend(
+                    _render_callout(
+                        "🧰 Tools",
+                        "[!note]- Expand Tools",
+                        items,
+                        cfg,
+                        badge_cfg,
+                        ordering_cfg,
+                    )
                 )
-            )
         elif name == "DOCS":
-            lines.extend(
-                _render_docs_callout(
-                    "📚 Docs & Reading",
-                    "[!info]- Reading Queue",
-                    items,
-                    cfg,
-                    badge_cfg,
-                    ordering_cfg,
+            if should_render:
+                lines.extend(
+                    _render_docs_callout(
+                        "📚 Docs & Reading",
+                        "[!info]- Reading Queue",
+                        items,
+                        cfg,
+                        badge_cfg,
+                        ordering_cfg,
+                    )
                 )
-            )
         elif name == "QUICK":
-            if cfg.get("includeQuickWins", True):
+            if cfg.get("includeQuickWins", True) and should_render:
                 lines.extend(
                     _render_quick_callout(
                         "🧹 Quick Wins / Low Effort",
@@ -772,17 +780,18 @@ def _render_sections(
                     )
                 )
         elif name == "ADMIN":
-            lines.extend(
-                _render_callout(
-                    "🔐 Tools & Admin",
-                    "[!warning]- Sensitive/Administrative",
-                    items,
-                    cfg,
-                    badge_cfg,
-                    ordering_cfg,
-                    admin=True,
+            if should_render:
+                lines.extend(
+                    _render_callout(
+                        "🔐 Tools & Admin",
+                        "[!warning]- Sensitive/Administrative",
+                        items,
+                        cfg,
+                        badge_cfg,
+                        ordering_cfg,
+                        admin=True,
+                    )
                 )
-            )
         if len(lines) > start_len:
             lines.append("")
     if lines and lines[-1] == "":
@@ -1312,23 +1321,38 @@ def _validate_coverage(items: List[dict], buckets: Dict[str, List[dict]]) -> Non
         raise ValueError(f"Not all items assigned to a bucket: {missing}")
 
 
-def _validate_rendered(md: str, buckets: Dict[str, List[dict]]) -> None:
-    # Section order
+def _validate_rendered(md: str, buckets: Dict[str, List[dict]], cfg: Dict) -> None:
+    include_empty = bool(cfg.get("includeEmptySections", False))
+    include_quick = bool(cfg.get("includeQuickWins", True))
+
+    ordered_sections = [
+        ("## 🔥 High Priority", "HIGH"),
+        ("## 📺 Media Queue", "MEDIA"),
+        ("## 🏗 Repos", "REPOS"),
+        ("## 🧰 Tools", "TOOLS"),
+        ("## 📚 Docs & Reading", "DOCS"),
+        ("## 🧹 Quick Wins / Low Effort", "QUICK"),
+        ("## 🗃 Backlog", "BACKLOG"),
+        ("## 🔐 Tools & Admin", "ADMIN"),
+    ]
+
     positions = []
-    for header in ["## 🔥 High Priority", "## 📺 Media Queue", "## 🏗 Repos", "## 🧰 Tools", "## 📚 Docs & Reading"]:
+    for header, bucket_name in ordered_sections:
+        items = buckets.get(bucket_name, [])
+        should_render = bool(items) or include_empty
+        if bucket_name == "QUICK":
+            should_render = include_quick and should_render
+        elif bucket_name == "BACKLOG":
+            should_render = bool(items)
+
+        if not should_render:
+            continue
+
         pos = md.find(header)
         if pos == -1:
             raise ValueError(f"Missing section {header}")
         positions.append(pos)
-    # Quick Wins / Low Effort optional but included by default
-    if "## 🧹 Quick Wins / Low Effort" in md:
-        positions.append(md.find("## 🧹 Quick Wins / Low Effort"))
-    if "## 🗃 Backlog" in md:
-        positions.append(md.find("## 🗃 Backlog"))
-    admin_pos = md.find("## 🔐 Tools & Admin")
-    if admin_pos == -1:
-        raise ValueError("Missing section Admin")
-    positions.append(admin_pos)
+
     if positions != sorted(positions):
         raise ValueError("Section order incorrect")
 

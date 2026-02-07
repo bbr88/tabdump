@@ -22,14 +22,6 @@ Deduped: 1
 > ### youtube.com
 > - [ ] [Design a Distributed Rate Limiter...](https://www.youtube.com/watch?v=MIJFyUPG4Z4) · video
 
-## 🏗 Repos
-> [!code]- View Repositories (0)
-> _(empty)_
-
-## 🧰 Tools
-> [!note]- Expand Tools (0)
-> _(empty)_
-
 ## 📚 Docs & Reading
 > [!info]- Reading Queue (3)
 > ### example.org
@@ -38,10 +30,6 @@ Deduped: 1
 > - [ ] [Microsoft Word - vldb-07-final.doc](http://nms.csail.mit.edu/~stavros/pubs/hstore.pdf) · paper
 > ### pgbouncer.org
 > - [ ] [PgBouncer config](https://www.pgbouncer.org/config.html) · docs
-
-## 🧹 Quick Wins / Low Effort
-> [!tip]- Expand Quick Wins / Low Effort (0)
-> _(empty)_
 
 ## 🔐 Tools & Admin
 > [!warning]- Sensitive/Administrative (2)

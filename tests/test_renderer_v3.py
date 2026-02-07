@@ -289,13 +289,18 @@ def test_quickwins_leisure_4chan():
 def test_quickwins_no_best_vs_keyword_only():
     payload = json.loads(FIXTURE_QW_NO_BEST_VS_JSON.read_text())
     md = render_markdown(payload)
-    quick = _section(md, "## 🧹 Quick Wins / Low Effort")
-    # Fallback misc should be excluded from low-effort quick wins.
-    assert "### Shopping" not in quick
-    assert "### Leisure" not in quick
-    assert "why:fallback_misc" not in quick
+    # Empty quick wins section should be hidden by default.
+    assert "## 🧹 Quick Wins / Low Effort" not in md
+    assert "why:fallback_misc" not in md
     backlog = _section(md, "## 🗃 Backlog")
     assert "best laptops vs tablets 2026" in backlog
+
+
+def test_include_empty_sections_opt_in():
+    payload = json.loads(FIXTURE_QW_NO_BEST_VS_JSON.read_text())
+    md = render_markdown(payload, cfg={"includeEmptySections": True})
+    assert "## 🧹 Quick Wins / Low Effort" in md
+    assert "> _(empty)_" in md
 
 
 def test_suffix_match_helper():
