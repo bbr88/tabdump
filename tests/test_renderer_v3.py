@@ -136,7 +136,7 @@ def test_admin_auth_false_positive_not_classified():
 def test_docs_no_intent_subgrouping():
     payload = json.loads(FIXTURE_DOCS_SUBGROUP_JSON.read_text())
     md = render_markdown(payload)
-    docs_section = _section(md, "## 📚 Docs & Reading")
+    docs_section = _section(md, "## 📚 Read Later")
     assert "#### " not in docs_section
     assert "Implement feature X" in docs_section
     assert "Debugging common issues" in docs_section
@@ -159,7 +159,7 @@ def test_docs_no_domain_numbering_even_when_many_domains():
         ],
     }
     md = render_markdown(payload)
-    docs = _section(md, "## 📚 Docs & Reading")
+    docs = _section(md, "## 📚 Read Later")
     assert "> ### a.com" in docs
     assert "> ### f.com" in docs
     assert "[01]" not in docs
@@ -179,7 +179,7 @@ def test_docs_no_item_numbering_even_when_entries_gte_5():
         ],
     }
     md = render_markdown(payload)
-    docs = _section(md, "## 📚 Docs & Reading")
+    docs = _section(md, "## 📚 Read Later")
     assert "> ### x.com" in docs
     assert "> - [ ] [Alpha]" in docs
     assert "> - [ ] [Beta]" in docs
@@ -206,7 +206,7 @@ def test_docs_large_section_summary_and_singleton_split():
         ],
     }
     md = render_markdown(payload)
-    docs = _section(md, "## 📚 Docs & Reading")
+    docs = _section(md, "## 📚 Read Later")
     assert "> [!info]- Main Sources (4)" in docs
     assert "_8 total = 4 from main sources + 4 more links_" not in docs
     assert "> #### Main Sources (4)" not in docs
@@ -240,7 +240,7 @@ def test_docs_oneoffs_grouped_by_kind_when_many_oneoff_domains():
         ],
     }
     md = render_markdown(payload)
-    docs = _section(md, "## 📚 Docs & Reading")
+    docs = _section(md, "## 📚 Read Later")
     assert "> [!summary]- More Links (" in docs
     assert "> #### Docs (" in docs
     assert "> #### Articles (" in docs
@@ -251,7 +251,7 @@ def test_docs_oneoffs_grouped_by_kind_when_many_oneoff_domains():
 def test_admin_compact_bullets_default():
     payload = _load_payload()
     md = render_markdown(payload)
-    admin_section = _section(md, "## 🔐 Tools & Admin")
+    admin_section = _section(md, "## 🔐 Accounts & Settings")
     # Should show admin badge and no dom:: chips
     for line in admin_section.splitlines():
         if line.strip().startswith("> - [ ]"):
@@ -262,7 +262,7 @@ def test_admin_compact_bullets_default():
 def test_docs_denoise_omit_dom_and_kind():
     payload = json.loads(FIXTURE_DOCS_DENOISE_JSON.read_text())
     md = render_markdown(payload)
-    docs_section = _section(md, "## 📚 Docs & Reading")
+    docs_section = _section(md, "## 📚 Read Later")
     bullet_lines = [l for l in docs_section.splitlines() if l.strip().startswith("> - [ ]")]
     assert bullet_lines
     for line in bullet_lines:
@@ -273,7 +273,7 @@ def test_docs_denoise_omit_dom_and_kind():
 def test_quickwins_suffix_matching_disneyplus():
     payload = json.loads(FIXTURE_QW_SUFFIX_JSON.read_text())
     md = render_markdown(payload)
-    quick = _section(md, "## 🧹 Quick Wins / Low Effort")
+    quick = _section(md, "## 🧹 Easy Tasks")
     assert "### Leisure" in quick
     assert "why:" not in quick
 
@@ -281,7 +281,7 @@ def test_quickwins_suffix_matching_disneyplus():
 def test_quickwins_leisure_4chan():
     payload = json.loads(FIXTURE_QW_4CHAN_JSON.read_text())
     md = render_markdown(payload)
-    quick = _section(md, "## 🧹 Quick Wins / Low Effort")
+    quick = _section(md, "## 🧹 Easy Tasks")
     assert "### Leisure" in quick
     assert "why:" not in quick
 
@@ -290,16 +290,16 @@ def test_quickwins_no_best_vs_keyword_only():
     payload = json.loads(FIXTURE_QW_NO_BEST_VS_JSON.read_text())
     md = render_markdown(payload)
     # Empty quick wins section should be hidden by default.
-    assert "## 🧹 Quick Wins / Low Effort" not in md
+    assert "## 🧹 Easy Tasks" not in md
     assert "why:fallback_misc" not in md
-    backlog = _section(md, "## 🗃 Backlog")
+    backlog = _section(md, "## 🗃 Maybe Later")
     assert "best laptops vs tablets 2026" in backlog
 
 
 def test_include_empty_sections_opt_in():
     payload = json.loads(FIXTURE_QW_NO_BEST_VS_JSON.read_text())
     md = render_markdown(payload, cfg={"includeEmptySections": True})
-    assert "## 🧹 Quick Wins / Low Effort" in md
+    assert "## 🧹 Easy Tasks" in md
     assert "> _(empty)_" in md
 
 
@@ -312,7 +312,7 @@ def test_suffix_match_helper():
 def test_docs_dom_chip_suppression_and_paper_kind():
     payload = _load_payload()
     md = render_markdown(payload)
-    docs_section = _section(md, "## 📚 Docs & Reading")
+    docs_section = _section(md, "## 📚 Read Later")
     # paper retains kind, but no dom chip
     paper_line = [l for l in docs_section.splitlines() if "hstore.pdf" in l][0]
     assert " · paper" in paper_line
@@ -322,7 +322,7 @@ def test_docs_dom_chip_suppression_and_paper_kind():
 def test_media_queue_omits_dom_chip():
     payload = _load_payload()
     md = render_markdown(payload)
-    media_section = _section(md, "## 📺 Media Queue")
+    media_section = _section(md, "## 📺 Watch / Listen Later")
     media_lines = [l for l in media_section.splitlines() if l.strip().startswith("> - [ ]")]
     assert media_lines
     assert all("dom::" not in l for l in media_lines)
@@ -357,7 +357,7 @@ def test_domain_ordering_and_item_alpha():
         ],
     }
     md = render_markdown(payload)
-    docs = _section(md, "## 📚 Docs & Reading")
+    docs = _section(md, "## 📚 Read Later")
     headers = re.findall(r"> ### ([^\n]+)", docs)
     assert headers[:3] == ["a.com", "b.com", "c.com"]
     # a.com items should be alpha by title
@@ -388,7 +388,7 @@ def test_keyword_exclusions_domain_wins():
         ],
     }
     md = render_markdown(payload)
-    quick = _section(md, "## 🧹 Quick Wins / Low Effort")
+    quick = _section(md, "## 🧹 Easy Tasks")
     assert "### Shopping" in quick
     assert "why:" not in quick
 
@@ -401,7 +401,7 @@ def test_quickwins_reason_kept_in_state_not_rendered():
     assert any((it.get("quick_why") or "").startswith("leisure_") for it in quick_items)
 
     md = render_markdown(payload)
-    quick = _section(md, "## 🧹 Quick Wins / Low Effort")
+    quick = _section(md, "## 🧹 Easy Tasks")
     assert "why:" not in quick
 
 

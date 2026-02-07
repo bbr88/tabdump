@@ -11,31 +11,7 @@ Deduped: 0
 # 📑 Tab Dump: 2026-02-06
 > **Focus:** Mostly browsing across boards.4chan.org.
 
-## 🔥 High Priority
-*Auto-selected “do next” items.*
-_(empty)_
-
-## 📺 Media Queue
-> [!video]- Expand Watch List (0)
-> _(empty)_
-
-## 🏗 Repos
-> [!code]- View Repositories (0)
-> _(empty)_
-
-## 🧰 Tools
-> [!note]- Expand Tools (0)
-> _(empty)_
-
-## 📚 Docs & Reading
-> [!info]- View Documentation (0)
-> _(empty)_
-
-## 🧹 Quick Wins
-> [!tip]- Expand Quick Wins (1)
+## 🧹 Easy Tasks
+> [!tip]- Expand Easy Tasks (1)
 > ### Leisure
-> - [ ] **Interesting thread** ([Link](https://boards.4chan.org/g/thread/123)) · misc · why:leisure_domain
-
-## 🔐 Tools & Admin
-> [!warning]- Sensitive/Administrative (0)
-> _(empty)_
+> - [ ] [Interesting thread](https://boards.4chan.org/g/thread/123) · misc

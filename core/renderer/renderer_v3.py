@@ -788,8 +788,8 @@ def _render_sections(
             if should_render:
                 lines.extend(
                     _render_callout(
-                        "📺 Media Queue",
-                        "[!video]- Expand Watch List",
+                        "📺 Watch / Listen Later",
+                        "[!video]- Expand Watch / Listen Later",
                         items,
                         cfg,
                         badge_cfg,
@@ -824,8 +824,8 @@ def _render_sections(
             if should_render:
                 lines.extend(
                     _render_callout(
-                        "🧰 Tools",
-                        "[!note]- Expand Tools",
+                        "🧰 Apps & Utilities",
+                        "[!note]- Expand Apps & Utilities",
                         items,
                         cfg,
                         badge_cfg,
@@ -836,8 +836,8 @@ def _render_sections(
             if should_render:
                 lines.extend(
                     _render_docs_callout(
-                        "📚 Docs & Reading",
-                        "[!info]- Reading Queue",
+                        "📚 Read Later",
+                        "[!info]- Read Later",
                         items,
                         cfg,
                         badge_cfg,
@@ -848,8 +848,8 @@ def _render_sections(
             if cfg.get("includeQuickWins", True) and should_render:
                 lines.extend(
                     _render_quick_callout(
-                        "🧹 Quick Wins / Low Effort",
-                        "[!tip]- Expand Quick Wins / Low Effort",
+                        "🧹 Easy Tasks",
+                        "[!tip]- Expand Easy Tasks",
                         items,
                         cfg,
                         badge_cfg,
@@ -862,8 +862,8 @@ def _render_sections(
             if items:
                 lines.extend(
                     _render_callout(
-                        "🗃 Backlog",
-                        "[!quote]- Expand Backlog",
+                        "🗃 Maybe Later",
+                        "[!quote]- Expand Maybe Later",
                         items,
                         cfg,
                         badge_cfg,
@@ -874,8 +874,8 @@ def _render_sections(
             if should_render:
                 lines.extend(
                     _render_callout(
-                        "🔐 Tools & Admin",
-                        "[!warning]- Sensitive/Administrative",
+                        "🔐 Accounts & Settings",
+                        "[!warning]- Account/Settings Access",
                         items,
                         cfg,
                         badge_cfg,
@@ -891,7 +891,7 @@ def _render_sections(
 
 
 def _render_high(items: List[dict], cfg: Dict, badge_cfg: Dict) -> List[str]:
-    lines = ["## 🔥 High Priority", "*Auto-selected “do next” items.*"]
+    lines = ["## 🔥 Start Here", "*Auto-selected “do next” items.*"]
     if not items:
         lines.append(cfg.get("emptyBucketMessage", "_(empty)_"))
         return lines
@@ -1417,15 +1417,15 @@ def _validate_rendered(md: str, buckets: Dict[str, List[dict]], cfg: Dict) -> No
     include_quick = bool(cfg.get("includeQuickWins", True))
 
     ordered_sections = [
-        ("## 🔥 High Priority", "HIGH"),
-        ("## 📺 Media Queue", "MEDIA"),
+        ("## 🔥 Start Here", "HIGH"),
+        ("## 📺 Watch / Listen Later", "MEDIA"),
         ("## 🏗 Repos", "REPOS"),
         ("## 🗂 Projects", "PROJECTS"),
-        ("## 🧰 Tools", "TOOLS"),
-        ("## 📚 Docs & Reading", "DOCS"),
-        ("## 🧹 Quick Wins / Low Effort", "QUICK"),
-        ("## 🗃 Backlog", "BACKLOG"),
-        ("## 🔐 Tools & Admin", "ADMIN"),
+        ("## 🧰 Apps & Utilities", "TOOLS"),
+        ("## 📚 Read Later", "DOCS"),
+        ("## 🧹 Easy Tasks", "QUICK"),
+        ("## 🗃 Maybe Later", "BACKLOG"),
+        ("## 🔐 Accounts & Settings", "ADMIN"),
     ]
 
     positions = []
