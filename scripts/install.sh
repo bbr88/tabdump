@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
+umask 077
 
 CONFIG_DIR="${HOME}/Library/Application Support/TabDump"
 CONFIG_PATH="${CONFIG_DIR}/config.json"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+MANIFEST_PATH="${ROOT_DIR}/scripts/runtime-manifest.sha256"
 ENGINE_SOURCE="${ROOT_DIR}/macos/configurable-tabDump.scpt"
 ENGINE_DEST="${CONFIG_DIR}/TabDump.scpt"
 CORE_DIR="${ROOT_DIR}/core"
@@ -26,11 +28,27 @@ PYTHON_BIN="$(command -v python3 || true)"
 KEYCHAIN_SERVICE="${TABDUMP_KEYCHAIN_SERVICE:-TabDump}"
 KEYCHAIN_ACCOUNT="${TABDUMP_KEYCHAIN_ACCOUNT:-openai}"
 
+verify_runtime_manifest() {
+  if [[ ! -f "${MANIFEST_PATH}" ]]; then
+    echo "Runtime manifest not found: ${MANIFEST_PATH}"
+    exit 1
+  fi
+  if ! command -v shasum >/dev/null 2>&1; then
+    echo "shasum is required to verify runtime manifest integrity."
+    exit 1
+  fi
+  if ! (cd "${ROOT_DIR}" && shasum -a 256 -c "${MANIFEST_PATH}"); then
+    echo "Runtime manifest verification failed. Aborting install."
+    exit 1
+  fi
+}
+
 echo "TabDump installer"
 if [[ -z "${PYTHON_BIN}" ]]; then
   echo "python3 not found on PATH. Please install Python 3 and retry."
   exit 1
 fi
+verify_runtime_manifest
 
 echo "This will create/update:"
 echo "  - ${ENGINE_DEST}"
@@ -78,7 +96,9 @@ cp -f "${MONITOR_SOURCE}" "${MONITOR_DEST}"
 cp -f "${POSTPROCESS_SOURCE}" "${POSTPROCESS_DEST}"
 cp -f "${CORE_DIR}/__init__.py" "${CORE_PKG_DEST}/__init__.py"
 cp -f "${RENDERER_DIR}"/*.py "${RENDERER_DEST_DIR}/"
-chmod +x "${MONITOR_DEST}" "${POSTPROCESS_DEST}"
+chmod 700 "${CONFIG_DIR}" "${CORE_PKG_DEST}" "${RENDERER_DEST_DIR}" "${LOG_DIR}"
+chmod 600 "${ENGINE_DEST}" "${MONITOR_DEST}" "${POSTPROCESS_DEST}" "${CORE_PKG_DEST}/__init__.py"
+chmod 600 "${RENDERER_DEST_DIR}"/*.py
 
 VAULT_INBOX="${VAULT_INBOX}" CONFIG_PATH="${CONFIG_PATH}" python3 - <<'PY'
 import json, os
@@ -117,14 +137,14 @@ data = {
   "llmRedact": True,
   "llmRedactQuery": True,
   "llmTitleMax": 200,
-  "maxItems": 0,
-  "requireProvenance": True
+  "maxItems": 0
 }
 
 with open(config_path, "w", encoding="utf-8") as f:
   json.dump(data, f, indent=2)
   f.write("\n")
 PY
+chmod 600 "${CONFIG_PATH}"
 
 read -r -p "Set dryRun=false now? (y/N): " SET_DRY_RUN
 if [[ "${SET_DRY_RUN}" == "y" || "${SET_DRY_RUN}" == "Y" ]]; then
@@ -140,15 +160,13 @@ with open(config_path, "w", encoding="utf-8") as f:
 PY
 fi
 
-OPENAI_API_KEY=""
 echo
 echo "LLM tagging requires an OpenAI API key."
 echo "Choose storage:"
 echo "  1) Keychain (recommended)"
-echo "  2) LaunchAgent plist"
-echo "  3) I'll set OPENAI_API_KEY myself"
-echo "  4) Skip for now"
-read -r -p "Select [1-4] (default 1): " KEY_CHOICE
+echo "  2) I'll set OPENAI_API_KEY myself (env fallback)"
+echo "  3) Skip for now"
+read -r -p "Select [1-3] (default 1): " KEY_CHOICE
 if [[ -z "${KEY_CHOICE}" ]]; then
   KEY_CHOICE="1"
 fi
@@ -181,32 +199,9 @@ case "${KEY_CHOICE}" in
     ;;
   2)
     echo ""
-    echo "OpenAI key setup (LaunchAgent plist)"
-    echo "Paste your OpenAI API key (input hidden), then press Enter:"
-    read -rs OPENAI_API_KEY_INPUT
-    echo ""
-    if [[ -n "${OPENAI_API_KEY_INPUT}" ]]; then
-      OPENAI_API_KEY="${OPENAI_API_KEY_INPUT}"
-      echo "✅ Will store OpenAI key in LaunchAgent plist."
-    else
-      echo "ℹ️  Skipped (empty input)"
-    fi
-    if security find-generic-password -s "${KEYCHAIN_SERVICE}" -a "${KEYCHAIN_ACCOUNT}" >/dev/null 2>&1; then
-      echo "ℹ️  Note: a Keychain item exists and will take precedence over LaunchAgent/env."
-      read -r -p "Delete existing Keychain item? (y/N): " DELETE_KEYCHAIN
-      if [[ "${DELETE_KEYCHAIN}" == "y" || "${DELETE_KEYCHAIN}" == "Y" ]]; then
-        security delete-generic-password -s "${KEYCHAIN_SERVICE}" -a "${KEYCHAIN_ACCOUNT}" >/dev/null 2>&1 || true
-        echo "✅ Deleted Keychain item."
-      else
-        echo "ℹ️  Keeping Keychain item; it will be used first."
-      fi
-    fi
-    ;;
-  3)
-    echo ""
     echo "ℹ️  Skipping key storage."
     echo "   Set OPENAI_API_KEY in your environment before running."
-    echo "   (If you want it in the LaunchAgent plist, choose option 2.)"
+    echo "   (Runtime resolution order is Keychain, then OPENAI_API_KEY env var.)"
     if security find-generic-password -s "${KEYCHAIN_SERVICE}" -a "${KEYCHAIN_ACCOUNT}" >/dev/null 2>&1; then
       echo "ℹ️  Note: a Keychain item exists and will take precedence over env vars."
       read -r -p "Delete existing Keychain item? (y/N): " DELETE_KEYCHAIN
@@ -218,7 +213,7 @@ case "${KEY_CHOICE}" in
       fi
     fi
     ;;
-  4)
+  3)
     echo ""
     echo "ℹ️  Skipping OpenAI key setup."
     ;;
@@ -283,13 +278,6 @@ cat > "${LAUNCH_AGENT_PATH}" <<PLIST
     <string>${KEYCHAIN_ACCOUNT}</string>
 PLIST
 
-if [[ -n "${OPENAI_API_KEY}" ]]; then
-  cat >> "${LAUNCH_AGENT_PATH}" <<PLIST
-    <key>OPENAI_API_KEY</key>
-    <string>${OPENAI_API_KEY}</string>
-PLIST
-fi
-
 cat >> "${LAUNCH_AGENT_PATH}" <<PLIST
   </dict>
   <key>StartInterval</key>
@@ -303,6 +291,7 @@ cat >> "${LAUNCH_AGENT_PATH}" <<PLIST
 </dict>
 </plist>
 PLIST
+chmod 600 "${LAUNCH_AGENT_PATH}"
 
 if command -v launchctl >/dev/null 2>&1; then
   set +e

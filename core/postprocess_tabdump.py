@@ -11,7 +11,7 @@ Pipeline:
 
 import json
 import os
-import plistlib
+import ipaddress
 import re
 import subprocess
 import sys
@@ -39,7 +39,6 @@ if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 
 from core.renderer.renderer_v3 import render_markdown  # type: ignore
-LINK_RE = re.compile(r"^-\s+\[(?P<title>[^\]]+)\]\((?P<url>[^\)]+)\)\s*$")
 TRACKING_PARAMS = {
     "fbclid",
     "gclid",
@@ -59,12 +58,34 @@ REDACT_LLM = os.environ.get("TABDUMP_LLM_REDACT", "1").strip().lower() not in {"
 REDACT_QUERY = os.environ.get("TABDUMP_LLM_REDACT_QUERY", "1").strip().lower() not in {"0", "false", "no"}
 MAX_LLM_TITLE = int(os.environ.get("TABDUMP_LLM_TITLE_MAX", "200") or 0)
 MAX_ITEMS = int(os.environ.get("TABDUMP_MAX_ITEMS", "0") or 0)
-REQUIRE_PROVENANCE = os.environ.get("TABDUMP_REQUIRE_PROVENANCE", "0").strip().lower() not in {"0", "false", "no"}
 KEYCHAIN_SERVICE = os.environ.get("TABDUMP_KEYCHAIN_SERVICE", "TabDump")
 KEYCHAIN_ACCOUNT = os.environ.get("TABDUMP_KEYCHAIN_ACCOUNT", "openai")
-LAUNCH_LABEL = os.environ.get("TABDUMP_LAUNCH_LABEL", "io.orc-visioner.tabdump.monitor")
-LAUNCH_AGENT_PLIST = os.environ.get(
-    "TABDUMP_LAUNCH_AGENT_PLIST", f"~/Library/LaunchAgents/{LAUNCH_LABEL}.plist"
+SENSITIVE_HOSTS = {
+    "accounts.google.com",
+    "auth.openai.com",
+    "platform.openai.com",
+}
+AUTH_PATH_HINTS = (
+    "/login",
+    "/signin",
+    "/sign-in",
+    "/oauth",
+    "/sso",
+    "/session",
+    "/api-keys",
+    "/credentials",
+    "/token",
+)
+SENSITIVE_QUERY_KEYS = (
+    "token",
+    "secret",
+    "api_key",
+    "apikey",
+    "session",
+    "code",
+    "sig",
+    "signature",
+    "password",
 )
 
 
@@ -158,6 +179,81 @@ class Item:
     browser: Optional[str]
 
 
+def _parse_markdown_link_line(line: str) -> Optional[Tuple[str, str]]:
+    s = line.strip()
+    if not s.startswith("- ["):
+        return None
+
+    i = 3
+    title_chars: List[str] = []
+    escaped = False
+    while i < len(s):
+        ch = s[i]
+        if escaped:
+            title_chars.append(ch)
+            escaped = False
+            i += 1
+            continue
+        if ch == "\\":
+            escaped = True
+            i += 1
+            continue
+        if ch == "]":
+            break
+        title_chars.append(ch)
+        i += 1
+    if i >= len(s) or s[i] != "]":
+        return None
+    i += 1
+
+    while i < len(s) and s[i].isspace():
+        i += 1
+    if i >= len(s) or s[i] != "(":
+        return None
+    i += 1
+
+    depth = 1
+    url_chars: List[str] = []
+    escaped = False
+    while i < len(s):
+        ch = s[i]
+        if escaped:
+            url_chars.append(ch)
+            escaped = False
+            i += 1
+            continue
+        if ch == "\\":
+            escaped = True
+            i += 1
+            continue
+        if ch == "(":
+            depth += 1
+            url_chars.append(ch)
+            i += 1
+            continue
+        if ch == ")":
+            depth -= 1
+            if depth == 0:
+                i += 1
+                break
+            url_chars.append(ch)
+            i += 1
+            continue
+        url_chars.append(ch)
+        i += 1
+
+    if depth != 0:
+        return None
+    if s[i:].strip():
+        return None
+
+    title = "".join(title_chars).strip()
+    url = "".join(url_chars).strip()
+    if not title or not url:
+        return None
+    return title, url
+
+
 def extract_items(md: str) -> List[Item]:
     items: List[Item] = []
     current_browser: Optional[str] = None
@@ -172,11 +268,10 @@ def extract_items(md: str) -> List[Item]:
         if line.startswith("### "):
             # ignore window headings
             continue
-        m = LINK_RE.match(line)
-        if not m:
+        parsed = _parse_markdown_link_line(line)
+        if parsed is None:
             continue
-        title = m.group("title").strip()
-        url = m.group("url").strip()
+        title, url = parsed
         clean_url = normalize_url(url)
         items.append(
             Item(
@@ -214,28 +309,10 @@ def _key_from_keychain() -> Optional[str]:
     return value or None
 
 
-def _key_from_launch_agent_plist() -> Optional[str]:
-    plist_path = Path(LAUNCH_AGENT_PLIST).expanduser()
-    if not plist_path.exists():
-        return None
-    try:
-        with plist_path.open("rb") as f:
-            data = plistlib.load(f)
-    except Exception:
-        return None
-    env = data.get("EnvironmentVariables")
-    if isinstance(env, dict):
-        value = env.get("OPENAI_API_KEY")
-        if value:
-            return str(value).strip() or None
-    return None
-
-
 def resolve_openai_api_key() -> Optional[str]:
-    for getter in (_key_from_keychain, _key_from_launch_agent_plist):
-        value = getter()
-        if value:
-            return value
+    value = _key_from_keychain()
+    if value:
+        return value
     value = os.environ.get("OPENAI_API_KEY")
     if value:
         value = value.strip()
@@ -245,11 +322,9 @@ def resolve_openai_api_key() -> Optional[str]:
 def openai_chat_json(system: str, user: str, model: Optional[str] = None) -> dict:
     api_key = resolve_openai_api_key()
     if not api_key:
-        plist_path = str(Path(LAUNCH_AGENT_PLIST).expanduser())
         raise RuntimeError(
             "OpenAI API key not found. Checked: "
             f"Keychain (service={KEYCHAIN_SERVICE}, account={KEYCHAIN_ACCOUNT}), "
-            f"LaunchAgent plist ({plist_path}), "
             "env OPENAI_API_KEY."
         )
 
@@ -381,6 +456,67 @@ def _call_with_retries(system: str, user: str, tries: int = 3, backoff_sec: floa
     raise RuntimeError("LLM call failed with unknown error")
 
 
+def _is_private_or_loopback_host(host: str) -> bool:
+    host = host.strip().lower()
+    if host in {"localhost", "127.0.0.1", "::1"}:
+        return True
+    if host.endswith(".local"):
+        return True
+    try:
+        ip = ipaddress.ip_address(host)
+    except ValueError:
+        return False
+    return bool(ip.is_private or ip.is_loopback or ip.is_link_local)
+
+
+def _is_sensitive_url(url: str) -> bool:
+    try:
+        parsed = urllib.parse.urlsplit(url)
+    except Exception:
+        return True
+
+    scheme = (parsed.scheme or "").lower()
+    if scheme not in {"http", "https"}:
+        return True
+
+    host = (parsed.hostname or "").lower()
+    if not host:
+        return True
+    if host in SENSITIVE_HOSTS:
+        return True
+    if _is_private_or_loopback_host(host):
+        return True
+
+    lower_url = url.lower()
+    if any(hint in lower_url for hint in AUTH_PATH_HINTS):
+        return True
+
+    for key, _ in urllib.parse.parse_qsl(parsed.query, keep_blank_values=True):
+        if key.strip().lower() in SENSITIVE_QUERY_KEYS:
+            return True
+    return False
+
+
+def _default_kind_action(url: str) -> Tuple[str, str]:
+    lower_url = url.lower()
+    try:
+        parsed = urllib.parse.urlsplit(url)
+    except Exception:
+        return "internal", "ignore"
+    scheme = (parsed.scheme or "").lower()
+    host = (parsed.hostname or "").lower()
+    if not host:
+        return "internal", "ignore"
+
+    if scheme == "file" or _is_private_or_loopback_host(host):
+        return "local", "ignore"
+    if any(hint in lower_url for hint in AUTH_PATH_HINTS) or host in SENSITIVE_HOSTS:
+        return "auth", "ignore"
+    if scheme not in {"http", "https"}:
+        return "internal", "ignore"
+    return "misc", "triage"
+
+
 def build_clean_note(src_path: Path, items: List[Item], dump_id: Optional[str] = None) -> Tuple[str, dict]:
     # Ask LLM for enrichment
     system = (
@@ -391,9 +527,10 @@ def build_clean_note(src_path: Path, items: List[Item], dump_id: Optional[str] =
     cls_map: Dict[int, dict] = {}
     indexed_items = list(enumerate(items))
     url_to_idx = {it.norm_url: idx for idx, it in indexed_items}
-    indexed_for_cls = indexed_items
-    if MAX_ITEMS > 0 and len(indexed_items) > MAX_ITEMS:
-        indexed_for_cls = indexed_items[:MAX_ITEMS]
+    sensitive_items: Dict[int, bool] = {idx: _is_sensitive_url(it.clean_url) for idx, it in indexed_items}
+    indexed_for_cls = [(idx, it) for idx, it in indexed_items if not sensitive_items[idx]]
+    if MAX_ITEMS > 0 and len(indexed_for_cls) > MAX_ITEMS:
+        indexed_for_cls = indexed_for_cls[:MAX_ITEMS]
     chunk_size = int(os.environ.get("TABDUMP_CLASSIFY_CHUNK", "30"))
     for chunk in _chunked(indexed_for_cls, chunk_size):
         lines = []
@@ -443,10 +580,15 @@ def build_clean_note(src_path: Path, items: List[Item], dump_id: Optional[str] =
     enriched: List[dict] = []
     for idx, it in indexed_items:
         cls = cls_map.get(idx, {})
-        topic = _safe_topic(cls.get("topic"), it.domain)
-        kind = _safe_kind(cls.get("kind"))
-        action = _safe_action(cls.get("action"))
-        score = _safe_score(cls.get("score"))
+        if sensitive_items.get(idx):
+            kind, action = _default_kind_action(it.clean_url)
+            topic = _safe_topic(None, it.domain)
+            score = 3
+        else:
+            topic = _safe_topic(cls.get("topic"), it.domain)
+            kind = _safe_kind(cls.get("kind"))
+            action = _safe_action(cls.get("action"))
+            score = _safe_score(cls.get("score"))
 
         entry = {
             "title": it.title,
@@ -493,9 +635,8 @@ def main(argv: List[str]) -> int:
     src = Path(argv[1]).expanduser().resolve()
     md = src.read_text(encoding="utf-8", errors="replace")
     dump_id = _extract_frontmatter_value(src, "tabdump_id")
-    if REQUIRE_PROVENANCE and not dump_id:
-        print("Missing tabdump_id frontmatter; refusing to postprocess (set TABDUMP_REQUIRE_PROVENANCE=0 to override).",
-              file=sys.stderr)
+    if not dump_id:
+        print("Missing tabdump_id frontmatter; refusing to postprocess.", file=sys.stderr)
         return 4
     items = extract_items(md)
     if not items:

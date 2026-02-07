@@ -14,12 +14,13 @@ Flow:
 
 Env:
 - OpenAI API key is required for tagging. It is resolved by postprocess_tabdump.py
-  (Keychain -> LaunchAgent plist -> OPENAI_API_KEY env var).
+  (Keychain -> OPENAI_API_KEY env var).
 """
 
 import fcntl
 import json
 import os
+import stat
 import subprocess
 import sys
 import time
@@ -100,6 +101,29 @@ def parse_args(argv: List[str]) -> None:
         raise SystemExit(f"unknown args: {' '.join(rest)}")
 
 
+def _assert_secure_path(path: Path, name: str) -> None:
+    st = path.stat()
+    if st.st_uid != os.getuid():
+        raise PermissionError(f"{name} owner mismatch: {path}")
+    if st.st_mode & (stat.S_IWGRP | stat.S_IWOTH):
+        raise PermissionError(f"{name} is group/world writable: {path}")
+
+
+def _verify_runtime_integrity(cfg_path: Path) -> None:
+    must_check = [
+        (cfg_path, "config"),
+        (Path(__file__).resolve(), "monitor script"),
+        (POSTPROCESS, "postprocess script"),
+    ]
+    renderer_root = HERE / "core" / "renderer"
+    if renderer_root.exists():
+        must_check.append((renderer_root, "renderer package"))
+    for path, name in must_check:
+        if not path.exists():
+            raise FileNotFoundError(f"Missing required {name}: {path}")
+        _assert_secure_path(path, name)
+
+
 def run_tabdump_app() -> None:
     """Launch TabDump in a TCC-friendly way.
 
@@ -136,6 +160,7 @@ def main() -> int:
     parse_args(sys.argv)
     _lock_fh = acquire_lock()
     log("start")
+    _verify_runtime_integrity(DEFAULT_CFG)
     cfg = load_cfg(DEFAULT_CFG)
     vault_inbox = Path(cfg["vaultInbox"]).expanduser().resolve()
 
@@ -188,7 +213,6 @@ def main() -> int:
     env["TABDUMP_LLM_REDACT_QUERY"] = _env_bool(cfg.get("llmRedactQuery", True), default=True)
     env["TABDUMP_LLM_TITLE_MAX"] = str(cfg.get("llmTitleMax", 200))
     env["TABDUMP_MAX_ITEMS"] = str(cfg.get("maxItems", 0))
-    env["TABDUMP_REQUIRE_PROVENANCE"] = _env_bool(cfg.get("requireProvenance", True), default=True)
     pp = subprocess.run([sys.executable, str(POSTPROCESS), str(newest)], capture_output=True, text=True, timeout=240,
                         env=env)
     if pp.returncode == 3:

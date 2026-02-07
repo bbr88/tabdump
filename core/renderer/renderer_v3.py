@@ -6,7 +6,7 @@ import datetime as _dt
 import re
 from collections import Counter
 from typing import Dict, Iterable, List, Tuple
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
 # ------------------------------ Config ------------------------------ #
 
@@ -905,9 +905,16 @@ def _escape_md(text: str) -> str:
 def _format_bullet(it: dict, prefix: str, cfg: Dict, badges_cfg: Dict, context: str) -> str:
     display_title = it.get("canonical_title") or it.get("title_render") or it.get("title") or ""
     display_title = _escape_md(display_title)
-    url = it.get("url") or ""
+    url = _escape_md_url(str(it.get("url") or ""))
     badges = _build_badges(it, cfg, badges_cfg, context)
     return f"{prefix}- [ ] **{display_title}** ([Link]({url})) · {badges}"
+
+
+def _escape_md_url(url: str) -> str:
+    if not url:
+        return ""
+    # Encode characters that can break markdown link destinations (notably whitespace and parentheses).
+    return quote(url, safe=":/?#[]@!$&'*+,;=%-._~")
 
 
 def _sort_items_alpha(items: List[dict]) -> List[dict]:

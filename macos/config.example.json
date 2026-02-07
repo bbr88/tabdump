@@ -35,6 +35,5 @@
   "llmRedact": true,
   "llmRedactQuery": true,
   "llmTitleMax": 200,
-  "maxItems": 0,
-  "requireProvenance": true
+  "maxItems": 0
 }
