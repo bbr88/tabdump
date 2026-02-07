@@ -23,6 +23,8 @@ LAUNCH_LABEL="io.orc-visioner.tabdump.monitor"
 LAUNCH_AGENT_PATH="${LAUNCH_AGENT_DIR}/${LAUNCH_LABEL}.plist"
 LOG_DIR="${CONFIG_DIR}/logs"
 PYTHON_BIN="$(command -v python3 || true)"
+KEYCHAIN_SERVICE="${TABDUMP_KEYCHAIN_SERVICE:-TabDump}"
+KEYCHAIN_ACCOUNT="${TABDUMP_KEYCHAIN_ACCOUNT:-openai}"
 
 echo "TabDump installer"
 if [[ -z "${PYTHON_BIN}" ]]; then
@@ -138,7 +140,93 @@ with open(config_path, "w", encoding="utf-8") as f:
 PY
 fi
 
-read -r -p "OpenAI API key for tagging (leave empty to skip): " OPENAI_API_KEY
+OPENAI_API_KEY=""
+echo
+echo "LLM tagging requires an OpenAI API key."
+echo "Choose storage:"
+echo "  1) Keychain (recommended)"
+echo "  2) LaunchAgent plist"
+echo "  3) I'll set OPENAI_API_KEY myself"
+echo "  4) Skip for now"
+read -r -p "Select [1-4] (default 1): " KEY_CHOICE
+if [[ -z "${KEY_CHOICE}" ]]; then
+  KEY_CHOICE="1"
+fi
+
+case "${KEY_CHOICE}" in
+  1)
+    echo ""
+    echo "OpenAI key setup (Keychain)"
+    echo "Paste your OpenAI API key (input hidden), then press Enter:"
+    read -rs OPENAI_API_KEY_INPUT
+    echo ""
+    if [[ -n "${OPENAI_API_KEY_INPUT}" ]]; then
+      if security find-generic-password -s "${KEYCHAIN_SERVICE}" -a "${KEYCHAIN_ACCOUNT}" >/dev/null 2>&1; then
+        read -r -p "Keychain item exists for service=${KEYCHAIN_SERVICE}, account=${KEYCHAIN_ACCOUNT}. Replace? (y/N): " REPLACE_KEY
+        if [[ "${REPLACE_KEY}" == "y" || "${REPLACE_KEY}" == "Y" ]]; then
+          security add-generic-password -s "${KEYCHAIN_SERVICE}" -a "${KEYCHAIN_ACCOUNT}" -w "${OPENAI_API_KEY_INPUT}" -U >/dev/null
+          echo "✅ Stored OpenAI key in Keychain (service=${KEYCHAIN_SERVICE}, account=${KEYCHAIN_ACCOUNT})"
+        else
+          echo "ℹ️  Kept existing Keychain item."
+        fi
+      else
+        security add-generic-password -s "${KEYCHAIN_SERVICE}" -a "${KEYCHAIN_ACCOUNT}" -w "${OPENAI_API_KEY_INPUT}" >/dev/null
+        echo "✅ Stored OpenAI key in Keychain (service=${KEYCHAIN_SERVICE}, account=${KEYCHAIN_ACCOUNT})"
+      fi
+      echo "   To read it later:"
+      echo "   security find-generic-password -s \"${KEYCHAIN_SERVICE}\" -a \"${KEYCHAIN_ACCOUNT}\" -w"
+    else
+      echo "ℹ️  Skipped (empty input)"
+    fi
+    ;;
+  2)
+    echo ""
+    echo "OpenAI key setup (LaunchAgent plist)"
+    echo "Paste your OpenAI API key (input hidden), then press Enter:"
+    read -rs OPENAI_API_KEY_INPUT
+    echo ""
+    if [[ -n "${OPENAI_API_KEY_INPUT}" ]]; then
+      OPENAI_API_KEY="${OPENAI_API_KEY_INPUT}"
+      echo "✅ Will store OpenAI key in LaunchAgent plist."
+    else
+      echo "ℹ️  Skipped (empty input)"
+    fi
+    if security find-generic-password -s "${KEYCHAIN_SERVICE}" -a "${KEYCHAIN_ACCOUNT}" >/dev/null 2>&1; then
+      echo "ℹ️  Note: a Keychain item exists and will take precedence over LaunchAgent/env."
+      read -r -p "Delete existing Keychain item? (y/N): " DELETE_KEYCHAIN
+      if [[ "${DELETE_KEYCHAIN}" == "y" || "${DELETE_KEYCHAIN}" == "Y" ]]; then
+        security delete-generic-password -s "${KEYCHAIN_SERVICE}" -a "${KEYCHAIN_ACCOUNT}" >/dev/null 2>&1 || true
+        echo "✅ Deleted Keychain item."
+      else
+        echo "ℹ️  Keeping Keychain item; it will be used first."
+      fi
+    fi
+    ;;
+  3)
+    echo ""
+    echo "ℹ️  Skipping key storage."
+    echo "   Set OPENAI_API_KEY in your environment before running."
+    echo "   (If you want it in the LaunchAgent plist, choose option 2.)"
+    if security find-generic-password -s "${KEYCHAIN_SERVICE}" -a "${KEYCHAIN_ACCOUNT}" >/dev/null 2>&1; then
+      echo "ℹ️  Note: a Keychain item exists and will take precedence over env vars."
+      read -r -p "Delete existing Keychain item? (y/N): " DELETE_KEYCHAIN
+      if [[ "${DELETE_KEYCHAIN}" == "y" || "${DELETE_KEYCHAIN}" == "Y" ]]; then
+        security delete-generic-password -s "${KEYCHAIN_SERVICE}" -a "${KEYCHAIN_ACCOUNT}" >/dev/null 2>&1 || true
+        echo "✅ Deleted Keychain item."
+      else
+        echo "ℹ️  Keeping Keychain item; it will be used first."
+      fi
+    fi
+    ;;
+  4)
+    echo ""
+    echo "ℹ️  Skipping OpenAI key setup."
+    ;;
+  *)
+    echo ""
+    echo "ℹ️  Invalid choice; skipping OpenAI key setup."
+    ;;
+esac
 
 echo
 echo "Wrote config: ${CONFIG_PATH}"
@@ -187,19 +275,23 @@ cat > "${LAUNCH_AGENT_PATH}" <<PLIST
     <string>${PYTHON_BIN}</string>
     <string>${MONITOR_DEST}</string>
   </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>TABDUMP_KEYCHAIN_SERVICE</key>
+    <string>${KEYCHAIN_SERVICE}</string>
+    <key>TABDUMP_KEYCHAIN_ACCOUNT</key>
+    <string>${KEYCHAIN_ACCOUNT}</string>
 PLIST
 
 if [[ -n "${OPENAI_API_KEY}" ]]; then
   cat >> "${LAUNCH_AGENT_PATH}" <<PLIST
-  <key>EnvironmentVariables</key>
-  <dict>
     <key>OPENAI_API_KEY</key>
     <string>${OPENAI_API_KEY}</string>
-  </dict>
 PLIST
 fi
 
 cat >> "${LAUNCH_AGENT_PATH}" <<PLIST
+  </dict>
   <key>StartInterval</key>
   <integer>${START_INTERVAL}</integer>
   <key>RunAtLoad</key>

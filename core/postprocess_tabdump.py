@@ -11,7 +11,9 @@ Pipeline:
 
 import json
 import os
+import plistlib
 import re
+import subprocess
 import sys
 import time
 import urllib.parse
@@ -58,6 +60,12 @@ REDACT_QUERY = os.environ.get("TABDUMP_LLM_REDACT_QUERY", "1").strip().lower() n
 MAX_LLM_TITLE = int(os.environ.get("TABDUMP_LLM_TITLE_MAX", "200") or 0)
 MAX_ITEMS = int(os.environ.get("TABDUMP_MAX_ITEMS", "0") or 0)
 REQUIRE_PROVENANCE = os.environ.get("TABDUMP_REQUIRE_PROVENANCE", "0").strip().lower() not in {"0", "false", "no"}
+KEYCHAIN_SERVICE = os.environ.get("TABDUMP_KEYCHAIN_SERVICE", "TabDump")
+KEYCHAIN_ACCOUNT = os.environ.get("TABDUMP_KEYCHAIN_ACCOUNT", "openai")
+LAUNCH_LABEL = os.environ.get("TABDUMP_LAUNCH_LABEL", "io.orc-visioner.tabdump.monitor")
+LAUNCH_AGENT_PLIST = os.environ.get(
+    "TABDUMP_LAUNCH_AGENT_PLIST", f"~/Library/LaunchAgents/{LAUNCH_LABEL}.plist"
+)
 
 
 def normalize_url(url: str) -> str:
@@ -183,10 +191,67 @@ def extract_items(md: str) -> List[Item]:
     return items
 
 
+def _key_from_keychain() -> Optional[str]:
+    security_path = "/usr/bin/security"
+    if not Path(security_path).exists():
+        return None
+    cmd = [
+        security_path,
+        "find-generic-password",
+        "-s",
+        KEYCHAIN_SERVICE,
+        "-a",
+        KEYCHAIN_ACCOUNT,
+        "-w",
+    ]
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+    except Exception:
+        return None
+    if proc.returncode != 0:
+        return None
+    value = proc.stdout.strip()
+    return value or None
+
+
+def _key_from_launch_agent_plist() -> Optional[str]:
+    plist_path = Path(LAUNCH_AGENT_PLIST).expanduser()
+    if not plist_path.exists():
+        return None
+    try:
+        with plist_path.open("rb") as f:
+            data = plistlib.load(f)
+    except Exception:
+        return None
+    env = data.get("EnvironmentVariables")
+    if isinstance(env, dict):
+        value = env.get("OPENAI_API_KEY")
+        if value:
+            return str(value).strip() or None
+    return None
+
+
+def resolve_openai_api_key() -> Optional[str]:
+    for getter in (_key_from_keychain, _key_from_launch_agent_plist):
+        value = getter()
+        if value:
+            return value
+    value = os.environ.get("OPENAI_API_KEY")
+    if value:
+        value = value.strip()
+    return value or None
+
+
 def openai_chat_json(system: str, user: str, model: Optional[str] = None) -> dict:
-    api_key = os.environ.get("OPENAI_API_KEY")
+    api_key = resolve_openai_api_key()
     if not api_key:
-        raise RuntimeError("OPENAI_API_KEY is not set")
+        plist_path = str(Path(LAUNCH_AGENT_PLIST).expanduser())
+        raise RuntimeError(
+            "OpenAI API key not found. Checked: "
+            f"Keychain (service={KEYCHAIN_SERVICE}, account={KEYCHAIN_ACCOUNT}), "
+            f"LaunchAgent plist ({plist_path}), "
+            "env OPENAI_API_KEY."
+        )
 
     model = model or os.environ.get("TABDUMP_TAG_MODEL") or "gpt-4.1-mini"
 

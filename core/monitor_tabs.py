@@ -13,7 +13,8 @@ Flow:
 - Append link to today's reading queue note
 
 Env:
-- OPENAI_API_KEY must be set for tagging
+- OpenAI API key is required for tagging. It is resolved by postprocess_tabdump.py
+  (Keychain -> LaunchAgent plist -> OPENAI_API_KEY env var).
 """
 
 import fcntl
