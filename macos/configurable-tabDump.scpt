@@ -352,11 +352,21 @@ on writeState(pathStr, lastCheck, lastDump, lastTabs)
     "import json, os\n" & ¬
     "p = os.environ['STATE_PATH']\n" & ¬
     "def to_int(val):\n" & ¬
-    "  s = str(val).replace(',', '')\n" & ¬
+    "  s = str(val).strip().replace(' ', '')\n" & ¬
+    "  if not s:\n" & ¬
+    "    return 0\n" & ¬
     "  try:\n" & ¬
     "    return int(s)\n" & ¬
     "  except Exception:\n" & ¬
+    "    pass\n" & ¬
+    "  if ('e' in s.lower()) and (',' in s) and ('.' not in s):\n" & ¬
+    "    s = s.replace(',', '.')\n" & ¬
+    "  else:\n" & ¬
+    "    s = s.replace(',', '')\n" & ¬
+    "  try:\n" & ¬
     "    return int(float(s))\n" & ¬
+    "  except Exception:\n" & ¬
+    "    return 0\n" & ¬
     "data = {\n" & ¬
     "  'lastCheck': to_int(os.environ.get('LAST_CHECK', 0)),\n" & ¬
     "  'lastDump': to_int(os.environ.get('LAST_DUMP', 0)),\n" & ¬
