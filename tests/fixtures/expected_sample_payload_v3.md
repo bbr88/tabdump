@@ -13,14 +13,14 @@ Deduped: 1
 
 ## 🔥 High Priority
 *Auto-selected “do next” items.*
-- [ ] **5mins of Postgres E18: Partition pruning, prepared statements and generic vs custom que…** ([Link](https://pganalyze.com/blog/5mins-postgres-partition-pruning-prepared-statements-generic-vs-custom-query-plans)) · docs · #postgres
-- [ ] **OpenAI API Reference — Responses** ([Link](https://platform.openai.com/docs/api-reference/responses)) · docs · #llm
-- [ ] **neondatabase/neon** ([Link](https://github.com/neondatabase/neon)) · repo · #postgres
+- [ ] [5mins of Postgres E18: Partition pruning, prepared statements and generic vs custom que…](https://pganalyze.com/blog/5mins-postgres-partition-pruning-prepared-statements-generic-vs-custom-query-plans) · docs · #postgres
+- [ ] [OpenAI API Reference — Responses](https://platform.openai.com/docs/api-reference/responses) · docs · #llm
+- [ ] [neondatabase/neon](https://github.com/neondatabase/neon) · repo · #postgres
 
 ## 📺 Media Queue
 > [!video]- Expand Watch List (1)
 > ### youtube.com
-> - [ ] **Design a Distributed Rate Limiter...** ([Link](https://www.youtube.com/watch?v=MIJFyUPG4Z4)) · video
+> - [ ] [Design a Distributed Rate Limiter...](https://www.youtube.com/watch?v=MIJFyUPG4Z4) · video
 
 ## 🏗 Repos
 > [!code]- View Repositories (0)
@@ -33,19 +33,19 @@ Deduped: 1
 ## 📚 Docs & Reading
 > [!info]- View Documentation (3)
 > ### example.org
-> - [ ] **Short blog post to skim quickly** ([Link](https://example.org/skim)) · article
+> - [ ] [Short blog post to skim quickly](https://example.org/skim) · article
 > ### nms.csail.mit.edu
-> - [ ] **Microsoft Word - vldb-07-final.doc** ([Link](http://nms.csail.mit.edu/~stavros/pubs/hstore.pdf)) · paper
+> - [ ] [Microsoft Word - vldb-07-final.doc](http://nms.csail.mit.edu/~stavros/pubs/hstore.pdf) · paper
 > ### pgbouncer.org
-> - [ ] **PgBouncer config** ([Link](https://www.pgbouncer.org/config.html)) · docs
+> - [ ] [PgBouncer config](https://www.pgbouncer.org/config.html) · docs
 
-## 🧹 Quick Wins
-> [!tip]- Expand Quick Wins (0)
+## 🧹 Quick Wins / Low Effort
+> [!tip]- Expand Quick Wins / Low Effort (0)
 > _(empty)_
 
 ## 🔐 Tools & Admin
 > [!warning]- Sensitive/Administrative (2)
 > ### admin_local • localhost
-> - [ ] **localhost** ([Link](http://localhost:15433/)) · admin
+> - [ ] [localhost](http://localhost:15433/) · admin
 > ### admin_auth • platform.openai.com
-> - [ ] **API keys - OpenAI API** ([Link](https://platform.openai.com/api-keys)) · admin
+> - [ ] [API keys - OpenAI API](https://platform.openai.com/api-keys) · admin

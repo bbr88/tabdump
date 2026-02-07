@@ -80,22 +80,26 @@ DEFAULT_CFG: Dict = {
         "youtube.com": {"stripSuffixes": [" - YouTube", " | YouTube"]},
         "github.com": {"preferRepoSlug": True},
     },
-    "docsSubgroupByIntentWhenDomainCountGte": 4,
-    "docsSubgroupOrder": ["implement", "debug", "decide", "build", "reference", "learn", "explore", "skim", "other"],
     "docsOmitDomInBullets": True,
     "docsOmitKindFor": ["docs", "article"],
     "docsIncludeSrcWhenMultiBrowser": False,
     "showDomChipInDomainGroupedSections": False,
     "showKindChipInSections": {"media": False, "repos": False, "tools": False, "docs": False},
     "quickWinsEnableMiniCategories": True,
-    "quickWinsMiniCategories": ["leisure", "shopping", "misc"],
+    "quickWinsMiniCategories": ["leisure", "shopping"],
+    "quickWinsLowEffortReasons": [
+        "leisure_domain",
+        "leisure_keyword",
+        "shopping_domain",
+        "shopping_keyword",
+    ],
     "quickWinsDomainSuffixMatching": True,
     "render": {
         "badges": {
             "enabled": True,
             "maxPerBullet": 3,
             "includeTopicInHighPriority": True,
-            "includeQuickWinsWhy": True,
+            "includeQuickWinsWhy": False,
         },
         "ordering": {
             "domains": {"byCountThenAlpha": True, "pinned": []},
@@ -431,18 +435,19 @@ def _assign_buckets(items: List[dict], cfg: Dict) -> Dict[str, List[dict]]:
         bucket = _bucket_for_item(item, cfg)
         buckets[bucket].append(item)
 
-    # Quick wins overflow handling
+    # Quick wins tightening + overflow handling
     if cfg.get("includeQuickWins", True):
+        _tighten_quick_wins(buckets, cfg)
         quick_limit = int(cfg.get("quickWinsMaxItems", 15))
         quick_items = buckets["QUICK"]
         if len(quick_items) > quick_limit:
             overflow = quick_items[quick_limit:]
             buckets["QUICK"] = quick_items[:quick_limit]
             if cfg.get("quickWinsOverflowToBacklog", True):
-                backlog_cap = int(cfg.get("backlogMaxItems", 50))
-                buckets["BACKLOG"] = overflow[:backlog_cap]
+                # Preserve all items to keep bucket coverage strict.
+                buckets["BACKLOG"] = buckets.get("BACKLOG", []) + overflow
             else:
-                buckets["BACKLOG"] = []
+                buckets["BACKLOG"] = buckets.get("BACKLOG", [])
     else:
         # If quick wins disabled, collapse QUICK into BACKLOG for visibility
         buckets["BACKLOG"] = buckets["QUICK"]
@@ -452,6 +457,32 @@ def _assign_buckets(items: List[dict], cfg: Dict) -> Dict[str, List[dict]]:
     for name in SECTION_ORDER:
         buckets.setdefault(name, [])
     return buckets
+
+
+def _tighten_quick_wins(buckets: Dict[str, List[dict]], cfg: Dict) -> None:
+    """Keep only explicit low-effort items in QUICK; move others to BACKLOG."""
+    allowed_reasons = {
+        str(reason).lower()
+        for reason in cfg.get(
+            "quickWinsLowEffortReasons",
+            ["leisure_domain", "leisure_keyword", "shopping_domain", "shopping_keyword"],
+        )
+    }
+
+    filtered: List[dict] = []
+    moved_to_backlog: List[dict] = []
+    for it in buckets.get("QUICK", []):
+        cat, reason = _quick_mini_classify(it, cfg)
+        it["quick_cat"] = str(cat).lower()
+        it["quick_why"] = str(reason).lower()
+        if it["quick_why"] in allowed_reasons:
+            filtered.append(it)
+        else:
+            moved_to_backlog.append(it)
+
+    buckets["QUICK"] = filtered
+    if moved_to_backlog:
+        buckets["BACKLOG"] = moved_to_backlog + buckets.get("BACKLOG", [])
 
 
 def _bucket_for_item(item: dict, cfg: Dict) -> str:
@@ -714,8 +745,8 @@ def _render_sections(
             if cfg.get("includeQuickWins", True):
                 lines.extend(
                     _render_quick_callout(
-                        "🧹 Quick Wins",
-                        "[!tip]- Expand Quick Wins",
+                        "🧹 Quick Wins / Low Effort",
+                        "[!tip]- Expand Quick Wins / Low Effort",
                         items,
                         cfg,
                         badge_cfg,
@@ -803,33 +834,10 @@ def _render_docs_callout(
         return lines
 
     grouped = _group_items(items, admin=False, ordering_cfg=ordering_cfg)
-    threshold = int(cfg.get("docsSubgroupByIntentWhenDomainCountGte", 4))
-    order = cfg.get("docsSubgroupOrder", [])
     for heading, group_items in grouped:
         lines.append(f"> ### {heading}")
-        if len(group_items) < threshold:
-            for it in _sort_items_alpha(group_items):
-                lines.append(_format_bullet(it, prefix="> ", cfg=cfg, badges_cfg=badge_cfg, context="docs"))
-            continue
-
-        # subgroup by intent
-        buckets: Dict[str, List[dict]] = {}
-        for it in group_items:
-            bucket = _intent_subgroup((it.get("intent") or {}).get("action"), order)
-            buckets.setdefault(bucket, []).append(it)
-        for subgroup in order:
-            if subgroup not in buckets:
-                continue
-            lines.append(f"> #### {subgroup.capitalize()}")
-            for it in _sort_items_alpha(buckets[subgroup]):
-                lines.append(_format_bullet(it, prefix="> ", cfg=cfg, badges_cfg=badge_cfg, context="docs"))
-        # leftover
-        for subgroup, arr in buckets.items():
-            if subgroup in order:
-                continue
-            lines.append(f"> #### {subgroup.capitalize()}")
-            for it in _sort_items_alpha(arr):
-                lines.append(_format_bullet(it, prefix="> ", cfg=cfg, badges_cfg=badge_cfg, context="docs"))
+        for it in _sort_items_alpha(group_items):
+            lines.append(_format_bullet(it, prefix="> ", cfg=cfg, badges_cfg=badge_cfg, context="docs"))
     return lines
 
 
@@ -850,14 +858,20 @@ def _render_quick_callout(
         lines.append(f"> {cfg.get('emptyBucketMessage', '_(empty)_')}")
         return lines
 
-    cats = {name: [] for name in cfg.get("quickWinsMiniCategories", ["leisure", "shopping", "misc"])}
+    category_order = [str(name).lower() for name in cfg.get("quickWinsMiniCategories", ["leisure", "shopping"])]
+    cats = {name: [] for name in category_order}
     for it in items:
-        cat, reason = _quick_mini_classify(it, cfg)
-        it["quick_why"] = reason
+        cat = str(it.get("quick_cat") or "").lower()
+        reason = str(it.get("quick_why") or "").lower()
+        if not cat or not reason:
+            cat, reason = _quick_mini_classify(it, cfg)
+            cat = str(cat).lower()
+            reason = str(reason).lower()
+            it["quick_cat"] = cat
+            it["quick_why"] = reason
         cats.setdefault(cat, []).append(it)
 
-    order = ["leisure", "shopping", "misc"]
-    for cat in order:
+    for cat in category_order:
         arr = cats.get(cat, [])
         if not arr:
             continue
@@ -907,7 +921,7 @@ def _format_bullet(it: dict, prefix: str, cfg: Dict, badges_cfg: Dict, context: 
     display_title = _escape_md(display_title)
     url = _escape_md_url(str(it.get("url") or ""))
     badges = _build_badges(it, cfg, badges_cfg, context)
-    return f"{prefix}- [ ] **{display_title}** ([Link]({url})) · {badges}"
+    return f"{prefix}- [ ] [{display_title}]({url}) · {badges}"
 
 
 def _escape_md_url(url: str) -> str:
@@ -971,21 +985,6 @@ def _tagify(slug: str) -> str:
     return tag or "other"
 
 
-def _intent_subgroup(action: str, order: List[str]) -> str:
-    action = (action or "").lower()
-    mapping = {
-        "implement": "implement",
-        "build": "implement",
-        "debug": "debug",
-        "decide": "decide",
-        "reference": "reference",
-        "learn": "learn",
-        "explore": "learn",
-        "skim": "skim",
-    }
-    bucket = mapping.get(action, "other")
-    return bucket if bucket in order else "other"
-
 def _badge_cfg(cfg: Dict) -> Dict:
     render_cfg = cfg.get("render") or {}
     defaults = DEFAULT_CFG.get("render", {}).get("badges", {})
@@ -1013,7 +1012,7 @@ def _primary_badge(item: dict) -> str:
 def _build_badges(item: dict, cfg: Dict, badges_cfg: Dict, context: str) -> str:
     max_badges = int(badges_cfg.get("maxPerBullet", 3))
     include_topic = bool(badges_cfg.get("includeTopicInHighPriority", True))
-    include_why = bool(badges_cfg.get("includeQuickWinsWhy", True))
+    include_why = bool(badges_cfg.get("includeQuickWinsWhy", False))
 
     badges: List[str] = [_primary_badge(item)]
 
@@ -1200,9 +1199,9 @@ def _validate_rendered(md: str, buckets: Dict[str, List[dict]]) -> None:
         if pos == -1:
             raise ValueError(f"Missing section {header}")
         positions.append(pos)
-    # Quick Wins optional but included by default
-    if "## 🧹 Quick Wins" in md:
-        positions.append(md.find("## 🧹 Quick Wins"))
+    # Quick Wins / Low Effort optional but included by default
+    if "## 🧹 Quick Wins / Low Effort" in md:
+        positions.append(md.find("## 🧹 Quick Wins / Low Effort"))
     if "## 🗃 Backlog" in md:
         positions.append(md.find("## 🗃 Backlog"))
     admin_pos = md.find("## 🔐 Tools & Admin")

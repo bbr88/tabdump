@@ -199,7 +199,7 @@ def test_renderer_escapes_markdown_in_titles():
         ],
     }
     md = render_markdown(payload)
-    line = next(l for l in md.splitlines() if "Hello" in l and "[Link]" in l)
+    line = next(l for l in md.splitlines() if "Hello" in l and "](" in l)
     assert "\\[x\\]\\(y\\)" in line
     assert "\\*bold\\*" in line
     assert "\\`code\\`" in line
@@ -393,7 +393,7 @@ def test_renderer_encodes_markdown_sensitive_url_chars():
         ],
     }
     md = render_markdown(payload)
-    line = next(l for l in md.splitlines() if "[Link]" in l)
+    line = next(l for l in md.splitlines() if "https://example.com/" in l and "](" in l)
     assert "a_%28b%29" in line
     assert "q=hello%20world" in line
 

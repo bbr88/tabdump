@@ -102,7 +102,7 @@ def test_group_headers_match_domains():
         match = re.search(pattern, md, flags=re.S)
         if not match:
             continue
-        bullets = re.findall(r"\[Link\]\([^)]+\).*", match.group(0))
+        bullets = re.findall(r"\[[^\]]+\]\([^)]+\).*", match.group(0))
         assert bullets  # sanity
         assert all("dom::" not in b for b in bullets)
 
@@ -122,7 +122,7 @@ def test_canonical_title_cleanup_youtube():
 def test_github_slug_preference():
     payload = json.loads(FIXTURE_GH_JSON.read_text())
     md = render_markdown(payload)
-    assert re.search(r"\*\*owner/repo\*\*", md)
+    assert re.search(r"\[owner/repo\]\(https://github\.com/owner/repo\)", md)
     assert "GitHub -" not in md
 
 
@@ -133,14 +133,15 @@ def test_admin_auth_false_positive_not_classified():
     assert "https://example.com/docs/usage-token" not in admin_urls
 
 
-def test_docs_intent_subgrouping():
+def test_docs_no_intent_subgrouping():
     payload = json.loads(FIXTURE_DOCS_SUBGROUP_JSON.read_text())
     md = render_markdown(payload)
     docs_section = _section(md, "## 📚 Docs & Reading")
-    assert "#### Implement" in docs_section
-    assert "#### Debug" in docs_section
-    assert "#### Reference" in docs_section
-    assert "#### Learn" in docs_section
+    assert "#### " not in docs_section
+    assert "Implement feature X" in docs_section
+    assert "Debugging common issues" in docs_section
+    assert "API Reference" in docs_section
+    assert "Getting Started" in docs_section
 
 
 def test_admin_compact_bullets_default():
@@ -168,27 +169,29 @@ def test_docs_denoise_omit_dom_and_kind():
 def test_quickwins_suffix_matching_disneyplus():
     payload = json.loads(FIXTURE_QW_SUFFIX_JSON.read_text())
     md = render_markdown(payload)
-    quick = _section(md, "## 🧹 Quick Wins")
+    quick = _section(md, "## 🧹 Quick Wins / Low Effort")
     assert "### Leisure" in quick
-    assert "why:leisure_domain" in quick
+    assert "why:" not in quick
 
 
 def test_quickwins_leisure_4chan():
     payload = json.loads(FIXTURE_QW_4CHAN_JSON.read_text())
     md = render_markdown(payload)
-    quick = _section(md, "## 🧹 Quick Wins")
+    quick = _section(md, "## 🧹 Quick Wins / Low Effort")
     assert "### Leisure" in quick
-    assert "why:leisure_domain" in quick
+    assert "why:" not in quick
 
 
 def test_quickwins_no_best_vs_keyword_only():
     payload = json.loads(FIXTURE_QW_NO_BEST_VS_JSON.read_text())
     md = render_markdown(payload)
-    quick = _section(md, "## 🧹 Quick Wins")
-    # Should fall into Misc (not Shopping)
+    quick = _section(md, "## 🧹 Quick Wins / Low Effort")
+    # Fallback misc should be excluded from low-effort quick wins.
     assert "### Shopping" not in quick
-    assert "### Misc" in quick
-    assert "why:fallback_misc" in quick
+    assert "### Leisure" not in quick
+    assert "why:fallback_misc" not in quick
+    backlog = _section(md, "## 🗃 Backlog")
+    assert "best laptops vs tablets 2026" in backlog
 
 
 def test_suffix_match_helper():
@@ -276,9 +279,21 @@ def test_keyword_exclusions_domain_wins():
         ],
     }
     md = render_markdown(payload)
-    quick = _section(md, "## 🧹 Quick Wins")
+    quick = _section(md, "## 🧹 Quick Wins / Low Effort")
     assert "### Shopping" in quick
-    assert "why:shopping_domain" in quick
+    assert "why:" not in quick
+
+
+def test_quickwins_reason_kept_in_state_not_rendered():
+    payload = json.loads(FIXTURE_QW_SUFFIX_JSON.read_text())
+    state = build_state(payload)
+    quick_items = state["buckets"]["QUICK"]
+    assert quick_items
+    assert any((it.get("quick_why") or "").startswith("leisure_") for it in quick_items)
+
+    md = render_markdown(payload)
+    quick = _section(md, "## 🧹 Quick Wins / Low Effort")
+    assert "why:" not in quick
 
 
 def test_classification_precedence_admin_over_keywords():
