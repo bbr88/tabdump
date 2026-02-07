@@ -133,6 +133,7 @@ data = {
   "maxTabs": 30,
   "checkEveryMinutes": 5,
   "cooldownMinutes": 30,
+  "llmEnabled": False,
   "tagModel": "gpt-4.1-mini",
   "llmRedact": True,
   "llmRedactQuery": True,
@@ -161,67 +162,83 @@ PY
 fi
 
 echo
-echo "LLM tagging requires an OpenAI API key."
-echo "Choose storage:"
-echo "  1) Keychain (recommended)"
-echo "  2) I'll set OPENAI_API_KEY myself (env fallback)"
-echo "  3) Skip for now"
-read -r -p "Select [1-3] (default 1): " KEY_CHOICE
-if [[ -z "${KEY_CHOICE}" ]]; then
-  KEY_CHOICE="1"
-fi
+echo "LLM enrichment is optional and disabled by default."
+read -r -p "Enable LLM enrichment now? (y/N): " ENABLE_LLM
+if [[ "${ENABLE_LLM}" == "y" || "${ENABLE_LLM}" == "Y" ]]; then
+  CONFIG_PATH="${CONFIG_PATH}" python3 - <<'PY'
+import json, os
+config_path = os.environ["CONFIG_PATH"]
+with open(config_path, "r", encoding="utf-8") as f:
+  data = json.load(f)
+data["llmEnabled"] = True
+with open(config_path, "w", encoding="utf-8") as f:
+  json.dump(data, f, indent=2)
+  f.write("\n")
+PY
 
-case "${KEY_CHOICE}" in
-  1)
-    echo ""
-    echo "OpenAI key setup (Keychain)"
-    echo "Paste your OpenAI API key (input hidden), then press Enter:"
-    read -rs OPENAI_API_KEY_INPUT
-    echo ""
-    if [[ -n "${OPENAI_API_KEY_INPUT}" ]]; then
-      if security find-generic-password -s "${KEYCHAIN_SERVICE}" -a "${KEYCHAIN_ACCOUNT}" >/dev/null 2>&1; then
-        read -r -p "Keychain item exists for service=${KEYCHAIN_SERVICE}, account=${KEYCHAIN_ACCOUNT}. Replace? (y/N): " REPLACE_KEY
-        if [[ "${REPLACE_KEY}" == "y" || "${REPLACE_KEY}" == "Y" ]]; then
-          security add-generic-password -s "${KEYCHAIN_SERVICE}" -a "${KEYCHAIN_ACCOUNT}" -w "${OPENAI_API_KEY_INPUT}" -U >/dev/null
-          echo "✅ Stored OpenAI key in Keychain (service=${KEYCHAIN_SERVICE}, account=${KEYCHAIN_ACCOUNT})"
+  echo "OpenAI key setup:"
+  echo "  1) Keychain (recommended)"
+  echo "  2) I'll set OPENAI_API_KEY myself (env fallback)"
+  echo "  3) Skip for now"
+  read -r -p "Select [1-3] (default 1): " KEY_CHOICE
+  if [[ -z "${KEY_CHOICE}" ]]; then
+    KEY_CHOICE="1"
+  fi
+
+  case "${KEY_CHOICE}" in
+    1)
+      echo ""
+      echo "OpenAI key setup (Keychain)"
+      echo "Paste your OpenAI API key (input hidden), then press Enter:"
+      read -rs OPENAI_API_KEY_INPUT
+      echo ""
+      if [[ -n "${OPENAI_API_KEY_INPUT}" ]]; then
+        if security find-generic-password -s "${KEYCHAIN_SERVICE}" -a "${KEYCHAIN_ACCOUNT}" >/dev/null 2>&1; then
+          read -r -p "Keychain item exists for service=${KEYCHAIN_SERVICE}, account=${KEYCHAIN_ACCOUNT}. Replace? (y/N): " REPLACE_KEY
+          if [[ "${REPLACE_KEY}" == "y" || "${REPLACE_KEY}" == "Y" ]]; then
+            security add-generic-password -s "${KEYCHAIN_SERVICE}" -a "${KEYCHAIN_ACCOUNT}" -w "${OPENAI_API_KEY_INPUT}" -U >/dev/null
+            echo "✅ Stored OpenAI key in Keychain (service=${KEYCHAIN_SERVICE}, account=${KEYCHAIN_ACCOUNT})"
+          else
+            echo "ℹ️  Kept existing Keychain item."
+          fi
         else
-          echo "ℹ️  Kept existing Keychain item."
+          security add-generic-password -s "${KEYCHAIN_SERVICE}" -a "${KEYCHAIN_ACCOUNT}" -w "${OPENAI_API_KEY_INPUT}" >/dev/null
+          echo "✅ Stored OpenAI key in Keychain (service=${KEYCHAIN_SERVICE}, account=${KEYCHAIN_ACCOUNT})"
         fi
+        echo "   To read it later:"
+        echo "   security find-generic-password -s \"${KEYCHAIN_SERVICE}\" -a \"${KEYCHAIN_ACCOUNT}\" -w"
       else
-        security add-generic-password -s "${KEYCHAIN_SERVICE}" -a "${KEYCHAIN_ACCOUNT}" -w "${OPENAI_API_KEY_INPUT}" >/dev/null
-        echo "✅ Stored OpenAI key in Keychain (service=${KEYCHAIN_SERVICE}, account=${KEYCHAIN_ACCOUNT})"
+        echo "ℹ️  Skipped (empty input)"
       fi
-      echo "   To read it later:"
-      echo "   security find-generic-password -s \"${KEYCHAIN_SERVICE}\" -a \"${KEYCHAIN_ACCOUNT}\" -w"
-    else
-      echo "ℹ️  Skipped (empty input)"
-    fi
-    ;;
-  2)
-    echo ""
-    echo "ℹ️  Skipping key storage."
-    echo "   Set OPENAI_API_KEY in your environment before running."
-    echo "   (Runtime resolution order is Keychain, then OPENAI_API_KEY env var.)"
-    if security find-generic-password -s "${KEYCHAIN_SERVICE}" -a "${KEYCHAIN_ACCOUNT}" >/dev/null 2>&1; then
-      echo "ℹ️  Note: a Keychain item exists and will take precedence over env vars."
-      read -r -p "Delete existing Keychain item? (y/N): " DELETE_KEYCHAIN
-      if [[ "${DELETE_KEYCHAIN}" == "y" || "${DELETE_KEYCHAIN}" == "Y" ]]; then
-        security delete-generic-password -s "${KEYCHAIN_SERVICE}" -a "${KEYCHAIN_ACCOUNT}" >/dev/null 2>&1 || true
-        echo "✅ Deleted Keychain item."
-      else
-        echo "ℹ️  Keeping Keychain item; it will be used first."
+      ;;
+    2)
+      echo ""
+      echo "ℹ️  Skipping key storage."
+      echo "   Set OPENAI_API_KEY in your environment before running."
+      echo "   (Runtime resolution order is Keychain, then OPENAI_API_KEY env var.)"
+      if security find-generic-password -s "${KEYCHAIN_SERVICE}" -a "${KEYCHAIN_ACCOUNT}" >/dev/null 2>&1; then
+        echo "ℹ️  Note: a Keychain item exists and will take precedence over env vars."
+        read -r -p "Delete existing Keychain item? (y/N): " DELETE_KEYCHAIN
+        if [[ "${DELETE_KEYCHAIN}" == "y" || "${DELETE_KEYCHAIN}" == "Y" ]]; then
+          security delete-generic-password -s "${KEYCHAIN_SERVICE}" -a "${KEYCHAIN_ACCOUNT}" >/dev/null 2>&1 || true
+          echo "✅ Deleted Keychain item."
+        else
+          echo "ℹ️  Keeping Keychain item; it will be used first."
+        fi
       fi
-    fi
-    ;;
-  3)
-    echo ""
-    echo "ℹ️  Skipping OpenAI key setup."
-    ;;
-  *)
-    echo ""
-    echo "ℹ️  Invalid choice; skipping OpenAI key setup."
-    ;;
-esac
+      ;;
+    3)
+      echo ""
+      echo "ℹ️  Skipping OpenAI key setup."
+      ;;
+    *)
+      echo ""
+      echo "ℹ️  Invalid choice; skipping OpenAI key setup."
+      ;;
+  esac
+else
+  echo "ℹ️  LLM enrichment remains disabled (llmEnabled=false)."
+fi
 
 echo
 echo "Wrote config: ${CONFIG_PATH}"

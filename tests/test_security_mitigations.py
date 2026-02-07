@@ -110,6 +110,8 @@ def test_llm_id_mapping_uses_ids_not_urls(monkeypatch):
         captured["payload"] = payload
         return "md"
 
+    monkeypatch.setattr(ppt, "LLM_ENABLED", True)
+    monkeypatch.setattr(ppt, "resolve_openai_api_key", lambda: "key")
     monkeypatch.setattr(ppt, "_call_with_retries", fake_call)
     monkeypatch.setattr(ppt, "render_markdown", fake_render)
 
@@ -137,6 +139,8 @@ def test_llm_mapping_fallback_to_url(monkeypatch):
         captured["payload"] = payload
         return "md"
 
+    monkeypatch.setattr(ppt, "LLM_ENABLED", True)
+    monkeypatch.setattr(ppt, "resolve_openai_api_key", lambda: "key")
     monkeypatch.setattr(ppt, "_call_with_retries", fake_call)
     monkeypatch.setattr(ppt, "render_markdown", fake_render)
 
@@ -149,6 +153,8 @@ def test_llm_mapping_fallback_to_url(monkeypatch):
 
 def test_max_items_cap_limits_classification_only(monkeypatch):
     items = _make_items(4)
+    monkeypatch.setattr(ppt, "LLM_ENABLED", True)
+    monkeypatch.setattr(ppt, "resolve_openai_api_key", lambda: "key")
     monkeypatch.setattr(ppt, "MAX_ITEMS", 2)
 
     calls: list[str] = []
@@ -217,6 +223,7 @@ def test_monitor_passes_llm_env_from_config(tmp_path, monkeypatch):
                 {
                     "vaultInbox": str(vault_inbox),
                     "checkEveryMinutes": 0,
+                    "llmEnabled": True,
                     "tagModel": "gpt-4.1-mini",
                     "llmRedact": True,
                     "llmRedactQuery": False,
@@ -251,6 +258,7 @@ def test_monitor_passes_llm_env_from_config(tmp_path, monkeypatch):
 
     rc = monitor.main()
     assert rc == 0
+    assert captured_env["TABDUMP_LLM_ENABLED"] == "1"
     assert captured_env["TABDUMP_LLM_REDACT"] == "1"
     assert captured_env["TABDUMP_LLM_REDACT_QUERY"] == "0"
     assert captured_env["TABDUMP_LLM_TITLE_MAX"] == "123"
@@ -331,6 +339,8 @@ def test_llm_skips_sensitive_urls_and_assigns_safe_defaults(monkeypatch):
         captured["payload"] = payload
         return "md"
 
+    monkeypatch.setattr(ppt, "LLM_ENABLED", True)
+    monkeypatch.setattr(ppt, "resolve_openai_api_key", lambda: "key")
     monkeypatch.setattr(ppt, "_call_with_retries", fake_call)
     monkeypatch.setattr(ppt, "render_markdown", fake_render)
 
@@ -345,6 +355,51 @@ def test_llm_skips_sensitive_urls_and_assigns_safe_defaults(monkeypatch):
     assert payload_items[0]["kind"] == "auth"
     assert payload_items[1]["kind"] == "local"
     assert payload_items[2]["kind"] == "docs"
+
+
+def test_local_classifier_used_when_llm_disabled(monkeypatch):
+    items = _make_items(1)
+    monkeypatch.setattr(ppt, "LLM_ENABLED", False)
+
+    def fail_call(*args, **kwargs):
+        raise AssertionError("LLM should not be called when disabled")
+
+    captured = {}
+
+    def fake_render(payload, *args, **kwargs):
+        captured["payload"] = payload
+        return "md"
+
+    monkeypatch.setattr(ppt, "_call_with_retries", fail_call)
+    monkeypatch.setattr(ppt, "render_markdown", fake_render)
+
+    ppt.build_clean_note(Path("/tmp/ignore.md"), items, dump_id="id")
+    entry = captured["payload"]["items"][0]
+    assert entry["kind"] == "article"
+    assert entry["intent"]["action"] in {"read", "reference"}
+
+
+def test_llm_enabled_without_key_falls_back_to_local(monkeypatch):
+    items = _make_items(1)
+    monkeypatch.setattr(ppt, "LLM_ENABLED", True)
+    monkeypatch.setattr(ppt, "resolve_openai_api_key", lambda: None)
+
+    def fail_call(*args, **kwargs):
+        raise AssertionError("LLM should not be called without key")
+
+    captured = {}
+
+    def fake_render(payload, *args, **kwargs):
+        captured["payload"] = payload
+        return "md"
+
+    monkeypatch.setattr(ppt, "_call_with_retries", fail_call)
+    monkeypatch.setattr(ppt, "render_markdown", fake_render)
+
+    ppt.build_clean_note(Path("/tmp/ignore.md"), items, dump_id="id")
+    entry = captured["payload"]["items"][0]
+    assert entry["kind"] == "article"
+    assert entry["intent"]["action"] in {"read", "reference"}
 
 
 def test_extract_items_parses_parentheses_in_urls():

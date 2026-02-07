@@ -9,12 +9,12 @@ Flow:
 - Optional checkEveryMinutes gating (to avoid rapid relaunches)
 - Run TabDump.app (self-gating handles maxTabs + cooldown)
 - Find newest TabDump *.md in vaultInbox (new since start)
-- Postprocess it (domain + LLM topic tags) -> creates "(clean)" note
+- Postprocess it (local classification + optional LLM enrichment) -> creates "(clean)" note
 - Append link to today's reading queue note
 
 Env:
-- OpenAI API key is required for tagging. It is resolved by postprocess_tabdump.py
-  (Keychain -> OPENAI_API_KEY env var).
+- Optional OpenAI API key for LLM enrichment. Resolved by postprocess_tabdump.py
+  (Keychain -> OPENAI_API_KEY env var) when enabled.
 """
 
 import fcntl
@@ -208,6 +208,7 @@ def main() -> int:
         return "1" if default else "0"
 
     env = dict(os.environ)
+    env["TABDUMP_LLM_ENABLED"] = _env_bool(cfg.get("llmEnabled", False), default=False)
     env["TABDUMP_TAG_MODEL"] = str(cfg.get("tagModel", "gpt-4.1-mini"))
     env["TABDUMP_LLM_REDACT"] = _env_bool(cfg.get("llmRedact", True), default=True)
     env["TABDUMP_LLM_REDACT_QUERY"] = _env_bool(cfg.get("llmRedactQuery", True), default=True)
