@@ -8,6 +8,9 @@ from collections import Counter
 from typing import Dict, Iterable, List, Tuple
 from urllib.parse import quote, urlparse
 
+from core.tab_policy.actions import action_priority_weight, canonical_action
+from core.tab_policy.matching import host_matches_base as _host_matches_base_shared
+
 # ------------------------------ Config ------------------------------ #
 
 DEFAULT_CFG: Dict = {
@@ -153,7 +156,20 @@ DEFAULT_CFG: Dict = {
     },
 }
 
-ALLOWED_KINDS = {"admin", "paper", "docs", "spec", "article", "video", "repo", "tool", "misc"}
+ALLOWED_KINDS = {
+    "admin",
+    "paper",
+    "docs",
+    "spec",
+    "article",
+    "video",
+    "repo",
+    "tool",
+    "misc",
+    "local",
+    "auth",
+    "internal",
+}
 
 KIND_PRIORITY = ["paper", "spec", "docs", "repo", "article", "video", "tool", "misc", "admin"]
 KIND_PRIORITY_INDEX = {k: i for i, k in enumerate(KIND_PRIORITY)}
@@ -258,10 +274,11 @@ def _normalize_items(items_raw: List[dict], cfg: Dict) -> Tuple[List[dict], int]
         domain_display = domain_display or "unknown"
         path = parsed.path or ""
 
-        flags_raw = raw.get("flags") or {}
         browser = str(raw.get("browser") or "unknown").lower()
         intent = _normalize_intent(raw.get("intent"))
         provided_kind = str(raw.get("kind") or "").strip().lower()
+        flags_raw = raw.get("flags") or {}
+        flags = _normalize_flags(flags_raw, provided_kind=provided_kind)
         topics = raw.get("topics") if isinstance(raw.get("topics"), list) else []
 
         domain_category = _classify_domain(
@@ -269,7 +286,7 @@ def _normalize_items(items_raw: List[dict], cfg: Dict) -> Tuple[List[dict], int]
             parsed,
             domain_display,
             path,
-            flags_raw,
+            flags,
             cfg,
         )
         kind_norm = _derive_kind(domain_category, provided_kind, url)
@@ -285,7 +302,7 @@ def _normalize_items(items_raw: List[dict], cfg: Dict) -> Tuple[List[dict], int]
                 "domain_raw": hostname or "unknown",
                 "domain_category": domain_category,
                 "path": path,
-                "flags": _normalize_flags(flags_raw),
+                "flags": flags,
                 "browser": browser or "unknown",
                 "intent": intent,
                 "topics": topics,
@@ -369,7 +386,7 @@ def _github_repo_slug_title(path: str, title_norm: str) -> str:
 
 def _normalize_intent(intent_val) -> Dict:
     if isinstance(intent_val, dict):
-        action = str(intent_val.get("action") or "").strip().lower()
+        action = canonical_action(intent_val.get("action") or "")
         conf = intent_val.get("confidence", 0.0)
     else:
         action = ""
@@ -382,13 +399,21 @@ def _normalize_intent(intent_val) -> Dict:
     return {"action": action, "confidence": conf}
 
 
-def _normalize_flags(flags_raw: Dict) -> Dict:
-    return {
+def _normalize_flags(flags_raw: Dict, provided_kind: str = "") -> Dict:
+    flags = {
         "is_local": bool(flags_raw.get("is_local")),
         "is_auth": bool(flags_raw.get("is_auth")),
         "is_chat": bool(flags_raw.get("is_chat")),
         "is_internal": bool(flags_raw.get("is_internal")),
     }
+    kind = str(provided_kind or "").strip().lower()
+    if kind == "local":
+        flags["is_local"] = True
+    elif kind == "auth":
+        flags["is_auth"] = True
+    elif kind == "internal":
+        flags["is_internal"] = True
+    return flags
 
 
 # ------------------------------ Classification ------------------------------ #
@@ -403,13 +428,16 @@ def _classify_domain(
 ) -> str:
     lower_url = url.lower()
     hostname = domain_display.lower()
+    suffix_match = True
 
     # Admin forcing
     if flags.get("is_local") or hostname in {"localhost", "127.0.0.1"} or parsed.scheme == "file":
         return "admin_local"
     if flags.get("is_internal") or any(lower_url.startswith(p.lower()) for p in cfg.get("skipPrefixes", [])):
         return "admin_internal"
-    if flags.get("is_chat") or hostname in {d.lower() for d in cfg.get("chatDomains", [])}:
+    if flags.get("is_chat") or any(
+        _host_matches_base(hostname, str(base).lower(), enable_suffix=suffix_match) for base in cfg.get("chatDomains", [])
+    ):
         return "admin_chat"
 
     # Admin auth strict detection
@@ -422,11 +450,20 @@ def _classify_domain(
         return "admin_auth"
 
     # Non-admin categories
-    if hostname in {d.lower() for d in cfg.get("codeHostDomains", [])}:
+    if any(
+        _host_matches_base(hostname, str(base).lower(), enable_suffix=suffix_match)
+        for base in cfg.get("codeHostDomains", [])
+    ):
         return "code_host"
-    if hostname in {d.lower() for d in cfg.get("videoDomains", [])}:
+    if any(
+        _host_matches_base(hostname, str(base).lower(), enable_suffix=suffix_match)
+        for base in cfg.get("videoDomains", [])
+    ):
         return "video"
-    if hostname in {d.lower() for d in cfg.get("consoleDomains", [])}:
+    if any(
+        _host_matches_base(hostname, str(base).lower(), enable_suffix=suffix_match)
+        for base in cfg.get("consoleDomains", [])
+    ):
         return "console"
     if hostname.startswith(str(cfg.get("docsDomainPrefix", "docs."))):
         return "docs_site"
@@ -456,6 +493,10 @@ def _matches_any_regex(text: str, patterns: Iterable[str]) -> bool:
 
 def _derive_kind(domain_category: str, provided_kind: str, url: str) -> str:
     lower_url = url.lower()
+    if provided_kind in {"local", "auth", "internal"}:
+        return "admin"
+    if provided_kind in ALLOWED_KINDS:
+        return provided_kind
     if domain_category.startswith("admin_"):
         return "admin"
     if lower_url.endswith(".pdf"):
@@ -466,8 +507,6 @@ def _derive_kind(domain_category: str, provided_kind: str, url: str) -> str:
         return "repo"
     if domain_category in {"docs_site", "blog"}:
         return "docs"
-    if provided_kind in ALLOWED_KINDS:
-        return provided_kind
     return "article"
 
 
@@ -536,15 +575,15 @@ def _bucket_for_item(item: dict, cfg: Dict) -> str:
     provided_kind = item.get("provided_kind") or ""
     path = item.get("path") or ""
 
-    if domain_category.startswith("admin_"):
+    if domain_category.startswith("admin_") or kind == "admin" or provided_kind in {"local", "auth", "internal"}:
         return "ADMIN"
     if kind == "video":
         return "MEDIA"
-    if domain_category == "code_host" and _looks_like_repo_path(path):
+    if kind == "repo" or (domain_category == "code_host" and _looks_like_repo_path(path)):
         return "REPOS"
     if _is_project_workspace(item, cfg):
         return "PROJECTS"
-    if provided_kind == "tool" or domain_category == "console":
+    if kind == "tool" or provided_kind == "tool" or domain_category == "console":
         return "TOOLS"
     if kind in {"paper", "docs", "spec", "article"}:
         return "DOCS"
@@ -643,7 +682,7 @@ def _score_item(item: dict) -> int:
     kind = item.get("kind") or ""
     domain_category = item.get("domain_category") or ""
     intent = item.get("intent") or {}
-    action = intent.get("action") or ""
+    action = canonical_action(intent.get("action") or "")
     conf = float(intent.get("confidence", 0.0))
     title = (item.get("title") or "").lower()
     path = item.get("path") or ""
@@ -666,13 +705,8 @@ def _score_item(item: dict) -> int:
     elif domain_category == "console":
         score += 1
 
-    # Intent action
-    if action in {"implement", "build", "debug", "decide"}:
-        score += 2
-    elif action in {"learn", "reference", "explore"}:
-        score += 1
-    elif action in {"skim", "entertain", "relax", "ephemeral"}:
-        score -= 2
+    # Intent action (aligned with postprocess semantics)
+    score += action_priority_weight(action)
 
     # Confidence
     if conf >= 0.80:
@@ -1353,15 +1387,12 @@ SHOPPING_KEYWORDS = {
 
 
 def _host_matches_base(host: str, base: str, enable_suffix: bool) -> bool:
-    if not host or not base:
-        return False
-    host_norm = host.lower()
-    if host_norm.startswith("www."):
-        host_norm = host_norm[4:]
-    base_norm = base.lower()
-    if host_norm == base_norm:
-        return True
-    return enable_suffix and host_norm.endswith("." + base_norm)
+    return _host_matches_base_shared(
+        host,
+        base,
+        enable_suffix=enable_suffix,
+        strip_www_host=True,
+    )
 
 
 def _quick_mini_classify(it: dict, cfg: Dict) -> Tuple[str, str]:

@@ -4,6 +4,8 @@ import ipaddress
 import urllib.parse
 from typing import Iterable, Tuple
 
+from core.tab_policy.matching import host_matches_base as _host_matches_base_shared
+
 from .constants import AUTH_PATH_HINTS, SENSITIVE_HOSTS, SENSITIVE_QUERY_KEYS, TRACKING_PARAMS
 
 
@@ -46,13 +48,7 @@ def domain_of(url: str) -> str:
 
 
 def host_matches_base(host: str, base: str) -> bool:
-    host = host.strip().lower()
-    base = base.strip().lower()
-    if not host or not base:
-        return False
-    if host == base:
-        return True
-    return host.endswith("." + base)
+    return _host_matches_base_shared(host, base, enable_suffix=True, strip_www_host=False)
 
 
 def is_private_or_loopback_host(host: str) -> bool:
