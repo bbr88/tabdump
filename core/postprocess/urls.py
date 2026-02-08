@@ -139,10 +139,15 @@ def default_kind_action(
     scheme = (parsed.scheme or "").lower()
     host = (parsed.hostname or "").lower()
     path = (parsed.path or "").lower()
+
+    # file:// URLs intentionally map to local even though they have no host.
+    if scheme == "file":
+        return "local", "ignore"
+
     if not host:
         return "internal", "ignore"
 
-    if scheme == "file" or is_private_or_loopback_host(host):
+    if is_private_or_loopback_host(host):
         return "local", "ignore"
     if any(hint in lower_url for hint in auth_path_hints) or matches_sensitive_host_or_path(
         host,

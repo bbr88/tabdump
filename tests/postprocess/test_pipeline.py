@@ -1,0 +1,122 @@
+import io
+from pathlib import Path
+
+from core.postprocess.models import Item
+from core.postprocess.pipeline import build_clean_note
+from core.postprocess.urls import normalize_url
+
+
+def _item(title: str, url: str, domain: str) -> Item:
+    clean = normalize_url(url)
+    return Item(
+        title=title,
+        url=url,
+        norm_url=clean,
+        clean_url=clean,
+        domain=domain,
+        browser=None,
+    )
+
+
+def test_build_clean_note_uses_llm_and_skips_sensitive_items():
+    items = [
+        _item("Secrets", "https://example.com/secret?token=abc", "example.com"),
+        _item("Docs", "https://docs.python.org/3/tutorial/", "docs.python.org"),
+    ]
+
+    seen = {}
+    captured = {}
+
+    def classify_with_llm(indexed_for_cls, url_to_idx, api_key):
+        seen["indexed"] = indexed_for_cls
+        seen["api_key"] = api_key
+        assert url_to_idx[items[1].norm_url] == 1
+        return {1: {"topic": "python", "kind": "docs", "action": "read", "score": 5}}
+
+    def render(payload, cfg):
+        captured["payload"] = payload
+        return "md-output"
+
+    md, meta = build_clean_note(
+        src_path=Path("/tmp/in.md"),
+        items=items,
+        dump_id="dump-1",
+        llm_enabled=True,
+        resolve_openai_api_key_fn=lambda: "k",
+        classify_with_llm_fn=classify_with_llm,
+        is_sensitive_url_fn=lambda url: "secret" in url,
+        default_kind_action_fn=lambda _: ("auth", "ignore"),
+        extract_created_ts_fn=lambda *_args, **_kwargs: "2026-02-08 00-00-00",
+        render_markdown_fn=render,
+    )
+
+    assert md == "md-output"
+    assert meta["tabdump_id"] == "dump-1"
+    assert seen["api_key"] == "k"
+    assert [idx for idx, _ in seen["indexed"]] == [1]
+
+    payload = captured["payload"]
+    assert payload["counts"] == {"total": 2, "dumped": 2, "closed": 0, "kept": 0}
+    assert payload["items"][0]["kind"] == "auth"
+    assert payload["items"][0]["intent"]["action"] == "ignore"
+    assert payload["items"][0]["intent"]["confidence"] == 0.6
+    assert payload["items"][1]["kind"] == "docs"
+    assert payload["items"][1]["topics"][0]["slug"] == "python"
+
+
+def test_build_clean_note_falls_back_to_local_when_llm_enabled_but_key_missing():
+    items = [_item("Title", "https://example.com/article", "example.com")]
+    stderr = io.StringIO()
+
+    def classify_local(_item_obj):
+        return {"topic": "local-topic", "kind": "article", "action": "read", "score": 4}
+
+    captured = {}
+
+    def render(payload, cfg):
+        captured["payload"] = payload
+        return "md"
+
+    md, _ = build_clean_note(
+        src_path=Path("/tmp/in.md"),
+        items=items,
+        llm_enabled=True,
+        resolve_openai_api_key_fn=lambda: None,
+        classify_with_llm_fn=lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("should not call llm")),
+        classify_local_fn=classify_local,
+        extract_created_ts_fn=lambda *_args, **_kwargs: "ts",
+        render_markdown_fn=render,
+        stderr=stderr,
+    )
+
+    assert md == "md"
+    assert "LLM disabled: OpenAI API key not found" in stderr.getvalue()
+    assert captured["payload"]["items"][0]["kind"] == "article"
+    assert captured["payload"]["items"][0]["topics"][0]["slug"] == "local-topic"
+
+
+def test_build_clean_note_does_not_use_local_fallback_when_llm_enabled_with_key():
+    items = [_item("Unknown", "https://example.com/x", "example.com")]
+
+    captured = {}
+
+    def render(payload, cfg):
+        captured["payload"] = payload
+        return "md"
+
+    md, _ = build_clean_note(
+        src_path=Path("/tmp/in.md"),
+        items=items,
+        llm_enabled=True,
+        resolve_openai_api_key_fn=lambda: "key",
+        classify_with_llm_fn=lambda *_args, **_kwargs: {},
+        classify_local_fn=lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("should not call local")),
+        extract_created_ts_fn=lambda *_args, **_kwargs: "ts",
+        render_markdown_fn=render,
+    )
+
+    assert md == "md"
+    entry = captured["payload"]["items"][0]
+    assert entry["kind"] == "misc"
+    assert entry["intent"]["action"] == "triage"
+    assert entry["topics"][0]["slug"] == "example-com"
