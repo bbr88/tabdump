@@ -4,6 +4,8 @@ import re
 import urllib.parse
 from typing import Optional
 
+from core.tab_policy.text import slugify_kebab
+
 from .constants import (
     BLOG_HINTS,
     CODE_HOST_DOMAINS,
@@ -27,9 +29,7 @@ from .urls import host_matches_base
 
 
 def slugify_topic(value: str) -> str:
-    slug = re.sub(r"[^a-z0-9]+", "-", (value or "").strip().lower())
-    slug = re.sub(r"-+", "-", slug).strip("-")
-    return slug or "misc"
+    return slugify_kebab(value, fallback="misc")
 
 
 def topic_from_host(host: str) -> Optional[str]:

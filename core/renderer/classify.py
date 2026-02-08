@@ -31,7 +31,6 @@ def _classify_domain(
     url: str,
     parsed,
     domain_display: str,
-    path: str,
     flags: Dict,
     cfg: Dict,
 ) -> str:

@@ -20,7 +20,6 @@ def _render_md(state: Dict) -> str:
     counts = state["counts"]
     items = state["items"]
     deduped = state["deduped_count"]
-    multi_browser = len({it.get("browser") for it in items if it.get("browser")}) > 1
     badge_cfg = _badge_cfg(cfg)
     ordering_cfg = _ordering_cfg(cfg)
 
@@ -35,7 +34,7 @@ def _render_md(state: Dict) -> str:
         lines.append(f"> **Focus:** {_focus_line(items)}")
     lines.append("")
 
-    lines.extend(_render_sections(buckets, cfg, multi_browser, badge_cfg, ordering_cfg))
+    lines.extend(_render_sections(buckets, cfg, badge_cfg, ordering_cfg))
 
     md = "\n".join(lines).rstrip() + "\n"
     _validate_rendered(md, buckets, cfg)
@@ -91,7 +90,6 @@ def _dump_date(meta: Dict) -> str:
 def _render_sections(
     buckets: Dict[str, List[dict]],
     cfg: Dict,
-    multi_browser: bool,
     badge_cfg: Dict,
     ordering_cfg: Dict,
 ) -> List[str]:
@@ -418,7 +416,7 @@ def _format_bullet(
     display_title = it.get("canonical_title") or it.get("title_render") or it.get("title") or ""
     display_title = _escape_md(display_title)
     url = _escape_md_url(str(it.get("url") or ""))
-    badges = _build_badges(it, cfg, badges_cfg, context)
+    badges = _build_badges(it, badges_cfg, context)
     suffix = f" · {_escape_md(source_domain)}" if source_domain else ""
     return f"{prefix}- [ ] [{display_title}]({url}) · {badges}{suffix}"
 

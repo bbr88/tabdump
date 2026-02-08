@@ -117,3 +117,16 @@ def test_assign_buckets_applies_quick_limit_overflow_and_disable_modes():
     buckets_disabled = _assign_buckets(items, cfg_disabled)
     assert buckets_disabled["QUICK"] == []
     assert len(buckets_disabled["BACKLOG"]) == 2
+
+
+def test_assign_buckets_drops_overflow_when_backlog_overflow_disabled():
+    cfg = _cfg(includeQuickWins=True, quickWinsMaxItems=1, quickWinsOverflowToBacklog=False)
+    items = [
+        _item(url="https://amazon.com/p/1", domain="amazon.com", kind="misc"),
+        _item(url="https://netflix.com/title/1", domain="netflix.com", kind="misc"),
+    ]
+
+    buckets = _assign_buckets(items, cfg)
+
+    assert len(buckets["QUICK"]) == 1
+    assert buckets["BACKLOG"] == []

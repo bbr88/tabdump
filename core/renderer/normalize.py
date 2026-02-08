@@ -51,7 +51,6 @@ def _normalize_items(items_raw: List[dict], cfg: Dict) -> Tuple[List[dict], int]
             url,
             parsed,
             domain_display,
-            path,
             flags,
             cfg,
         )

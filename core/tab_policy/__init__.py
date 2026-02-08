@@ -2,6 +2,7 @@
 
 from .actions import canonical_action, action_priority_weight
 from .matching import host_matches_base
+from .text import slugify_kebab
 from .taxonomy import (
     AUTH_PATH_HINTS,
     BLOG_PATH_HINTS,
@@ -22,6 +23,7 @@ __all__ = [
     "canonical_action",
     "action_priority_weight",
     "host_matches_base",
+    "slugify_kebab",
     "POSTPROCESS_ACTION_ORDER",
     "POSTPROCESS_ACTIONS",
     "POSTPROCESS_KIND_ORDER",

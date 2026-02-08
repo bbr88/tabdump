@@ -68,11 +68,10 @@ def test_badge_cfg_and_ordering_cfg_merge_with_defaults():
 
 
 def test_build_badges_for_high_and_quick_contexts():
-    cfg = {}
     badges_cfg = {"maxPerBullet": 3, "includeTopicInHighPriority": True, "includeQuickWinsWhy": True}
 
-    high = _build_badges(_item(), cfg, badges_cfg, context="high")
-    quick = _build_badges(_item(kind="misc"), cfg, badges_cfg, context="quick")
+    high = _build_badges(_item(), badges_cfg, context="high")
+    quick = _build_badges(_item(kind="misc"), badges_cfg, context="quick")
 
     assert "docs" in high
     assert "#distributed-systems" in high

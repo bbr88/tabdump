@@ -63,3 +63,14 @@ def test_default_kind_action_returns_expected_defaults():
     assert default_kind_action("https://platform.openai.com/api-keys") == ("auth", "ignore")
     assert default_kind_action("ftp://example.com/path") == ("internal", "ignore")
     assert default_kind_action("https://example.com/path") == ("misc", "triage")
+
+
+def test_url_helpers_fail_closed_when_urlsplit_raises(monkeypatch):
+    import core.postprocess.urls as urls
+
+    monkeypatch.setattr(urls.urllib.parse, "urlsplit", lambda _value: (_ for _ in ()).throw(ValueError("boom")))
+
+    assert normalize_url("https://example.com/path") == "https://example.com/path"
+    assert domain_of("https://example.com/path") == "(unknown)"
+    assert is_sensitive_url("https://example.com/path") is True
+    assert default_kind_action("https://example.com/path") == ("internal", "ignore")

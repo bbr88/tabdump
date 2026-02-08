@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from .taxonomy import POSTPROCESS_ACTIONS
-
 # Renderer historically used a different vocabulary; keep aliases for compatibility.
 LEGACY_ACTION_ALIASES = {
     "implement": "build",

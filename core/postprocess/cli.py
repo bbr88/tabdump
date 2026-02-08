@@ -41,24 +41,15 @@ if str(ROOT) not in sys.path:
 
 from core.postprocess.classify_local import (
     classify_local as _classify_local_impl,
-    infer_local_action as _infer_local_action_impl,
-    infer_local_kind as _infer_local_kind_impl,
-    infer_local_score as _infer_local_score_impl,
-    needle_in_blob as _needle_in_blob_impl,
-    slugify_topic as _slugify_topic_impl,
-    topic_from_host as _topic_from_host_impl,
-    topic_from_keywords as _topic_from_keywords_impl,
 )
 from core.postprocess.coerce import (
     safe_action as _safe_action_impl,
     safe_kind as _safe_kind_impl,
-    safe_prio as _safe_prio_impl,
     safe_score as _safe_score_impl,
     safe_topic as _safe_topic_impl,
 )
 from core.postprocess.llm import (
     call_with_retries as _call_with_retries_impl,
-    chunked as _chunked_impl,
     classify_with_llm as _classify_with_llm_impl,
     key_from_keychain as _key_from_keychain_impl,
     openai_chat_json as _openai_chat_json_impl,
@@ -68,7 +59,6 @@ from core.postprocess.parsing import (
     extract_created_ts as _extract_created_ts_impl,
     extract_frontmatter_value as _extract_frontmatter_value_impl,
     extract_items as _extract_items_impl,
-    parse_markdown_link_line as _parse_markdown_link_line,
 )
 from core.postprocess.pipeline import build_clean_note as _build_clean_note_impl
 from core.postprocess.redaction import (
@@ -78,10 +68,7 @@ from core.postprocess.redaction import (
 from core.postprocess.urls import (
     default_kind_action as _default_kind_action_impl,
     domain_of,
-    host_matches_base as _host_matches_base_impl,
     is_sensitive_url as _is_sensitive_url_impl,
-    is_private_or_loopback_host as _is_private_or_loopback_host_impl,
-    matches_sensitive_host_or_path as _matches_sensitive_host_or_path_impl,
     normalize_url,
 )
 from core.renderer.renderer import render_markdown  # type: ignore
@@ -161,20 +148,12 @@ def _safe_score(value: object) -> Optional[int]:
     return _safe_score_impl(value)
 
 
-def _safe_prio(value: object) -> Optional[str]:
-    return _safe_prio_impl(value)
-
-
 def _extract_created_ts(src_path: Path, fallback: str) -> str:
     return _extract_created_ts_impl(src_path, fallback)
 
 
 def _extract_frontmatter_value(src_path: Path, key: str) -> Optional[str]:
     return _extract_frontmatter_value_impl(src_path, key)
-
-
-def _chunked(items: List, size: int) -> List[List]:
-    return _chunked_impl(items, size)
 
 
 def _call_with_retries(
@@ -200,46 +179,6 @@ def _is_sensitive_url(url: str) -> bool:
 
 def _default_kind_action(url: str) -> Tuple[str, str]:
     return _default_kind_action_impl(url)
-
-
-def _is_private_or_loopback_host(host: str) -> bool:
-    return _is_private_or_loopback_host_impl(host)
-
-
-def _matches_sensitive_host_or_path(host: str, path: str) -> bool:
-    return _matches_sensitive_host_or_path_impl(host, path)
-
-
-def _host_matches_base(host: str, base: str) -> bool:
-    return _host_matches_base_impl(host, base)
-
-
-def _slugify_topic(value: str) -> str:
-    return _slugify_topic_impl(value)
-
-
-def _topic_from_host(host: str) -> Optional[str]:
-    return _topic_from_host_impl(host)
-
-
-def _topic_from_keywords(text_blob: str) -> Optional[str]:
-    return _topic_from_keywords_impl(text_blob)
-
-
-def _needle_in_blob(topic: str, needle: str, blob: str) -> bool:
-    return _needle_in_blob_impl(topic, needle, blob)
-
-
-def _infer_local_kind(item: Item) -> str:
-    return _infer_local_kind_impl(item)
-
-
-def _infer_local_action(kind: str, item: Item) -> str:
-    return _infer_local_action_impl(kind, item)
-
-
-def _infer_local_score(kind: str, action: str, item: Item) -> int:
-    return _infer_local_score_impl(kind, action, item)
 
 
 def _classify_local(item: Item) -> dict:

@@ -144,3 +144,25 @@ def test_render_quick_callout_and_docs_large_mode_grouping():
     assert "> #### Docs" in docs_text
     assert "> #### Articles" in docs_text
     assert "> #### Papers" in docs_text
+
+
+def test_render_quick_callout_falls_back_to_generic_mode_when_disabled():
+    cfg = {
+        "quickWinsEnableMiniCategories": False,
+        "emptyBucketMessage": "_(empty)_",
+    }
+    badges_cfg = {"maxPerBullet": 3, "includeTopicInHighPriority": True, "includeQuickWinsWhy": False}
+
+    lines = _render_quick_callout(
+        "Easy Tasks",
+        "[!tip]- Expand Easy Tasks",
+        [_item(domain="amazon.com", kind="misc"), _item(domain="netflix.com", kind="misc")],
+        cfg,
+        badges_cfg,
+        ordering_cfg={},
+    )
+    text = "\n".join(lines)
+    assert "> ### amazon.com" in text
+    assert "> ### netflix.com" in text
+    assert "> ### Shopping" not in text
+    assert "> ### Leisure" not in text

@@ -17,7 +17,6 @@ def _classify(url: str, *, flags=None, cfg=None) -> str:
         url=url,
         parsed=parsed,
         domain_display=domain,
-        path=parsed.path or "",
         flags=flags or {},
         cfg=cfg or _cfg(),
     )

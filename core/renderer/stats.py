@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-import re
 from collections import Counter
 from typing import Dict, List
+
+from core.tab_policy.text import slugify_kebab
 
 from .config import DEFAULT_CFG
 
@@ -47,9 +48,7 @@ def _focus_line(items: List[dict]) -> str:
 
 
 def _tagify(slug: str) -> str:
-    tag = re.sub(r"[^a-zA-Z0-9]+", "-", (slug or "").lower())
-    tag = re.sub(r"-+", "-", tag).strip("-")
-    return tag or "other"
+    return slugify_kebab(slug, fallback="other")
 
 
 def _badge_cfg(cfg: Dict) -> Dict:
@@ -76,7 +75,7 @@ def _primary_badge(item: dict) -> str:
     return kind
 
 
-def _build_badges(item: dict, cfg: Dict, badges_cfg: Dict, context: str) -> str:
+def _build_badges(item: dict, badges_cfg: Dict, context: str) -> str:
     max_badges = int(badges_cfg.get("maxPerBullet", 3))
     include_topic = bool(badges_cfg.get("includeTopicInHighPriority", True))
     include_why = bool(badges_cfg.get("includeQuickWinsWhy", False))
