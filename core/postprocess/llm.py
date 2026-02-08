@@ -8,6 +8,8 @@ import urllib.request
 from pathlib import Path
 from typing import Dict, List, Optional, TextIO, Tuple
 
+from core.tab_policy.taxonomy import POSTPROCESS_ACTION_ORDER, POSTPROCESS_KIND_ORDER
+
 from .models import Item
 from .urls import normalize_url
 
@@ -140,6 +142,8 @@ def classify_with_llm(
 ) -> Dict[int, dict]:
     system = "You are a strict classifier for browser tabs. Return ONLY valid JSON."
     cls_map: Dict[int, dict] = {}
+    kind_values = ", ".join(POSTPROCESS_KIND_ORDER)
+    action_values = ", ".join(POSTPROCESS_ACTION_ORDER)
 
     if max_items > 0 and len(indexed_for_cls) > max_items:
         indexed_for_cls = indexed_for_cls[:max_items]
@@ -159,8 +163,8 @@ def classify_with_llm(
         user = (
             "For each tab, provide:\n"
             "- topic: short, lowercase, kebab-case (e.g. distributed-systems, postgres, llm, finance, travel, food, shopping)\n"
-            "- kind: one of [video, repo, paper, docs, article, tool, misc, local, auth, internal]\n"
-            "- action: one of [read, watch, reference, build, triage, ignore]\n"
+            f"- kind: one of [{kind_values}]\n"
+            f"- action: one of [{action_values}]\n"
             "- score: integer 1-5 (importance)\n\n"
             "Return JSON like:\n"
             "{\n"

@@ -2,6 +2,17 @@
 
 from typing import Tuple
 
+from core.tab_policy.taxonomy import (
+    AUTH_PATH_HINTS,
+    BLOG_PATH_HINTS,
+    CODE_HOST_DOMAINS,
+    DOC_PATH_HINTS,
+    SENSITIVE_HOSTS,
+    SENSITIVE_QUERY_KEYS,
+    TOOL_DOMAINS,
+    VIDEO_DOMAINS,
+)
+
 TRACKING_PARAMS = {
     "fbclid",
     "gclid",
@@ -16,122 +27,10 @@ TRACKING_PARAMS = {
     "yclid",
 }
 
-SENSITIVE_HOSTS = {
-    "accounts.google.com",
-    "auth.openai.com",
-    "platform.openai.com",
-    "chat.openai.com",
-    "github.com/settings",
-}
-
-AUTH_PATH_HINTS = (
-    "/login",
-    "/signin",
-    "/sign-in",
-    "/oauth",
-    "/sso",
-    "/session",
-    "/api-keys",
-    "/credentials",
-    "/token",
-    "/profile",
-)
-
-SENSITIVE_QUERY_KEYS = (
-    "token",
-    "access_token",
-    "refresh_token",
-    "secret",
-    "api_key",
-    "apikey",
-    "session",
-    "code",
-    "sig",
-    "signature",
-    "password",
-)
-
-VIDEO_DOMAINS = {
-    "youtube.com",
-    "youtu.be",
-    "vimeo.com",
-    "twitch.tv",
-    "netflix.com",
-    "disneyplus.com",
-    "hulu.com",
-    "primevideo.com",
-    "music.apple.com",
-    "tv.apple.com",
-    "open.spotify.com",
-    "music.youtube.com",
-    "loom.com",
-    "v.redd.it",
-}
-
-CODE_HOST_DOMAINS = {"github.com", "gitlab.com", "bitbucket.org"}
-
-TOOL_DOMAINS = {
-    "console.aws.amazon.com",
-    "console.cloud.google.com",
-    "portal.azure.com",
-    "notion.so",
-    "notion.site",
-    "trello.com",
-    "asana.com",
-    "todoist.com",
-    "airtable.com",
-    "canva.com",
-    "figma.com",
-    "miro.com",
-    "slack.com",
-    "zoom.us",
-    "meet.google.com",
-    "calendar.google.com",
-    "docs.google.com",
-    "drive.google.com",
-    "mail.google.com",
-    "outlook.live.com",
-    "dropbox.com",
-    "maps.google.com",
-    "translate.google.com",
-}
-
-DOC_HINTS = (
-    "/docs/",
-    "/docs",
-    "/documentation/",
-    "/documentation",
-    "/reference/",
-    "/reference",
-    "/guides/",
-    "/guides",
-    "/guide/",
-    "/guide",
-    "/api/",
-    "/api",
-    "/manual",
-    "/handbook",
-    "/release",
-    "/releases",
-    "/changelog",
-)
+DOC_HINTS = DOC_PATH_HINTS
+BLOG_HINTS = BLOG_PATH_HINTS
 
 DOC_HOST_OVERRIDES = {"docs.github.com"}
-
-BLOG_HINTS = (
-    "/blog/",
-    "/blog",
-    "/blogs/",
-    "/blogs",
-    "/post/",
-    "/posts/",
-    "/posts",
-    "/article",
-    "/articles/",
-    "/articles",
-    "/stories/",
-    "/story/",
-)
 
 REFERENCE_HINTS = ("reference", "api", "spec", "documentation", "docs")
 
@@ -206,7 +105,10 @@ TOPIC_KEYWORDS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
     ("llm", ("llm", "openai", "anthropic", "chatgpt", "huggingface")),
     ("frontend", ("react", "vue", "angular", "frontend", "css")),
     ("security", ("security", "oauth", "sso", "token", "auth")),
-    ("finance", ("finance", "investing", "stocks", "etf", "budget", "mortgage", "credit card", "retirement", "tax")),
+    (
+        "finance",
+        ("finance", "investing", "stocks", "etf", "budget", "mortgage", "credit card", "retirement", "tax"),
+    ),
     ("health", ("health", "wellness", "nutrition", "diet", "mental health", "therapy", "mindfulness")),
     ("fitness", ("workout", "fitness", "exercise", "gym", "running", "yoga", "pilates")),
     ("food", ("recipe", "cooking", "baking", "meal prep", "kitchen", "restaurant")),

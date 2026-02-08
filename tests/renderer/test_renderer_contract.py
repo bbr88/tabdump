@@ -339,6 +339,36 @@ def test_postprocess_repo_kind_short_path_stays_in_repos():
     assert not state["buckets"]["BACKLOG"]
 
 
+def test_shared_video_domain_classifies_as_video_category():
+    payload = {
+        "meta": {"created": "2026-02-08T12:00:00Z", "source": "video_domain.raw.json"},
+        "counts": {"total": 1, "dumped": 1, "closed": 1, "kept": 0},
+        "cfg": {"highPriorityLimit": 0},
+        "items": [
+            {"url": "https://netflix.com/title/123", "title": "Netflix Show"},
+        ],
+    }
+    state = build_state(payload)
+    item = state["items"][0]
+    assert item["domain_category"] == "video"
+    assert item["kind"] == "video"
+
+
+def test_shared_docs_path_hint_classifies_as_docs_site():
+    payload = {
+        "meta": {"created": "2026-02-08T12:00:00Z", "source": "docs_hint.raw.json"},
+        "counts": {"total": 1, "dumped": 1, "closed": 1, "kept": 0},
+        "cfg": {"highPriorityLimit": 0},
+        "items": [
+            {"url": "https://example.com/api/users", "title": "Users API"},
+        ],
+    }
+    state = build_state(payload)
+    item = state["items"][0]
+    assert item["domain_category"] == "docs_site"
+    assert item["kind"] == "docs"
+
+
 def test_postprocess_action_semantics_score_mapping():
     base = {
         "kind": "article",

@@ -2,6 +2,8 @@
 
 from typing import Optional
 
+from core.tab_policy.taxonomy import POSTPROCESS_ACTIONS, POSTPROCESS_KINDS
+
 
 def safe_topic(value: object, domain: str) -> str:
     if isinstance(value, str) and value.strip():
@@ -12,19 +14,17 @@ def safe_topic(value: object, domain: str) -> str:
 
 
 def safe_kind(value: object) -> str:
-    allowed = {"video", "repo", "paper", "docs", "article", "tool", "misc", "local", "auth", "internal"}
     if isinstance(value, str):
         candidate = value.strip().lower()
-        if candidate in allowed:
+        if candidate in POSTPROCESS_KINDS:
             return candidate
     return "misc"
 
 
 def safe_action(value: object) -> str:
-    allowed = {"read", "watch", "reference", "build", "triage", "ignore", "deep_work"}
     if isinstance(value, str):
         candidate = value.strip().lower()
-        if candidate in allowed:
+        if candidate in POSTPROCESS_ACTIONS:
             return candidate
     return "triage"
 

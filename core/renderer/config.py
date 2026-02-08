@@ -4,6 +4,15 @@ from __future__ import annotations
 
 from typing import Dict
 
+from core.tab_policy.taxonomy import (
+    BLOG_PATH_HINTS,
+    CODE_HOST_DOMAINS,
+    DOC_PATH_HINTS,
+    RENDERER_ALLOWED_KINDS,
+    SENSITIVE_QUERY_KEYS,
+    VIDEO_DOMAINS,
+)
+
 DEFAULT_CFG: Dict = {
     "rendererVersion": "3.2.4.1",
     "titleMaxLen": 96,
@@ -46,8 +55,8 @@ DEFAULT_CFG: Dict = {
         "safari-web-extension://",
     ],
     "chatDomains": ["chatgpt.com", "gemini.google.com", "claude.ai", "copilot.microsoft.com"],
-    "codeHostDomains": ["github.com", "gitlab.com", "bitbucket.org"],
-    "videoDomains": ["youtube.com", "www.youtube.com", "vimeo.com"],
+    "codeHostDomains": list(CODE_HOST_DOMAINS),
+    "videoDomains": list(VIDEO_DOMAINS),
     "projectDomains": [
         "notion.so",
         "notion.site",
@@ -89,13 +98,13 @@ DEFAULT_CFG: Dict = {
     "projectNotionRequireHint": True,
     "projectDomainSuffixMatching": True,
     "docsDomainPrefix": "docs.",
-    "docsPathHints": ["/docs/", "/documentation/", "/reference/", "/guides/"],
-    "blogPathHints": ["/blog/", "/posts/", "/articles/"],
+    "docsPathHints": list(DOC_PATH_HINTS),
+    "blogPathHints": list(BLOG_PATH_HINTS),
     "authPathRegex": [
         "(?i)(^|/)(login|signin|sign-in|sso|oauth)(/|$)",
         "(?i)(^|/)(api-keys|credentials)(/|$)",
     ],
-    "authContainsHintsSoft": ["apikey", "api_key", "token", "session"],
+    "authContainsHintsSoft": list(SENSITIVE_QUERY_KEYS),
     "adminAuthRequiresStrongSignal": True,
     "consoleDomains": ["console.aws.amazon.com", "console.cloud.google.com", "portal.azure.com"],
     "emptyBucketMessage": "_(empty)_",
@@ -147,20 +156,7 @@ DEFAULT_CFG: Dict = {
     },
 }
 
-ALLOWED_KINDS = {
-    "admin",
-    "paper",
-    "docs",
-    "spec",
-    "article",
-    "video",
-    "repo",
-    "tool",
-    "misc",
-    "local",
-    "auth",
-    "internal",
-}
+ALLOWED_KINDS = set(RENDERER_ALLOWED_KINDS)
 
 KIND_PRIORITY = ["paper", "spec", "docs", "repo", "article", "video", "tool", "misc", "admin"]
 KIND_PRIORITY_INDEX = {k: i for i, k in enumerate(KIND_PRIORITY)}

@@ -7,6 +7,7 @@ import pytest
 from core.postprocess import llm
 from core.postprocess.models import Item
 from core.postprocess.urls import normalize_url
+from core.tab_policy.taxonomy import POSTPROCESS_ACTION_ORDER, POSTPROCESS_KIND_ORDER
 
 
 def _item(i: int) -> Item:
@@ -159,6 +160,8 @@ def test_classify_with_llm_maps_by_id_and_url_with_redaction_and_max_items():
 
     assert "- 0 | R<Title 0> | U<https://example.com/item/0?q=v0> | example.com" in seen["user"]
     assert "- 2 |" not in seen["user"]
+    assert f"- kind: one of [{', '.join(POSTPROCESS_KIND_ORDER)}]" in seen["user"]
+    assert f"- action: one of [{', '.join(POSTPROCESS_ACTION_ORDER)}]" in seen["user"]
     assert cls[1]["kind"] == "repo"
     assert cls[0]["kind"] == "docs"
 

@@ -2,17 +2,7 @@
 
 from __future__ import annotations
 
-
-# Postprocess emits this action vocabulary today.
-POSTPROCESS_ACTIONS = {
-    "read",
-    "watch",
-    "reference",
-    "build",
-    "triage",
-    "ignore",
-    "deep_work",
-}
+from .taxonomy import POSTPROCESS_ACTIONS
 
 # Renderer historically used a different vocabulary; keep aliases for compatibility.
 LEGACY_ACTION_ALIASES = {
