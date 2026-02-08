@@ -6,7 +6,6 @@ MANIFEST_PATH="${ROOT_DIR}/scripts/runtime-manifest.sha256"
 
 TRACKED_FILES=(
   "core/monitor_tabs.py"
-  "core/postprocess_tabdump.py"
   "core/postprocess/__init__.py"
   "core/postprocess/cli.py"
   "core/postprocess/classify_local.py"

@@ -6,7 +6,6 @@ CONFIG_DIR="${HOME}/Library/Application Support/TabDump"
 ENGINE_DEST="${CONFIG_DIR}/TabDump.scpt"
 CONFIG_PATH="${CONFIG_DIR}/config.json"
 MONITOR_DEST="${CONFIG_DIR}/monitor_tabs.py"
-POSTPROCESS_DEST="${CONFIG_DIR}/postprocess_tabdump.py"
 CORE_PKG_DIR="${CONFIG_DIR}/core"
 RENDERER_DIR="${CORE_PKG_DIR}/renderer"
 POSTPROCESS_DIR="${CORE_PKG_DIR}/postprocess"
@@ -30,7 +29,6 @@ echo "TabDump uninstaller"
 echo "This will remove:"
 echo "  - ${ENGINE_DEST}"
 echo "  - ${MONITOR_DEST}"
-echo "  - ${POSTPROCESS_DEST}"
 echo "  - ${APP_PATH}"
 echo "  - ${CLI_PATH}"
 echo "  - ${LAUNCH_AGENT_PATH}"
@@ -91,10 +89,6 @@ fi
 
 if [[ -e "${MONITOR_DEST}" ]]; then
   rm -f "${MONITOR_DEST}"
-fi
-
-if [[ -e "${POSTPROCESS_DEST}" ]]; then
-  rm -f "${POSTPROCESS_DEST}"
 fi
 
 if [[ -d "${RENDERER_DIR}" ]]; then

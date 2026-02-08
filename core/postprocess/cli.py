@@ -288,7 +288,8 @@ def build_clean_note(src_path: Path, items: List[Item], dump_id: Optional[str] =
 
 def main(argv: List[str]) -> int:
     if len(argv) < 2:
-        print("usage: postprocess_tabdump.py <path-to-tabdump-md>", file=sys.stderr)
+        exe = Path(argv[0]).name if argv else "cli.py"
+        print(f"usage: {exe} <path-to-tabdump-md>", file=sys.stderr)
         return 2
 
     src = Path(argv[1]).expanduser().resolve()

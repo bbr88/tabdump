@@ -9,7 +9,7 @@ from types import SimpleNamespace
 import pytest
 
 import core.monitor_tabs as monitor
-import core.postprocess_tabdump as ppt
+import core.postprocess.cli as ppt
 from core.postprocess.cli import Item
 from core.renderer.renderer_v3 import render_markdown
 
@@ -55,7 +55,7 @@ def _make_items(n: int) -> list[Item]:
 
 def test_provenance_required_blocks_without_tabdump_id(tmp_path):
     dump_path = _write_dump(tmp_path / "TabDump 2026-02-07 00-00-00.md", with_id=False)
-    rc = ppt.main(["postprocess_tabdump.py", str(dump_path)])
+    rc = ppt.main(["cli.py", str(dump_path)])
     assert rc == 4
 
 
@@ -72,7 +72,7 @@ def test_provenance_allows_with_tabdump_id(tmp_path, monkeypatch):
 
     monkeypatch.setattr(ppt, "render_markdown", fake_render)
 
-    rc = ppt.main(["postprocess_tabdump.py", str(dump_path)])
+    rc = ppt.main(["cli.py", str(dump_path)])
     assert rc == 0
 
     clean_path = dump_path.with_name(dump_path.stem + " (clean)" + dump_path.suffix)

@@ -33,9 +33,8 @@ HERE = Path(__file__).resolve().parent
 
 def _resolve_postprocess_path() -> Path:
     candidates = (
-        HERE / "postprocess" / "cli.py",         # repo runtime (core/monitor_tabs.py)
+        HERE / "postprocess" / "cli.py",          # repo runtime (core/monitor_tabs.py)
         HERE / "core" / "postprocess" / "cli.py", # installed runtime (App Support root)
-        HERE / "postprocess_tabdump.py",         # legacy fallback
     )
     for candidate in candidates:
         if candidate.exists():
