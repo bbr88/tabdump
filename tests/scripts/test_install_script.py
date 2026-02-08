@@ -24,6 +24,7 @@ class InstallRun:
     stdout: str
     stderr: str
     home: Path
+    bin_dir: Path
     log_path: Path
 
 
@@ -88,6 +89,15 @@ exit 0
         """#!/usr/bin/env bash
 set -euo pipefail
 echo "launchctl $*" >> "${TABDUMP_TEST_LOG:?}"
+if [[ "${TABDUMP_TEST_BOOTOUT_IO_ERROR:-0}" == "1" && "${1:-}" == "bootout" ]]; then
+  echo "Boot-out failed: 5: Input/output error" >&2
+  echo "Try re-running the command as root for richer errors." >&2
+  exit 1
+fi
+if [[ "${TABDUMP_TEST_FAIL_BOOTSTRAP:-0}" == "1" && "${1:-}" == "bootstrap" ]]; then
+  echo "bootstrap failed" >&2
+  exit 1
+fi
 exit 0
 """,
     )
@@ -98,6 +108,45 @@ exit 0
 set -euo pipefail
 echo "security $*" >> "${TABDUMP_TEST_LOG:?}"
 if [[ "${1:-}" == "find-generic-password" ]]; then
+  if [[ "${TABDUMP_TEST_KEYCHAIN_EXISTS:-0}" == "1" ]]; then
+    exit 0
+  fi
+  exit 1
+fi
+exit 0
+""",
+    )
+    _write_stub(
+        bin_dir,
+        "open",
+        """#!/usr/bin/env bash
+set -euo pipefail
+echo "open $*" >> "${TABDUMP_TEST_LOG:?}"
+exit 0
+""",
+    )
+    _write_stub(
+        bin_dir,
+        "osascript",
+        """#!/usr/bin/env bash
+set -euo pipefail
+echo "osascript $*" >> "${TABDUMP_TEST_LOG:?}"
+if [[ "$*" == *"id of application \\\"Google Chrome\\\""* ]]; then
+  if [[ "${TABDUMP_TEST_HAS_CHROME:-1}" == "1" ]]; then
+    exit 0
+  fi
+  exit 1
+fi
+if [[ "$*" == *"id of application \\\"Safari\\\""* ]]; then
+  if [[ "${TABDUMP_TEST_HAS_SAFARI:-1}" == "1" ]]; then
+    exit 0
+  fi
+  exit 1
+fi
+if [[ "$*" == *"id of application \\\"Firefox\\\""* ]]; then
+  if [[ "${TABDUMP_TEST_HAS_FIREFOX:-1}" == "1" ]]; then
+    exit 0
+  fi
   exit 1
 fi
 exit 0
@@ -105,21 +154,32 @@ exit 0
     )
 
 
-def _run_install(tmp_path: Path, user_input: str) -> InstallRun:
+def _run_install(
+    tmp_path: Path,
+    user_input: str = "",
+    args: list[str] | None = None,
+    extra_env: dict[str, str] | None = None,
+) -> InstallRun:
     home = tmp_path / "home"
     fake_bin = tmp_path / "bin"
     log_path = tmp_path / "command.log"
-    home.mkdir()
-    fake_bin.mkdir()
+    home.mkdir(exist_ok=True)
+    fake_bin.mkdir(exist_ok=True)
     _install_test_stubs(fake_bin)
 
     env = os.environ.copy()
     env["HOME"] = str(home)
     env["PATH"] = f"{fake_bin}:{env['PATH']}"
     env["TABDUMP_TEST_LOG"] = str(log_path)
+    if extra_env:
+        env.update(extra_env)
+
+    cmd = ["bash", str(INSTALL_SCRIPT)]
+    if args:
+        cmd.extend(args)
 
     proc = subprocess.run(
-        ["bash", str(INSTALL_SCRIPT)],
+        cmd,
         cwd=ROOT_DIR,
         env=env,
         input=user_input,
@@ -132,6 +192,7 @@ def _run_install(tmp_path: Path, user_input: str) -> InstallRun:
         stdout=proc.stdout,
         stderr=proc.stderr,
         home=home,
+        bin_dir=fake_bin,
         log_path=log_path,
     )
 
@@ -141,18 +202,43 @@ def _read_config(home: Path) -> dict:
     return json.loads(cfg_path.read_text(encoding="utf-8"))
 
 
-def test_install_requires_vault_inbox_path(tmp_path):
-    proc = _run_install(tmp_path, "\n")
+def _run_generated_cli(
+    run: InstallRun,
+    args: list[str] | None = None,
+    extra_env: dict[str, str] | None = None,
+) -> subprocess.CompletedProcess[str]:
+    cli_path = run.home / ".local" / "bin" / "tabdump"
+    env = os.environ.copy()
+    env["HOME"] = str(run.home)
+    env["PATH"] = f"{run.bin_dir}:{env['PATH']}"
+    env["TABDUMP_TEST_LOG"] = str(run.log_path)
+    if extra_env:
+        env.update(extra_env)
+
+    cmd = [str(cli_path)]
+    if args:
+        cmd.extend(args)
+
+    return subprocess.run(
+        cmd,
+        cwd=ROOT_DIR,
+        env=env,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+
+def test_install_requires_vault_inbox_path_in_yes_mode(tmp_path):
+    proc = _run_install(tmp_path, args=["--yes"])
     output = proc.stdout + proc.stderr
-    cfg_path = proc.home / "Library" / "Application Support" / "TabDump" / "config.json"
 
     assert proc.returncode == 1
-    assert "Vault Inbox path is required." in output
-    assert not cfg_path.exists()
+    assert "--vault-inbox is required when running with --yes." in output
 
 
 def test_install_writes_default_config_and_artifacts(tmp_path):
-    proc = _run_install(tmp_path, "~/vault/inbox\nn\nn\n")
+    proc = _run_install(tmp_path, user_input="~/vault/inbox\n\nn\nn\n")
     output = proc.stdout + proc.stderr
     home = proc.home
     config_dir = home / "Library" / "Application Support" / "TabDump"
@@ -172,6 +258,7 @@ def test_install_writes_default_config_and_artifacts(tmp_path):
     assert data["vaultInbox"] == f"{expected_vault}{os.sep}"
     assert data["dryRun"] is True
     assert data["llmEnabled"] is False
+    assert data["browsers"] == ["Chrome", "Safari"]
 
     assert stat.S_IMODE(config_path.stat().st_mode) == 0o600
     assert stat.S_IMODE(config_dir.stat().st_mode) == 0o700
@@ -182,15 +269,176 @@ def test_install_writes_default_config_and_artifacts(tmp_path):
     assert "shasum -a 256 -c" in log
     assert "osacompile -o" in log
     assert "codesign --force --deep --sign -" in log
+    assert "launchctl bootstrap" in log
 
 
-def test_install_can_enable_llm_and_disable_dry_run(tmp_path):
-    proc = _run_install(tmp_path, "~/vault/inbox\ny\ny\n2\n")
+def test_install_supports_noninteractive_flags_and_browser_list(tmp_path):
+    proc = _run_install(
+        tmp_path,
+        args=[
+            "--yes",
+            "--vault-inbox",
+            "~/vault/inbox",
+            "--browsers",
+            "Safari, Chrome, Firefox",
+            "--set-dry-run",
+            "false",
+            "--enable-llm",
+            "true",
+            "--key-mode",
+            "skip",
+        ],
+    )
     output = proc.stdout + proc.stderr
-    data = _read_config(proc.home)
-    log = proc.log_path.read_text(encoding="utf-8")
 
     assert proc.returncode == 0, output
+    data = _read_config(proc.home)
     assert data["dryRun"] is False
     assert data["llmEnabled"] is True
-    assert "security find-generic-password" in log
+    assert data["browsers"] == ["Safari", "Chrome", "Firefox"]
+
+
+def test_install_rejects_invalid_browsers(tmp_path):
+    proc = _run_install(
+        tmp_path,
+        args=[
+            "--yes",
+            "--vault-inbox",
+            "~/vault/inbox",
+            "--browsers",
+            "Chrome,Brave",
+        ],
+    )
+    output = proc.stdout + proc.stderr
+
+    assert proc.returncode == 1
+    assert "Invalid browser list" in output
+
+
+def test_install_warns_for_missing_configured_browser(tmp_path):
+    proc = _run_install(
+        tmp_path,
+        args=[
+            "--yes",
+            "--vault-inbox",
+            "~/vault/inbox",
+            "--browsers",
+            "Chrome,Safari",
+        ],
+        extra_env={"TABDUMP_TEST_HAS_CHROME": "0", "TABDUMP_TEST_HAS_SAFARI": "1"},
+    )
+    output = proc.stdout + proc.stderr
+
+    assert proc.returncode == 0, output
+    assert "Chrome is configured but not installed. TabDump will skip it until installed." in output
+
+
+def test_install_fails_when_launchctl_bootstrap_fails(tmp_path):
+    proc = _run_install(
+        tmp_path,
+        args=["--yes", "--vault-inbox", "~/vault/inbox"],
+        extra_env={"TABDUMP_TEST_FAIL_BOOTSTRAP": "1"},
+    )
+    output = proc.stdout + proc.stderr
+
+    assert proc.returncode == 1
+    assert "launchctl bootstrap failed" in output
+
+    log = proc.log_path.read_text(encoding="utf-8")
+    assert "launchctl bootstrap" in log
+
+
+def test_install_treats_bootout_io_error_as_expected(tmp_path):
+    proc = _run_install(
+        tmp_path,
+        args=["--yes", "--vault-inbox", "~/vault/inbox"],
+        extra_env={"TABDUMP_TEST_BOOTOUT_IO_ERROR": "1"},
+    )
+    output = proc.stdout + proc.stderr
+
+    assert proc.returncode == 0, output
+    assert "[ok] No existing launch agent to stop." in output
+    assert "[warn] launchctl bootout reported:" not in output
+
+
+def test_install_adds_local_bin_path_to_shell_rc(tmp_path):
+    proc = _run_install(
+        tmp_path,
+        args=["--yes", "--vault-inbox", "~/vault/inbox"],
+        extra_env={"SHELL": "/bin/zsh"},
+    )
+    output = proc.stdout + proc.stderr
+    zshrc_path = proc.home / ".zshrc"
+
+    assert proc.returncode == 0, output
+    assert zshrc_path.exists()
+    zshrc_text = zshrc_path.read_text(encoding="utf-8")
+    assert 'export PATH="$HOME/.local/bin:$PATH"' in zshrc_text
+
+
+def test_install_ignores_alias_local_bin_and_still_adds_path_export(tmp_path):
+    home = tmp_path / "home"
+    home.mkdir(parents=True, exist_ok=True)
+    zshrc_path = home / ".zshrc"
+    zshrc_path.write_text('alias nvim=/Users/i.bisarnov/.local/bin/lvim\n', encoding="utf-8")
+
+    proc = _run_install(
+        tmp_path,
+        args=["--yes", "--vault-inbox", "~/vault/inbox"],
+        extra_env={"SHELL": "/bin/zsh"},
+    )
+    output = proc.stdout + proc.stderr
+
+    assert proc.returncode == 0, output
+    zshrc_text = zshrc_path.read_text(encoding="utf-8")
+    assert 'alias nvim=/Users/i.bisarnov/.local/bin/lvim' in zshrc_text
+    assert 'export PATH="$HOME/.local/bin:$PATH"' in zshrc_text
+
+
+def test_install_requires_openai_key_for_keychain_mode_in_yes_mode(tmp_path):
+    proc = _run_install(
+        tmp_path,
+        args=[
+            "--yes",
+            "--vault-inbox",
+            "~/vault/inbox",
+            "--enable-llm",
+            "true",
+            "--key-mode",
+            "keychain",
+        ],
+    )
+    output = proc.stdout + proc.stderr
+
+    assert proc.returncode == 1
+    assert "--openai-key is required when using --key-mode keychain with --yes." in output
+
+
+def test_install_reprompts_on_invalid_key_mode_choice(tmp_path):
+    proc = _run_install(tmp_path, user_input="~/vault/inbox\n\nn\ny\n9\n2\n")
+    output = proc.stdout + proc.stderr
+
+    assert proc.returncode == 0, output
+    assert "Please choose 1, 2, or 3." in output
+
+    data = _read_config(proc.home)
+    assert data["llmEnabled"] is True
+
+
+def test_generated_cli_permissions_handles_missing_chrome(tmp_path):
+    install_run = _run_install(tmp_path, user_input="~/vault/inbox\n\nn\nn\n")
+    assert install_run.returncode == 0, install_run.stdout + install_run.stderr
+
+    cli_run = _run_generated_cli(
+        install_run,
+        args=["permissions"],
+        extra_env={"TABDUMP_TEST_HAS_CHROME": "0", "TABDUMP_TEST_HAS_SAFARI": "1"},
+    )
+    output = cli_run.stdout + cli_run.stderr
+
+    assert cli_run.returncode == 0, output
+    assert "Chrome is configured but not installed. Skipping." in output
+    assert "System Settings → Privacy & Security → Automation → TabDump → Safari" in output
+
+    log = install_run.log_path.read_text(encoding="utf-8")
+    assert f"open {install_run.home / 'Applications' / 'TabDump.app'}" in log
