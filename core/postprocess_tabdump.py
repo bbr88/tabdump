@@ -162,6 +162,7 @@ DOC_HINTS = (
     "/releases",
     "/changelog",
 )
+DOC_HOST_OVERRIDES = {"docs.github.com"}
 BLOG_HINTS = (
     "/blog/",
     "/blog",
@@ -200,16 +201,32 @@ DEEP_READ_HINTS = (
     "whitepaper",
 )
 LOW_SIGNAL_HINTS = ("best", "top", "vs", "review", "reviews", "news", "trending")
+SOCIAL_DOMAINS = {"x.com", "twitter.com", "threads.net", "reddit.com", "facebook.com", "instagram.com", "linkedin.com"}
 UI_UX_HINTS = ("design-system", "figma", "storybook", "tailwind", "component")
 PAPER_HINTS = (".pdf", "arxiv.org", "researchgate", "vldb", "acm.org")
 PROJECT_HINTS = ("jira", "confluence", "linear.app", "notion.so/view") # High-signal for 'Projects' section
+GO_CONTEXT_HINTS = (
+    "golang",
+    "go-lang",
+    "go language",
+    "learning go",
+    "learn go",
+    "go tutorial",
+    "go by example",
+    "go.dev",
+    "go module",
+    "go modules",
+    "goroutine",
+    "go package",
+    "go sdk",
+)
 TOPIC_KEYWORDS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
     ("architecture", ("patterns", "ddd", "microservices", "event-driven", "distributed")),
     ("postgres", ("postgres", "pgbouncer", "pganalyze", "sql", "wal")),
     ("python", ("python", "pypi", "django", "fastapi", "flask")),
     ("javascript", ("javascript", "typescript", "node.js", "nodejs", "npm")),
     ("rust", ("rust", "cargo", "crates.io")),
-    ("go", ("golang", "go.dev", "go ")),
+    ("go", ("golang", "go.dev", "go-lang", "learning go", "go language", "go")),
     ("kubernetes", ("kubernetes", "k8s")),
     ("docker", ("docker", "container")),
     ("terraform", ("terraform", "iac")),
@@ -539,7 +556,7 @@ def _safe_kind(value: object) -> str:
 
 
 def _safe_action(value: object) -> str:
-    allowed = {"read", "watch", "reference", "build", "triage", "ignore"}
+    allowed = {"read", "watch", "reference", "build", "triage", "ignore", "deep_work"}
     if isinstance(value, str):
         v = value.strip().lower()
         if v in allowed:
@@ -726,6 +743,8 @@ def _topic_from_host(host: str) -> Optional[str]:
     host = (host or "").strip().lower()
     if not host:
         return None
+    if any(_host_matches_base(host, base) for base in SOCIAL_DOMAINS):
+        return None
     host = host.split(":", 1)[0]
     parts = [p for p in host.split(".") if p and p != "www"]
     if len(parts) < 2:
@@ -741,7 +760,7 @@ def _topic_from_keywords(text_blob: str) -> Optional[str]:
     blob = (text_blob or "").lower()
     for topic, needles in TOPIC_KEYWORDS:
         for needle in needles:
-            if needle in blob:
+            if _needle_in_blob(topic, needle, blob):
                 return topic
     if any(h in blob for h in UI_UX_HINTS):
         return "ui-ux"
@@ -750,6 +769,16 @@ def _topic_from_keywords(text_blob: str) -> Optional[str]:
     if any(h in blob for h in PAPER_HINTS):
         return "research"
     return None
+
+
+def _needle_in_blob(topic: str, needle: str, blob: str) -> bool:
+    if not needle:
+        return False
+    if topic == "go" and needle == "go":
+        if re.search(r"\bgo\b", blob) is None:
+            return False
+        return any(h in blob for h in GO_CONTEXT_HINTS)
+    return needle in blob
 
 
 def _infer_local_kind(item: Item) -> str:
@@ -763,12 +792,48 @@ def _infer_local_kind(item: Item) -> str:
     path = (parsed.path or "").lower()
     title = (item.title or "").lower()
     blob = f"{host} {path} {title}"
+    code_host = any(_host_matches_base(host, base) for base in CODE_HOST_DOMAINS)
+    code_host_reserved = {
+        "",
+        "about",
+        "contact",
+        "collections",
+        "enterprise",
+        "events",
+        "explore",
+        "features",
+        "join",
+        "login",
+        "marketplace",
+        "new",
+        "notifications",
+        "orgs",
+        "organizations",
+        "pricing",
+        "search",
+        "settings",
+        "site",
+        "sponsors",
+        "topics",
+    }
+    first_path = ""
+    parts = [p for p in path.split("/") if p]
+    if parts:
+        first_path = parts[0].lower()
 
+    # Keep paper as the highest precedence content type.
     if path.endswith(".pdf") or any(h in blob for h in PAPER_HINTS):
         return "paper"
+    # Blog/article paths should win over generic docs-host heuristics.
+    if any(hint in path for hint in BLOG_HINTS):
+        return "article"
     if any(_host_matches_base(host, base) for base in VIDEO_DOMAINS):
         return "video"
-    if any(_host_matches_base(host, base) for base in CODE_HOST_DOMAINS) and len([p for p in path.split("/") if p]) >= 2:
+    # Some docs hosts should stay docs even with code-host-like paths.
+    if host in DOC_HOST_OVERRIDES:
+        return "docs"
+    # Treat user/org pages on code hosts as repo-ish unless they are known global sections.
+    if code_host and first_path not in code_host_reserved:
         return "repo"
     if any(h in blob for h in PROJECT_HINTS):
         return "tool"
@@ -776,8 +841,6 @@ def _infer_local_kind(item: Item) -> str:
         return "tool"
     if host.startswith("docs.") or any(hint in path for hint in DOC_HINTS):
         return "docs"
-    if any(hint in path for hint in BLOG_HINTS):
-        return "article"
     if any(hint in blob for hint in REFERENCE_HINTS):
         return "docs"
     return "article"
@@ -796,6 +859,8 @@ def _infer_local_action(kind: str, item: Item) -> str:
             return "build"
         return "triage"
     if kind in {"docs", "paper", "article"}:
+        if kind == "paper" and any(hint in lower for hint in DEEP_READ_HINTS):
+            return "deep_work"
         if any(hint in lower for hint in REFERENCE_HINTS):
             return "reference"
         return "read"
@@ -818,7 +883,10 @@ def _infer_local_score(kind: str, action: str, item: Item) -> int:
         score -= 1
 
     lower = f"{item.title} {item.clean_url}".lower()
-    if any(hint in lower for hint in DEEP_READ_HINTS):
+    if any(_host_matches_base((urllib.parse.urlsplit(item.clean_url).hostname or "").lower(), base) for base in SOCIAL_DOMAINS):
+        score -= 1
+    deep_read_hit = any(hint in lower for hint in DEEP_READ_HINTS)
+    if deep_read_hit:
         score += 1
     if any(hint in lower for hint in UI_UX_HINTS):
         score += 1
@@ -826,6 +894,10 @@ def _infer_local_score(kind: str, action: str, item: Item) -> int:
         score += 1
     if any(hint in lower for hint in LOW_SIGNAL_HINTS):
         score -= 1
+
+    # Cognitive load boost: deep papers should remain top-priority for focused sessions.
+    if kind == "paper" and deep_read_hit:
+        score = max(score, 5)
 
     if score < 1:
         score = 1

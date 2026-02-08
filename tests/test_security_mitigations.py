@@ -476,6 +476,118 @@ def test_sensitive_host_path_marker_applies_only_to_settings_path():
     assert not ppt._is_sensitive_url("https://github.com/openai/openai-python")
 
 
+def test_local_classifier_blog_under_docs_domain_prefers_article():
+    item = Item(
+        title="Product launch blog post",
+        url="https://docs.example.com/blog/my-post",
+        norm_url=ppt.normalize_url("https://docs.example.com/blog/my-post"),
+        clean_url=ppt.normalize_url("https://docs.example.com/blog/my-post"),
+        domain="docs.example.com",
+        browser=None,
+    )
+    cls = ppt._classify_local(item)
+    assert cls["kind"] == "article"
+
+
+def test_local_classifier_code_host_short_path_is_repo():
+    item = Item(
+        title="Microsoft on GitHub",
+        url="https://github.com/microsoft",
+        norm_url=ppt.normalize_url("https://github.com/microsoft"),
+        clean_url=ppt.normalize_url("https://github.com/microsoft"),
+        domain="github.com",
+        browser=None,
+    )
+    cls = ppt._classify_local(item)
+    assert cls["kind"] == "repo"
+
+
+def test_local_classifier_go_boundary_match_learning_go():
+    item = Item(
+        title="Learning Go.",
+        url="https://example.com/programming/intro",
+        norm_url=ppt.normalize_url("https://example.com/programming/intro"),
+        clean_url=ppt.normalize_url("https://example.com/programming/intro"),
+        domain="example.com",
+        browser=None,
+    )
+    cls = ppt._classify_local(item)
+    assert cls["topic"] == "go"
+
+
+def test_local_classifier_deep_paper_sets_deep_work_and_high_score():
+    item = Item(
+        title="Distributed systems whitepaper guide",
+        url="https://arxiv.org/abs/2402.98765",
+        norm_url=ppt.normalize_url("https://arxiv.org/abs/2402.98765"),
+        clean_url=ppt.normalize_url("https://arxiv.org/abs/2402.98765"),
+        domain="arxiv.org",
+        browser=None,
+    )
+    cls = ppt._classify_local(item)
+    assert cls["kind"] == "paper"
+    assert cls["action"] == "deep_work"
+    assert cls["score"] == 5
+
+
+def test_case_documentation_trap_docs_reference():
+    item = Item(
+        title="GitHub REST API reference",
+        url="https://docs.github.com/en/rest/reference/repos",
+        norm_url=ppt.normalize_url("https://docs.github.com/en/rest/reference/repos"),
+        clean_url=ppt.normalize_url("https://docs.github.com/en/rest/reference/repos"),
+        domain="docs.github.com",
+        browser=None,
+    )
+    cls = ppt._classify_local(item)
+    assert cls["kind"] == "docs"
+    assert cls["action"] == "reference"
+
+
+def test_case_social_thread_defaults_to_misc_article_score2():
+    item = Item(
+        title="Thread",
+        url="https://x.com/theprimeagen/status/12345",
+        norm_url=ppt.normalize_url("https://x.com/theprimeagen/status/12345"),
+        clean_url=ppt.normalize_url("https://x.com/theprimeagen/status/12345"),
+        domain="x.com",
+        browser=None,
+    )
+    cls = ppt._classify_local(item)
+    assert cls["topic"] == "misc"
+    assert cls["kind"] == "article"
+    assert cls["score"] == 2
+
+
+def test_case_deep_tech_repo_postgres_score5():
+    item = Item(
+        title="bufmgr internals",
+        url="https://github.com/postgres/postgres/blob/master/src/backend/storage/buffer/bufmgr.c",
+        norm_url=ppt.normalize_url("https://github.com/postgres/postgres/blob/master/src/backend/storage/buffer/bufmgr.c"),
+        clean_url=ppt.normalize_url("https://github.com/postgres/postgres/blob/master/src/backend/storage/buffer/bufmgr.c"),
+        domain="github.com",
+        browser=None,
+    )
+    cls = ppt._classify_local(item)
+    assert cls["kind"] == "repo"
+    assert cls["topic"] == "postgres"
+    assert cls["score"] == 5
+
+
+def test_case_llm_research_pdf():
+    item = Item(
+        title="LLM research paper",
+        url="https://arxiv.org/pdf/2405.12345.pdf",
+        norm_url=ppt.normalize_url("https://arxiv.org/pdf/2405.12345.pdf"),
+        clean_url=ppt.normalize_url("https://arxiv.org/pdf/2405.12345.pdf"),
+        domain="arxiv.org",
+        browser=None,
+    )
+    cls = ppt._classify_local(item)
+    assert cls["kind"] == "paper"
+    assert cls["topic"] in {"llm", "research"}
+
+
 def test_extract_items_parses_parentheses_in_urls():
     md = (
         "---\n"
