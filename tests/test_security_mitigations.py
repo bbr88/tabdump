@@ -402,6 +402,80 @@ def test_llm_enabled_without_key_falls_back_to_local(monkeypatch):
     assert entry["intent"]["action"] in {"read", "reference"}
 
 
+def test_local_classifier_matches_plural_blogs_path():
+    item = Item(
+        title="Summer travel ideas",
+        url="https://example.com/blogs/summer-travel-ideas",
+        norm_url=ppt.normalize_url("https://example.com/blogs/summer-travel-ideas"),
+        clean_url=ppt.normalize_url("https://example.com/blogs/summer-travel-ideas"),
+        domain="example.com",
+        browser=None,
+    )
+    cls = ppt._classify_local(item)
+    assert cls["kind"] == "article"
+    assert cls["topic"] == "travel"
+
+
+def test_local_classifier_identifies_general_tool_domains():
+    item = Item(
+        title="Family calendar",
+        url="https://calendar.google.com/calendar/u/0/r",
+        norm_url=ppt.normalize_url("https://calendar.google.com/calendar/u/0/r"),
+        clean_url=ppt.normalize_url("https://calendar.google.com/calendar/u/0/r"),
+        domain="calendar.google.com",
+        browser=None,
+    )
+    cls = ppt._classify_local(item)
+    assert cls["kind"] == "tool"
+    assert cls["topic"] == "productivity"
+
+
+def test_local_classifier_uses_paper_hints_without_pdf_suffix():
+    item = Item(
+        title="Reliable Event Streaming Whitepaper",
+        url="https://arxiv.org/abs/2401.12345",
+        norm_url=ppt.normalize_url("https://arxiv.org/abs/2401.12345"),
+        clean_url=ppt.normalize_url("https://arxiv.org/abs/2401.12345"),
+        domain="arxiv.org",
+        browser=None,
+    )
+    cls = ppt._classify_local(item)
+    assert cls["kind"] == "paper"
+
+
+def test_local_classifier_uses_project_hints_for_action():
+    item = Item(
+        title="Sprint planning board",
+        url="https://linear.app/acme/issue/APP-123",
+        norm_url=ppt.normalize_url("https://linear.app/acme/issue/APP-123"),
+        clean_url=ppt.normalize_url("https://linear.app/acme/issue/APP-123"),
+        domain="linear.app",
+        browser=None,
+    )
+    cls = ppt._classify_local(item)
+    assert cls["kind"] == "tool"
+    assert cls["action"] == "build"
+    assert cls["topic"] == "project-management"
+
+
+def test_local_classifier_uses_ui_ux_hints_for_topic():
+    item = Item(
+        title="Figma component kit",
+        url="https://workspace.app/ui-kit/storybook",
+        norm_url=ppt.normalize_url("https://workspace.app/ui-kit/storybook"),
+        clean_url=ppt.normalize_url("https://workspace.app/ui-kit/storybook"),
+        domain="workspace.app",
+        browser=None,
+    )
+    cls = ppt._classify_local(item)
+    assert cls["topic"] == "ui-ux"
+
+
+def test_sensitive_host_path_marker_applies_only_to_settings_path():
+    assert ppt._is_sensitive_url("https://github.com/settings/profile")
+    assert not ppt._is_sensitive_url("https://github.com/openai/openai-python")
+
+
 def test_extract_items_parses_parentheses_in_urls():
     md = (
         "---\n"

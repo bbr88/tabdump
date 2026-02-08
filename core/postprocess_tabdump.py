@@ -73,6 +73,8 @@ SENSITIVE_HOSTS = {
     "accounts.google.com",
     "auth.openai.com",
     "platform.openai.com",
+    "chat.openai.com",
+    "github.com/settings"
 }
 AUTH_PATH_HINTS = (
     "/login",
@@ -84,9 +86,12 @@ AUTH_PATH_HINTS = (
     "/api-keys",
     "/credentials",
     "/token",
+    "/profile"
 )
 SENSITIVE_QUERY_KEYS = (
     "token",
+    "access_token",
+    "refresh_token",
     "secret",
     "api_key",
     "apikey",
@@ -105,21 +110,102 @@ VIDEO_DOMAINS = {
     "disneyplus.com",
     "hulu.com",
     "primevideo.com",
-    "spotify.com",
     "music.apple.com",
     "tv.apple.com",
     "open.spotify.com",
     "music.youtube.com",
+    "loom.com",
+    "v.redd.it"
 }
 CODE_HOST_DOMAINS = {"github.com", "gitlab.com", "bitbucket.org"}
-TOOL_DOMAINS = {"console.aws.amazon.com", "console.cloud.google.com", "portal.azure.com"}
-DOC_HINTS = ("/docs/", "/documentation/", "/reference/", "/guides/", "/guide/", "/api/")
-BLOG_HINTS = ("/blog/", "/posts/", "/article", "/articles/")
+TOOL_DOMAINS = {
+    "console.aws.amazon.com",
+    "console.cloud.google.com",
+    "portal.azure.com",
+    "notion.so",
+    "notion.site",
+    "trello.com",
+    "asana.com",
+    "todoist.com",
+    "airtable.com",
+    "canva.com",
+    "figma.com",
+    "miro.com",
+    "slack.com",
+    "zoom.us",
+    "meet.google.com",
+    "calendar.google.com",
+    "docs.google.com",
+    "drive.google.com",
+    "mail.google.com",
+    "outlook.live.com",
+    "dropbox.com",
+    "maps.google.com",
+    "translate.google.com",
+}
+DOC_HINTS = (
+    "/docs/",
+    "/docs",
+    "/documentation/",
+    "/documentation",
+    "/reference/",
+    "/reference",
+    "/guides/",
+    "/guides",
+    "/guide/",
+    "/guide",
+    "/api/",
+    "/api",
+    "/manual",
+    "/handbook",
+    "/release",
+    "/releases",
+    "/changelog",
+)
+BLOG_HINTS = (
+    "/blog/",
+    "/blog",
+    "/blogs/",
+    "/blogs",
+    "/post/",
+    "/posts/",
+    "/posts",
+    "/article",
+    "/articles/",
+    "/articles",
+    "/stories/",
+    "/story/",
+)
 REFERENCE_HINTS = ("reference", "api", "spec", "documentation", "docs")
-DEEP_READ_HINTS = ("guide", "tutorial", "internals", "architecture", "design", "how to")
+DEEP_READ_HINTS = (
+    "guide",
+    "tutorial",
+    "internals",
+    "architecture",
+    "design",
+    "how to",
+    "how-to",
+    "beginner",
+    "beginners",
+    "step by step",
+    "step-by-step",
+    "explained",
+    "explainer",
+    "tips",
+    "checklist",
+    "overview",
+    "faq",
+    "what is",
+    ".pdf",
+    "whitepaper",
+)
 LOW_SIGNAL_HINTS = ("best", "top", "vs", "review", "reviews", "news", "trending")
+UI_UX_HINTS = ("design-system", "figma", "storybook", "tailwind", "component")
+PAPER_HINTS = (".pdf", "arxiv.org", "researchgate", "vldb", "acm.org")
+PROJECT_HINTS = ("jira", "confluence", "linear.app", "notion.so/view") # High-signal for 'Projects' section
 TOPIC_KEYWORDS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
-    ("postgres", ("postgres", "pgbouncer", "pganalyze", "sql")),
+    ("architecture", ("patterns", "ddd", "microservices", "event-driven", "distributed")),
+    ("postgres", ("postgres", "pgbouncer", "pganalyze", "sql", "wal")),
     ("python", ("python", "pypi", "django", "fastapi", "flask")),
     ("javascript", ("javascript", "typescript", "node.js", "nodejs", "npm")),
     ("rust", ("rust", "cargo", "crates.io")),
@@ -133,6 +219,21 @@ TOPIC_KEYWORDS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
     ("llm", ("llm", "openai", "anthropic", "chatgpt", "huggingface")),
     ("frontend", ("react", "vue", "angular", "frontend", "css")),
     ("security", ("security", "oauth", "sso", "token", "auth")),
+    ("finance", ("finance", "investing", "stocks", "etf", "budget", "mortgage", "credit card", "retirement", "tax")),
+    ("health", ("health", "wellness", "nutrition", "diet", "mental health", "therapy", "mindfulness")),
+    ("fitness", ("workout", "fitness", "exercise", "gym", "running", "yoga", "pilates")),
+    ("food", ("recipe", "cooking", "baking", "meal prep", "kitchen", "restaurant")),
+    ("travel", ("travel", "trip", "flight", "hotel", "vacation", "itinerary", "airbnb")),
+    ("shopping", ("shopping", "buy", "price", "deal", "discount", "coupon", "cart", "product")),
+    ("entertainment", ("movie", "tv show", "music", "podcast", "series", "trailer", "celebrity")),
+    ("sports", ("sports", "football", "soccer", "basketball", "tennis", "nfl", "nba", "mlb")),
+    ("education", ("course", "lesson", "study", "university", "school", "exam", "homework")),
+    ("career", ("career", "resume", "cv", "interview", "job", "salary", "linkedin", "agile", "scrum")),
+    ("productivity", ("productivity", "planner", "to-do", "todo", "calendar", "organize", "habit")),
+    ("personal-development", ("self improvement", "motivation", "mindset", "goal setting", "discipline")),
+    ("parenting", ("parenting", "kids", "child", "baby", "toddler", "family")),
+    ("home", ("home improvement", "diy", "garden", "gardening", "cleaning", "organization")),
+    ("automotive", ("car", "automotive", "vehicle", "motorcycle", "maintenance", "road trip")),
 )
 
 
@@ -537,6 +638,24 @@ def _is_private_or_loopback_host(host: str) -> bool:
     return bool(ip.is_private or ip.is_loopback or ip.is_link_local)
 
 
+def _matches_sensitive_host_or_path(host: str, path: str) -> bool:
+    host = (host or "").strip().lower()
+    path = (path or "").strip().lower()
+    for marker in SENSITIVE_HOSTS:
+        needle = str(marker).strip().lower()
+        if not needle:
+            continue
+        if "/" in needle:
+            m_host, m_path = needle.split("/", 1)
+            m_path = "/" + m_path
+            if _host_matches_base(host, m_host) and path.startswith(m_path):
+                return True
+            continue
+        if _host_matches_base(host, needle):
+            return True
+    return False
+
+
 def _is_sensitive_url(url: str) -> bool:
     try:
         parsed = urllib.parse.urlsplit(url)
@@ -548,9 +667,10 @@ def _is_sensitive_url(url: str) -> bool:
         return True
 
     host = (parsed.hostname or "").lower()
+    path = (parsed.path or "").lower()
     if not host:
         return True
-    if host in SENSITIVE_HOSTS:
+    if _matches_sensitive_host_or_path(host, path):
         return True
     if _is_private_or_loopback_host(host):
         return True
@@ -573,12 +693,13 @@ def _default_kind_action(url: str) -> Tuple[str, str]:
         return "internal", "ignore"
     scheme = (parsed.scheme or "").lower()
     host = (parsed.hostname or "").lower()
+    path = (parsed.path or "").lower()
     if not host:
         return "internal", "ignore"
 
     if scheme == "file" or _is_private_or_loopback_host(host):
         return "local", "ignore"
-    if any(hint in lower_url for hint in AUTH_PATH_HINTS) or host in SENSITIVE_HOSTS:
+    if any(hint in lower_url for hint in AUTH_PATH_HINTS) or _matches_sensitive_host_or_path(host, path):
         return "auth", "ignore"
     if scheme not in {"http", "https"}:
         return "internal", "ignore"
@@ -622,6 +743,12 @@ def _topic_from_keywords(text_blob: str) -> Optional[str]:
         for needle in needles:
             if needle in blob:
                 return topic
+    if any(h in blob for h in UI_UX_HINTS):
+        return "ui-ux"
+    if any(h in blob for h in PROJECT_HINTS):
+        return "project-management"
+    if any(h in blob for h in PAPER_HINTS):
+        return "research"
     return None
 
 
@@ -637,13 +764,15 @@ def _infer_local_kind(item: Item) -> str:
     title = (item.title or "").lower()
     blob = f"{host} {path} {title}"
 
-    if path.endswith(".pdf"):
+    if path.endswith(".pdf") or any(h in blob for h in PAPER_HINTS):
         return "paper"
     if any(_host_matches_base(host, base) for base in VIDEO_DOMAINS):
         return "video"
     if any(_host_matches_base(host, base) for base in CODE_HOST_DOMAINS) and len([p for p in path.split("/") if p]) >= 2:
         return "repo"
-    if host in TOOL_DOMAINS:
+    if any(h in blob for h in PROJECT_HINTS):
+        return "tool"
+    if any(_host_matches_base(host, base) for base in TOOL_DOMAINS):
         return "tool"
     if host.startswith("docs.") or any(hint in path for hint in DOC_HINTS):
         return "docs"
@@ -663,6 +792,8 @@ def _infer_local_action(kind: str, item: Item) -> str:
             return "triage"
         return "build"
     if kind == "tool":
+        if any(h in lower for h in PROJECT_HINTS):
+            return "build"
         return "triage"
     if kind in {"docs", "paper", "article"}:
         if any(hint in lower for hint in REFERENCE_HINTS):
@@ -688,6 +819,10 @@ def _infer_local_score(kind: str, action: str, item: Item) -> int:
 
     lower = f"{item.title} {item.clean_url}".lower()
     if any(hint in lower for hint in DEEP_READ_HINTS):
+        score += 1
+    if any(hint in lower for hint in UI_UX_HINTS):
+        score += 1
+    if any(hint in lower for hint in PROJECT_HINTS):
         score += 1
     if any(hint in lower for hint in LOW_SIGNAL_HINTS):
         score -= 1
