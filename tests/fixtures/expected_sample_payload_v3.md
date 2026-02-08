@@ -2,7 +2,7 @@
 Dump Date: 2026-02-01
 Tab Count: 10
 Top Domains: example.org, github.com, nms.csail.mit.edu, pganalyze.com, pgbouncer.org
-Top Kinds: docs, article, paper
+Top Kinds: article, docs, paper
 Renderer: tabdump-pretty-v3.2.4.1
 Source: TabDump 2026-02-01 21-10-00.raw.json
 Deduped: 1
@@ -13,9 +13,9 @@ Deduped: 1
 
 ## 🔥 Start Here
 *Auto-selected “do next” items.*
-- [ ] [5mins of Postgres E18: Partition pruning, prepared statements and generic vs custom que…](https://pganalyze.com/blog/5mins-postgres-partition-pruning-prepared-statements-generic-vs-custom-query-plans) · docs · #postgres
 - [ ] [OpenAI API Reference — Responses](https://platform.openai.com/docs/api-reference/responses) · docs · #llm
 - [ ] [neondatabase/neon](https://github.com/neondatabase/neon) · repo · #postgres
+- [ ] [5mins of Postgres E18: Partition pruning, prepared statements and generic vs custom que…](https://pganalyze.com/blog/5mins-postgres-partition-pruning-prepared-statements-generic-vs-custom-query-plans) · article · #postgres
 
 ## 📺 Watch / Listen Later
 > [!video]- Expand Watch / Listen Later (1)

@@ -4,7 +4,7 @@ from pathlib import Path
 
 from core.renderer.renderer_v3 import build_state, render_markdown, _score_item, _host_matches_base
 
-TESTS_DIR = Path(__file__).resolve().parent
+TESTS_DIR = Path(__file__).resolve().parents[1]
 FIXTURES_DIR = TESTS_DIR / "fixtures"
 FIXTURE_JSON = FIXTURES_DIR / "sample_payload_v3.json"
 FIXTURE_MD = FIXTURES_DIR / "expected_sample_payload_v3.md"
@@ -304,6 +304,59 @@ def test_suffix_match_helper():
     assert _host_matches_base("apps.disneyplus.com", "disneyplus.com", True)
     assert _host_matches_base("www.netflix.com", "netflix.com", True)
     assert not _host_matches_base("notnetflix.com", "netflix.com", True)
+
+
+def test_postprocess_sensitive_kinds_are_admin_bucketed():
+    payload = {
+        "meta": {"created": "2026-02-07T10:00:00Z", "source": "sensitive_kinds.raw.json"},
+        "counts": {"total": 3, "dumped": 3, "closed": 3, "kept": 0},
+        "cfg": {"highPriorityLimit": 0},
+        "items": [
+            {"url": "https://platform.openai.com/api-keys?token=abc", "title": "API Keys", "kind": "auth"},
+            {"url": "http://localhost:3000/admin", "title": "Local Admin", "kind": "local"},
+            {"url": "custom-scheme://internal/panel", "title": "Internal Panel", "kind": "internal"},
+        ],
+    }
+    state = build_state(payload)
+    admin_urls = {it["url"] for it in state["buckets"]["ADMIN"]}
+    assert "https://platform.openai.com/api-keys?token=abc" in admin_urls
+    assert "http://localhost:3000/admin" in admin_urls
+    assert "custom-scheme://internal/panel" in admin_urls
+    assert not state["buckets"]["DOCS"]
+
+
+def test_postprocess_repo_kind_short_path_stays_in_repos():
+    payload = {
+        "meta": {"created": "2026-02-07T11:00:00Z", "source": "repo_short_path.raw.json"},
+        "counts": {"total": 1, "dumped": 1, "closed": 1, "kept": 0},
+        "cfg": {"highPriorityLimit": 0},
+        "items": [
+            {"url": "https://github.com/microsoft", "title": "Microsoft on GitHub", "kind": "repo"},
+        ],
+    }
+    state = build_state(payload)
+    assert len(state["buckets"]["REPOS"]) == 1
+    assert not state["buckets"]["BACKLOG"]
+
+
+def test_postprocess_action_semantics_score_mapping():
+    base = {
+        "kind": "article",
+        "domain_category": "generic",
+        "intent": {"confidence": 0.8},
+        "title": "Sample",
+        "path": "/",
+    }
+
+    def score_for(action: str) -> int:
+        it = dict(base)
+        it["intent"] = {"action": action, "confidence": 0.8}
+        return _score_item(it)
+
+    assert score_for("build") == score_for("deep_work")
+    assert score_for("reference") == score_for("triage")
+    assert score_for("watch") < score_for("reference")
+    assert score_for("ignore") < score_for("watch")
 
 
 def test_docs_dom_chip_suppression_and_paper_kind():
