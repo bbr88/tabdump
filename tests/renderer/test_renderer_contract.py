@@ -565,7 +565,8 @@ def test_notion_requires_project_hints_by_default():
     }
     state = build_state(payload)
     assert not state["buckets"]["PROJECTS"]
-    assert state["buckets"]["DOCS"]
+    assert state["buckets"]["TOOLS"]
+    assert not state["buckets"]["DOCS"]
 
     md = render_markdown(payload)
     assert "## 🗂 Projects" not in md

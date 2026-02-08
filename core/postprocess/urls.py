@@ -125,6 +125,7 @@ def default_kind_action(
     url: str,
     auth_path_hints: Iterable[str] = AUTH_PATH_HINTS,
     sensitive_hosts: Iterable[str] = SENSITIVE_HOSTS,
+    sensitive_query_keys: Iterable[str] = SENSITIVE_QUERY_KEYS,
 ) -> Tuple[str, str]:
     lower_url = url.lower()
     try:
@@ -145,11 +146,18 @@ def default_kind_action(
 
     if is_private_or_loopback_host(host):
         return "local", "ignore"
+    has_sensitive_query_key = False
+    if scheme in {"http", "https"}:
+        sensitive_keys = {key.strip().lower() for key in sensitive_query_keys}
+        for key, _ in urllib.parse.parse_qsl(parsed.query, keep_blank_values=True):
+            if key.strip().lower() in sensitive_keys:
+                has_sensitive_query_key = True
+                break
     if any(hint in lower_url for hint in auth_path_hints) or matches_sensitive_host_or_path(
         host,
         path,
         sensitive_hosts=sensitive_hosts,
-    ):
+    ) or has_sensitive_query_key:
         return "auth", "ignore"
     if scheme not in {"http", "https"}:
         return "internal", "ignore"

@@ -5,11 +5,13 @@ from __future__ import annotations
 from typing import Dict
 
 from core.tab_policy.taxonomy import (
+    AUTH_PATH_HINTS,
     BLOG_PATH_HINTS,
     CODE_HOST_DOMAINS,
     DOC_PATH_HINTS,
     RENDERER_ALLOWED_KINDS,
     SENSITIVE_QUERY_KEYS,
+    TOOL_DOMAINS,
     VIDEO_DOMAINS,
 )
 
@@ -100,6 +102,7 @@ DEFAULT_CFG: Dict = {
     "docsDomainPrefix": "docs.",
     "docsPathHints": list(DOC_PATH_HINTS),
     "blogPathHints": list(BLOG_PATH_HINTS),
+    "authPathHints": list(AUTH_PATH_HINTS),
     "authPathRegex": [
         "(?i)(^|/)(login|signin|sign-in|sso|oauth)(/|$)",
         "(?i)(^|/)(api-keys|credentials)(/|$)",
@@ -107,6 +110,7 @@ DEFAULT_CFG: Dict = {
     "authContainsHintsSoft": list(SENSITIVE_QUERY_KEYS),
     "adminAuthRequiresStrongSignal": True,
     "consoleDomains": ["console.aws.amazon.com", "console.cloud.google.com", "portal.azure.com"],
+    "toolDomains": list(TOOL_DOMAINS),
     "emptyBucketMessage": "_(empty)_",
     "canonicalTitleEnabled": True,
     "canonicalTitleMaxLen": 88,
