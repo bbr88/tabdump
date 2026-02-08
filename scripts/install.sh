@@ -594,8 +594,8 @@ collect_install_choices() {
     LLM_ENABLED="${LLM_OVERRIDE}"
   elif [[ "${ASSUME_YES}" -eq 0 ]]; then
     echo
-    echo "LLM enrichment is optional and disabled by default."
-    if prompt_yes_no "Enable LLM enrichment now?" "n"; then
+    echo "LLM enrichment is optional and enabled by default."
+    if prompt_yes_no "Enable LLM enrichment now?" "y"; then
       LLM_ENABLED="true"
     fi
   fi
@@ -628,7 +628,7 @@ collect_install_choices() {
       echo
       OPENAI_KEY_VALUE="$(trim "${OPENAI_KEY_VALUE}")"
       if [[ -z "${OPENAI_KEY_VALUE}" ]]; then
-        print_warn "Empty OpenAI key input; keychain storage will be skipped."
+        print_warn "Empty OpenAI key input; switching to local classifier (llmEnabled=false)."
         KEY_MODE="skip"
       fi
     fi
@@ -640,6 +640,11 @@ collect_install_choices() {
 
   if [[ "${KEY_MODE}" == "env" && -n "${DELETE_KEYCHAIN_OVERRIDE}" ]]; then
     DELETE_KEYCHAIN="${DELETE_KEYCHAIN_OVERRIDE}"
+  fi
+
+  if [[ "${KEY_MODE}" == "skip" ]]; then
+    LLM_ENABLED="false"
+    print_warn "OpenAI key setup skipped; local classifier will be used (llmEnabled=false)."
   fi
 }
 

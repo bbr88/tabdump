@@ -272,7 +272,7 @@ def test_install_writes_default_config_and_artifacts(tmp_path):
     assert "launchctl bootstrap" in log
 
 
-def test_install_supports_noninteractive_flags_and_browser_list(tmp_path):
+def test_install_noninteractive_skip_key_mode_disables_llm(tmp_path):
     proc = _run_install(
         tmp_path,
         args=[
@@ -294,7 +294,7 @@ def test_install_supports_noninteractive_flags_and_browser_list(tmp_path):
     assert proc.returncode == 0, output
     data = _read_config(proc.home)
     assert data["dryRun"] is False
-    assert data["llmEnabled"] is True
+    assert data["llmEnabled"] is False
     assert data["browsers"] == ["Safari", "Chrome", "Firefox"]
 
 
@@ -393,6 +393,15 @@ def test_install_ignores_alias_local_bin_and_still_adds_path_export(tmp_path):
     zshrc_text = zshrc_path.read_text(encoding="utf-8")
     assert 'alias nvim=/Users/i.bisarnov/.local/bin/lvim' in zshrc_text
     assert 'export PATH="$HOME/.local/bin:$PATH"' in zshrc_text
+
+
+def test_install_interactive_defaults_to_enabling_llm(tmp_path):
+    proc = _run_install(tmp_path, user_input="~/vault/inbox\n\nn\n\n2\n")
+    output = proc.stdout + proc.stderr
+    data = _read_config(proc.home)
+
+    assert proc.returncode == 0, output
+    assert data["llmEnabled"] is True
 
 
 def test_install_requires_openai_key_for_keychain_mode_in_yes_mode(tmp_path):
