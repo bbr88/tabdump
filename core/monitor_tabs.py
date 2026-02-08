@@ -13,7 +13,7 @@ Flow:
 - Append link to today's reading queue note
 
 Env:
-- Optional OpenAI API key for LLM enrichment. Resolved by postprocess_tabdump.py
+- Optional OpenAI API key for LLM enrichment. Resolved by core.postprocess.cli
   (Keychain -> OPENAI_API_KEY env var) when enabled.
 """
 
@@ -29,7 +29,21 @@ from pathlib import Path
 from typing import List, Optional
 
 HERE = Path(__file__).resolve().parent
-POSTPROCESS = HERE / "postprocess_tabdump.py"
+
+
+def _resolve_postprocess_path() -> Path:
+    candidates = (
+        HERE / "postprocess" / "cli.py",         # repo runtime (core/monitor_tabs.py)
+        HERE / "core" / "postprocess" / "cli.py", # installed runtime (App Support root)
+        HERE / "postprocess_tabdump.py",         # legacy fallback
+    )
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return candidates[0]
+
+
+POSTPROCESS = _resolve_postprocess_path()
 APP_SUPPORT = Path("~/Library/Application Support/TabDump").expanduser()
 DEFAULT_CFG = Path(os.environ.get("TABDUMP_CONFIG_PATH", str(APP_SUPPORT / "config.json"))).expanduser()
 APP_PATH = Path(os.environ.get("TABDUMP_APP_PATH", "~/Applications/TabDump.app")).expanduser()
@@ -116,8 +130,11 @@ def _verify_runtime_integrity(cfg_path: Path) -> None:
         (POSTPROCESS, "postprocess script"),
     ]
     renderer_root = HERE / "core" / "renderer"
+    postprocess_root = HERE / "core" / "postprocess"
     if renderer_root.exists():
         must_check.append((renderer_root, "renderer package"))
+    if postprocess_root.exists():
+        must_check.append((postprocess_root, "postprocess package"))
     for path, name in must_check:
         if not path.exists():
             raise FileNotFoundError(f"Missing required {name}: {path}")

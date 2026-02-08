@@ -2,10 +2,7 @@ import json
 import re
 from pathlib import Path
 
-import pytest
-
 from core.renderer.renderer_v3 import build_state, render_markdown, _score_item, _host_matches_base
-
 
 TESTS_DIR = Path(__file__).resolve().parent
 FIXTURES_DIR = TESTS_DIR / "fixtures"

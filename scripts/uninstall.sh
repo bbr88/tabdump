@@ -9,6 +9,7 @@ MONITOR_DEST="${CONFIG_DIR}/monitor_tabs.py"
 POSTPROCESS_DEST="${CONFIG_DIR}/postprocess_tabdump.py"
 CORE_PKG_DIR="${CONFIG_DIR}/core"
 RENDERER_DIR="${CORE_PKG_DIR}/renderer"
+POSTPROCESS_DIR="${CORE_PKG_DIR}/postprocess"
 CORE_INIT_PATH="${CORE_PKG_DIR}/__init__.py"
 LOG_DIR="${CONFIG_DIR}/logs"
 MONITOR_STATE_PATH="${CONFIG_DIR}/monitor_state.json"
@@ -34,6 +35,7 @@ echo "  - ${APP_PATH}"
 echo "  - ${CLI_PATH}"
 echo "  - ${LAUNCH_AGENT_PATH}"
 echo "  - ${RENDERER_DIR}"
+echo "  - ${POSTPROCESS_DIR}"
 echo "  - ${CORE_PKG_DIR}"
 echo "  - ${LOG_DIR}"
 echo "  - ${MONITOR_STATE_PATH}"
@@ -97,6 +99,10 @@ fi
 
 if [[ -d "${RENDERER_DIR}" ]]; then
   rm -rf "${RENDERER_DIR}"
+fi
+
+if [[ -d "${POSTPROCESS_DIR}" ]]; then
+  rm -rf "${POSTPROCESS_DIR}"
 fi
 
 if [[ -e "${CORE_INIT_PATH}" ]]; then

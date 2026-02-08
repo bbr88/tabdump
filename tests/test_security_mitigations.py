@@ -10,7 +10,7 @@ import pytest
 
 import core.monitor_tabs as monitor
 import core.postprocess_tabdump as ppt
-from core.postprocess_tabdump import Item
+from core.postprocess.cli import Item
 from core.renderer.renderer_v3 import render_markdown
 
 
