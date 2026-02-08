@@ -69,6 +69,7 @@ def _create_installed_layout(home: Path) -> None:
 
     (config_dir / "TabDump.scpt").write_text("engine", encoding="utf-8")
     (config_dir / "monitor_tabs.py").write_text("monitor", encoding="utf-8")
+    (config_dir / "tabdump-monitor").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
     (core_dir / "__init__.py").write_text("", encoding="utf-8")
     (renderer_dir / "renderer.py").write_text("", encoding="utf-8")
     (postprocess_dir / "cli.py").write_text("", encoding="utf-8")
@@ -133,9 +134,11 @@ def test_uninstall_yes_keeps_config_and_does_not_purge_tcc(tmp_path):
     proc = _run_uninstall(tmp_path, args=["--yes"])
     output = proc.stdout + proc.stderr
     config_path = proc.home / "Library" / "Application Support" / "TabDump" / "config.json"
+    wrapper_path = proc.home / "Library" / "Application Support" / "TabDump" / "tabdump-monitor"
 
     assert proc.returncode == 0, output
     assert config_path.exists()
+    assert not wrapper_path.exists()
     assert not (proc.home / "Applications" / "TabDump.app").exists()
 
     log = proc.log_path.read_text(encoding="utf-8")

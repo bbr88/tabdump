@@ -243,12 +243,14 @@ def test_install_writes_default_config_and_artifacts(tmp_path):
     home = proc.home
     config_dir = home / "Library" / "Application Support" / "TabDump"
     config_path = config_dir / "config.json"
+    wrapper_path = config_dir / "tabdump-monitor"
     app_path = home / "Applications" / "TabDump.app"
     cli_path = home / ".local" / "bin" / "tabdump"
     plist_path = home / "Library" / "LaunchAgents" / "io.orc-visioner.tabdump.monitor.plist"
 
     assert proc.returncode == 0, output
     assert config_path.exists()
+    assert wrapper_path.exists()
     assert app_path.exists()
     assert cli_path.exists()
     assert plist_path.exists()
@@ -262,8 +264,11 @@ def test_install_writes_default_config_and_artifacts(tmp_path):
 
     assert stat.S_IMODE(config_path.stat().st_mode) == 0o600
     assert stat.S_IMODE(config_dir.stat().st_mode) == 0o700
+    assert os.access(wrapper_path, os.X_OK)
     assert os.access(cli_path, os.X_OK)
-    assert "<integer>300</integer>" in plist_path.read_text(encoding="utf-8")
+    plist_text = plist_path.read_text(encoding="utf-8")
+    assert "<integer>300</integer>" in plist_text
+    assert f"<string>{wrapper_path}</string>" in plist_text
 
     log = proc.log_path.read_text(encoding="utf-8")
     assert "shasum -a 256 -c" in log

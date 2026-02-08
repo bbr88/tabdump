@@ -14,6 +14,7 @@ POSTPROCESS_PKG_DIR="${CORE_DIR}/postprocess"
 TAB_POLICY_PKG_DIR="${CORE_DIR}/tab_policy"
 MONITOR_SOURCE="${CORE_DIR}/monitor_tabs.py"
 MONITOR_DEST="${CONFIG_DIR}/monitor_tabs.py"
+MONITOR_WRAPPER_DEST="${CONFIG_DIR}/tabdump-monitor"
 CORE_PKG_DEST="${CONFIG_DIR}/core"
 RENDERER_DEST_DIR="${CORE_PKG_DEST}/renderer"
 POSTPROCESS_DEST_DIR="${CORE_PKG_DEST}/postprocess"
@@ -556,6 +557,7 @@ collect_install_choices() {
   echo "This will create/update:"
   echo "  - ${ENGINE_DEST}"
   echo "  - ${MONITOR_DEST}"
+  echo "  - ${MONITOR_WRAPPER_DEST}"
   echo "  - ${POSTPROCESS_CLI_DEST}"
   echo "  - ${CONFIG_PATH}"
   echo "  - ${APP_PATH}"
@@ -663,12 +665,18 @@ prepare_directories() {
 install_runtime_files() {
   cp -f "${ENGINE_SOURCE}" "${ENGINE_DEST}"
   cp -f "${MONITOR_SOURCE}" "${MONITOR_DEST}"
+  cat > "${MONITOR_WRAPPER_DEST}" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+exec "${PYTHON_BIN}" "${MONITOR_DEST}" "\$@"
+EOF
   cp -f "${CORE_DIR}/__init__.py" "${CORE_PKG_DEST}/__init__.py"
   cp -f "${RENDERER_DIR}"/*.py "${RENDERER_DEST_DIR}/"
   cp -f "${POSTPROCESS_PKG_DIR}"/*.py "${POSTPROCESS_DEST_DIR}/"
   cp -f "${TAB_POLICY_PKG_DIR}"/*.py "${TAB_POLICY_DEST_DIR}/"
 
   chmod 700 "${CONFIG_DIR}" "${CORE_PKG_DEST}" "${RENDERER_DEST_DIR}" "${POSTPROCESS_DEST_DIR}" "${TAB_POLICY_DEST_DIR}" "${LOG_DIR}"
+  chmod 700 "${MONITOR_WRAPPER_DEST}"
   chmod 600 "${ENGINE_DEST}" "${MONITOR_DEST}" "${CORE_PKG_DEST}/__init__.py"
   chmod 600 "${RENDERER_DEST_DIR}"/*.py
   chmod 600 "${POSTPROCESS_DEST_DIR}"/*.py
@@ -1007,8 +1015,7 @@ PY
   <string>${LAUNCH_LABEL}</string>
   <key>ProgramArguments</key>
   <array>
-    <string>${PYTHON_BIN}</string>
-    <string>${MONITOR_DEST}</string>
+    <string>${MONITOR_WRAPPER_DEST}</string>
   </array>
   <key>EnvironmentVariables</key>
   <dict>
@@ -1074,6 +1081,7 @@ print_summary() {
   echo "Browsers:         ${BROWSERS_CSV}"
   echo "Installed engine: ${ENGINE_DEST}"
   echo "Installed monitor:${MONITOR_DEST}"
+  echo "Installed wrapper:${MONITOR_WRAPPER_DEST}"
   echo "Installed app:    ${APP_PATH}"
   echo "Bundle id:        ${BUNDLE_ID}"
   echo "Installed CLI:    ${CLI_PATH}"
