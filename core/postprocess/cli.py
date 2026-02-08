@@ -29,7 +29,8 @@ def _find_root(path: Path) -> Path:
         path.parent.parent.parent,
     ]
     for candidate in candidates:
-        if (candidate / "core" / "renderer" / "renderer_v3.py").exists():
+        renderer_root = candidate / "core" / "renderer"
+        if (renderer_root / "renderer.py").exists():
             return candidate
     return path.parent.parent
 
@@ -83,7 +84,7 @@ from core.postprocess.urls import (
     matches_sensitive_host_or_path as _matches_sensitive_host_or_path_impl,
     normalize_url,
 )
-from core.renderer.renderer_v3 import render_markdown  # type: ignore
+from core.renderer.renderer import render_markdown  # type: ignore
 
 
 REDACT_LLM = os.environ.get("TABDUMP_LLM_REDACT", "1").strip().lower() not in {"0", "false", "no"}

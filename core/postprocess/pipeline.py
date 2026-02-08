@@ -5,7 +5,7 @@ import time
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
 
-from core.renderer.renderer_v3 import render_markdown
+from core.renderer.renderer import render_markdown
 
 from .classify_local import classify_local
 from .coerce import safe_action, safe_kind, safe_score, safe_topic

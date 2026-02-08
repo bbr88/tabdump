@@ -6,7 +6,7 @@ import pytest
 import core.monitor_tabs as monitor
 import core.postprocess.cli as ppt
 from core.postprocess.cli import Item
-from core.renderer.renderer_v3 import render_markdown
+from core.renderer.renderer import render_markdown
 
 ROOT_DIR = Path(__file__).resolve().parents[3]
 INSTALL_SCRIPT = ROOT_DIR / "scripts" / "install.sh"

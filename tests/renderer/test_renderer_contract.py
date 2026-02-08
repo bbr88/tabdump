@@ -2,7 +2,7 @@ import json
 import re
 from pathlib import Path
 
-from core.renderer.renderer_v3 import build_state, render_markdown, _score_item, _host_matches_base
+from core.renderer.renderer import build_state, render_markdown, _score_item, _host_matches_base
 
 TESTS_DIR = Path(__file__).resolve().parents[1]
 FIXTURES_DIR = TESTS_DIR / "fixtures"
