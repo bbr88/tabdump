@@ -696,6 +696,7 @@ import os
 vault_inbox = os.environ["VAULT_INBOX"]
 config_path = os.environ["CONFIG_PATH"]
 dry_run = os.environ["DRY_RUN_VALUE"].strip().lower() == "true"
+dry_run_policy = "auto" if dry_run else "manual"
 llm_enabled = os.environ["LLM_ENABLED"].strip().lower() == "true"
 browsers_csv = os.environ.get("BROWSERS_CSV", "Chrome,Safari")
 browsers = [item.strip() for item in browsers_csv.split(",") if item.strip()]
@@ -724,6 +725,7 @@ data = {
   "outputGroupByWindow": True,
   "outputIncludeMetadata": False,
   "dryRun": dry_run,
+  "dryRunPolicy": dry_run_policy,
   "maxTabs": 30,
   "checkEveryMinutes": 5,
   "cooldownMinutes": 30,
@@ -828,6 +830,7 @@ usage() {
   cat <<'USAGE'
 Usage:
   tabdump [run|open]
+  tabdump mode [show|dump-only|dump-close|auto]
   tabdump permissions
   tabdump help
 USAGE
@@ -917,6 +920,109 @@ join_with_slash() {
   printf '%s' "${joined}"
 }
 
+ensure_config() {
+  if [[ ! -f "${CONFIG_PATH}" ]]; then
+    echo "[error] config.json not found at ${CONFIG_PATH}" >&2
+    exit 1
+  fi
+}
+
+load_mode_summary() {
+  ensure_config
+  CONFIG_PATH="${CONFIG_PATH}" python3 - <<'PY'
+import json
+import os
+
+config_path = os.environ["CONFIG_PATH"]
+with open(config_path, "r", encoding="utf-8") as fh:
+  data = json.load(fh) or {}
+
+dry_run = bool(data.get("dryRun", True))
+policy = str(data.get("dryRunPolicy", "manual")).strip().lower()
+if policy not in {"manual", "auto"}:
+  policy = "manual"
+mode = "dump-only" if dry_run else "dump-close"
+print(("true" if dry_run else "false") + " " + policy + " " + mode)
+PY
+}
+
+set_mode_values() {
+  local dry_run_value="$1"
+  local policy_value="$2"
+  ensure_config
+  CONFIG_PATH="${CONFIG_PATH}" \
+  DRY_RUN_VALUE="${dry_run_value}" \
+  DRY_RUN_POLICY="${policy_value}" \
+  python3 - <<'PY'
+import json
+import os
+import stat
+
+config_path = os.environ["CONFIG_PATH"]
+dry_run_value = os.environ["DRY_RUN_VALUE"].strip().lower()
+policy_value = os.environ["DRY_RUN_POLICY"].strip().lower()
+
+if dry_run_value not in {"true", "false"}:
+  raise SystemExit(f"invalid dryRun value: {dry_run_value}")
+if policy_value not in {"manual", "auto"}:
+  raise SystemExit(f"invalid dryRunPolicy value: {policy_value}")
+
+with open(config_path, "r", encoding="utf-8") as fh:
+  data = json.load(fh) or {}
+
+data["dryRun"] = dry_run_value == "true"
+data["dryRunPolicy"] = policy_value
+
+with open(config_path, "w", encoding="utf-8") as fh:
+  json.dump(data, fh, indent=2)
+  fh.write("\n")
+
+os.chmod(config_path, stat.S_IRUSR | stat.S_IWUSR)
+PY
+}
+
+mode_show_cmd() {
+  local dry_run policy mode
+  read -r dry_run policy mode <<< "$(load_mode_summary)"
+  echo "mode=${mode}, dryRun=${dry_run}, dryRunPolicy=${policy}"
+  if [[ "${policy}" == "auto" && "${dry_run}" == "true" ]]; then
+    echo "🧪 Auto mode is in onboarding: after the first clean dump, TabDump switches to dump+close."
+  fi
+}
+
+mode_cmd() {
+  local subcmd="${1:-show}"
+  local dry_run policy mode
+  case "${subcmd}" in
+    show)
+      mode_show_cmd
+      ;;
+    dump-only)
+      set_mode_values "true" "manual"
+      echo "🧪 Dump-only enabled. Notes are saved, tabs stay open."
+      ;;
+    dump-close)
+      set_mode_values "false" "manual"
+      echo "⚠️ Dump+Close enabled. Non-allowlisted/non-pinned tabs may be closed."
+      ;;
+    auto)
+      read -r dry_run policy mode <<< "$(load_mode_summary)"
+      if [[ "${dry_run}" == "true" ]]; then
+        set_mode_values "true" "auto"
+        echo "🧪 Auto mode enabled. Starts in dump-only, then switches to dump+close after first clean dump."
+      else
+        set_mode_values "false" "auto"
+        echo "⚠️ Auto mode enabled while current mode remains dump+close."
+      fi
+      ;;
+    *)
+      echo "[error] Unknown mode: ${subcmd}" >&2
+      echo "Usage: tabdump mode [show|dump-only|dump-close|auto]" >&2
+      exit 1
+      ;;
+  esac
+}
+
 permissions_cmd() {
   open_tabdump
 
@@ -973,6 +1079,9 @@ cmd="${1:-run}"
 case "${cmd}" in
   run|open)
     open_tabdump
+    ;;
+  mode)
+    mode_cmd "${2:-show}"
     ;;
   permissions)
     permissions_cmd
@@ -1091,6 +1200,19 @@ print_summary() {
   echo "  open ~/Applications/TabDump.app"
   echo "Permissions helper:"
   echo "  tabdump permissions"
+  echo
+  echo "Modes:"
+  echo "  tabdump mode show"
+  echo "  tabdump mode dump-only"
+  echo "  tabdump mode dump-close"
+  echo "  tabdump mode auto"
+  echo
+  echo "Dry-run behavior:"
+  echo "  🧪 Dump-only (dryRun=true): writes raw+clean notes and keeps tabs open."
+  echo "  ⚠️ Dump+close (dryRun=false): may close non-allowlisted/non-pinned tabs."
+  if [[ "${DRY_RUN_VALUE}" == "true" ]]; then
+    echo "  Auto mode is enabled by default and will switch to dump+close after the first clean dump."
+  fi
   echo
   echo "If Automation prompts do not reappear, reset with:"
   echo "  tccutil reset AppleEvents ${BUNDLE_ID}"

@@ -195,6 +195,59 @@ def test_monitor_passes_llm_env_from_config(tmp_path, monkeypatch):
     assert captured_env["TABDUMP_MAX_ITEMS"] == "7"
 
 
+def test_monitor_auto_switches_dry_run_after_first_clean_dump(tmp_path, monkeypatch):
+    vault_inbox = tmp_path / "inbox"
+    vault_inbox.mkdir()
+
+    config_path = tmp_path / "config.json"
+    config_path.write_text(
+        (
+            json.dumps(
+                {
+                    "vaultInbox": str(vault_inbox),
+                    "checkEveryMinutes": 0,
+                    "dryRun": True,
+                    "dryRunPolicy": "auto",
+                    "llmEnabled": False,
+                },
+                indent=2,
+            )
+            + "\n"
+        ),
+        encoding="utf-8",
+    )
+
+    dump_path = _write_dump(vault_inbox / "TabDump 2026-02-07 00-00-00.md", with_id=True)
+    future = time.time() + 10
+    os.utime(dump_path, (future, future))
+
+    monkeypatch.setattr(monitor, "DEFAULT_CFG", config_path)
+    state_path = tmp_path / "state.json"
+    monkeypatch.setattr(monitor, "STATE_PATH", state_path)
+    monkeypatch.setattr(monitor, "LOCK_PATH", state_path.with_suffix(".lock"))
+    monkeypatch.setattr(monitor, "run_tabdump_app", lambda: None)
+    monkeypatch.setattr(monitor.sys, "argv", ["monitor_tabs.py"])
+
+    clean_path = vault_inbox / "TabDump 2026-02-07 00-00-00 (clean).md"
+
+    def fake_run(args, capture_output, text, timeout, env):
+        return SimpleNamespace(returncode=0, stdout=str(clean_path), stderr="")
+
+    monkeypatch.setattr(monitor.subprocess, "run", fake_run)
+
+    rc = monitor.main()
+    assert rc == 0
+
+    saved_cfg = json.loads(config_path.read_text(encoding="utf-8"))
+    assert saved_cfg["dryRun"] is False
+    assert saved_cfg["dryRunPolicy"] == "auto"
+
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    assert state["lastClean"] == str(clean_path)
+    assert state["autoSwitchReason"] == "first_clean_dump"
+    assert isinstance(state["autoSwitchedAt"], float)
+
+
 def test_local_classifier_used_when_llm_disabled(monkeypatch):
     items = _make_items(1)
     monkeypatch.setattr(ppt, "LLM_ENABLED", False)

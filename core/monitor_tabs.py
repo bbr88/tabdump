@@ -65,6 +65,11 @@ def load_cfg(p: Path) -> dict:
     return json.loads(p.read_text(encoding="utf-8"))
 
 
+def save_cfg(path: Path, cfg: dict) -> None:
+    path.write_text(json.dumps(cfg, indent=2) + "\n", encoding="utf-8")
+    os.chmod(path, stat.S_IRUSR | stat.S_IWUSR)
+
+
 def save_state(state: dict) -> None:
     STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
     STATE_PATH.write_text(json.dumps(state, indent=2, sort_keys=True), encoding="utf-8")
@@ -172,6 +177,42 @@ def append_to_queue(vault_inbox: Path, clean_note_path: Path) -> None:
         q.write_text(f"# Reading Queue {today}\n\n" + entry, encoding="utf-8")
 
 
+def _cfg_bool(value: object, default: bool = False) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    v = str(value).strip().lower()
+    if v in {"1", "true", "yes", "y", "on"}:
+        return True
+    if v in {"0", "false", "no", "n", "off"}:
+        return False
+    return default
+
+
+def maybe_auto_switch_dry_run(cfg: dict, cfg_path: Path, state: dict) -> None:
+    policy = str(cfg.get("dryRunPolicy", "manual")).strip().lower()
+    if policy != "auto":
+        return
+    if not _cfg_bool(cfg.get("dryRun", True), default=True):
+        return
+
+    cfg["dryRun"] = False
+    cfg["dryRunPolicy"] = "auto"
+    try:
+        save_cfg(cfg_path, cfg)
+    except Exception as exc:
+        log(f"warn: failed to persist auto-switch to config ({exc})")
+        return
+
+    switched_at = time.time()
+    state["autoSwitchedAt"] = switched_at
+    state["autoSwitchReason"] = "first_clean_dump"
+    log("auto-switch: dryRun=false (policy=auto, reason=first_clean_dump)")
+
+
 def main() -> int:
     parse_args(sys.argv)
     _lock_fh = acquire_lock()
@@ -250,6 +291,7 @@ def main() -> int:
     state["lastProcessed"] = str(newest)
     state["lastProcessedAt"] = time.time()
     state["lastClean"] = str(clean_path)
+    maybe_auto_switch_dry_run(cfg, DEFAULT_CFG, state)
     save_state(state)
     log("done")
 

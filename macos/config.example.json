@@ -28,6 +28,7 @@
   "outputGroupByWindow": true,
   "outputIncludeMetadata": false,
   "dryRun": true,
+  "dryRunPolicy": "auto",
   "maxTabs": 30,
   "checkEveryMinutes": 5,
   "cooldownMinutes": 30,

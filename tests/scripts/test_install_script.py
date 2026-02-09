@@ -259,6 +259,7 @@ def test_install_writes_default_config_and_artifacts(tmp_path):
     expected_vault = (home / "vault" / "inbox").resolve()
     assert data["vaultInbox"] == f"{expected_vault}{os.sep}"
     assert data["dryRun"] is True
+    assert data["dryRunPolicy"] == "auto"
     assert data["llmEnabled"] is False
     assert data["browsers"] == ["Chrome", "Safari"]
 
@@ -299,6 +300,7 @@ def test_install_noninteractive_skip_key_mode_disables_llm(tmp_path):
     assert proc.returncode == 0, output
     data = _read_config(proc.home)
     assert data["dryRun"] is False
+    assert data["dryRunPolicy"] == "manual"
     assert data["llmEnabled"] is False
     assert data["browsers"] == ["Safari", "Chrome", "Firefox"]
 
@@ -456,3 +458,37 @@ def test_generated_cli_permissions_handles_missing_chrome(tmp_path):
 
     log = install_run.log_path.read_text(encoding="utf-8")
     assert f"open {install_run.home / 'Applications' / 'TabDump.app'}" in log
+
+
+def test_generated_cli_mode_commands_update_config(tmp_path):
+    install_run = _run_install(tmp_path, user_input="~/vault/inbox\n\nn\nn\n")
+    assert install_run.returncode == 0, install_run.stdout + install_run.stderr
+
+    show_initial = _run_generated_cli(install_run, args=["mode", "show"])
+    out_initial = show_initial.stdout + show_initial.stderr
+    assert show_initial.returncode == 0, out_initial
+    assert "mode=dump-only, dryRun=true, dryRunPolicy=auto" in out_initial
+
+    set_close = _run_generated_cli(install_run, args=["mode", "dump-close"])
+    out_close = set_close.stdout + set_close.stderr
+    assert set_close.returncode == 0, out_close
+    assert "Dump+Close enabled" in out_close
+    data = _read_config(install_run.home)
+    assert data["dryRun"] is False
+    assert data["dryRunPolicy"] == "manual"
+
+    set_auto = _run_generated_cli(install_run, args=["mode", "auto"])
+    out_auto = set_auto.stdout + set_auto.stderr
+    assert set_auto.returncode == 0, out_auto
+    assert "Auto mode enabled" in out_auto
+    data = _read_config(install_run.home)
+    assert data["dryRun"] is False
+    assert data["dryRunPolicy"] == "auto"
+
+    set_dump_only = _run_generated_cli(install_run, args=["mode", "dump-only"])
+    out_dump_only = set_dump_only.stdout + set_dump_only.stderr
+    assert set_dump_only.returncode == 0, out_dump_only
+    assert "Dump-only enabled" in out_dump_only
+    data = _read_config(install_run.home)
+    assert data["dryRun"] is True
+    assert data["dryRunPolicy"] == "manual"
