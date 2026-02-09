@@ -587,7 +587,11 @@ collect_install_choices() {
   if [[ -n "${DRY_RUN_OVERRIDE}" ]]; then
     DRY_RUN_VALUE="${DRY_RUN_OVERRIDE}"
   elif [[ "${ASSUME_YES}" -eq 0 ]]; then
-    if prompt_yes_no "Set dryRun=false now?" "n"; then
+    echo
+    echo "Mode setup:"
+    echo "  🧪 dryRun=true  (dump-only): save raw+clean notes, keep tabs open."
+    echo "  ⚠️ dryRun=false (dump+close): also close non-allowlisted/non-pinned tabs."
+    if prompt_yes_no "Start in dump+close now?" "n"; then
       DRY_RUN_VALUE="false"
     fi
   fi
@@ -828,6 +832,12 @@ set -euo pipefail
 APP_PATH="$HOME/Applications/TabDump.app"
 CONFIG_PATH="$HOME/Library/Application Support/TabDump/config.json"
 MONITOR_PATH="$HOME/Library/Application Support/TabDump/monitor_tabs.py"
+STATE_DIR="$HOME/Library/Application Support/TabDump"
+MONITOR_STATE_PATH="$STATE_DIR/monitor_state.json"
+LEGACY_STATE_PATH="$STATE_DIR/state.json"
+LOG_DIR="$STATE_DIR/logs"
+LAUNCH_LABEL="io.orc-visioner.tabdump.monitor"
+LAUNCH_AGENT_PATH="$HOME/Library/LaunchAgents/${LAUNCH_LABEL}.plist"
 
 usage() {
   cat <<'USAGE'
@@ -835,6 +845,7 @@ Usage:
   tabdump [run|open]
   tabdump now [--close] [--json]
   tabdump mode [show|dump-only|dump-close|auto]
+  tabdump status
   tabdump permissions
   tabdump help
 USAGE
@@ -1055,6 +1066,16 @@ print(str(value))
 PY
 }
 
+run_monitor_json() {
+  local mode_arg="$1"
+  local output
+  if ! output="$(python3 "${MONITOR_PATH}" --force --mode "${mode_arg}" --json 2>&1)"; then
+    echo "[error] monitor_tabs failed: ${output}" >&2
+    return 1
+  fi
+  echo "${output}"
+}
+
 now_cmd() {
   local mode_arg="dump-only"
   local want_json=0
@@ -1089,7 +1110,9 @@ now_cmd() {
   ensure_config
   ensure_monitor
 
-  monitor_json="$(python3 "${MONITOR_PATH}" --force --mode "${mode_arg}" --json)"
+  if ! monitor_json="$(run_monitor_json "${mode_arg}")"; then
+    return 1
+  fi
   if [[ "${want_json}" -eq 1 ]]; then
     echo "${monitor_json}"
     return 0
@@ -1100,20 +1123,27 @@ now_cmd() {
   reason="$(read_json_field "${monitor_json}" "reason")"
 
   if [[ "${status}" == "ok" && -n "${clean_note}" ]]; then
-    echo "✅ Clean dump: ${clean_note}"
+    echo "[ok] Clean dump: ${clean_note}"
     return 0
   fi
 
   if [[ -z "${reason}" ]]; then
     reason="unknown"
   fi
-  echo "[warn] No clean dump produced (${reason})." >&2
+  if [[ "${status}" == "noop" ]]; then
+    echo "[info] No clean dump produced (${reason})."
+    return 0
+  fi
+
+  echo "[error] No clean dump produced (${reason})." >&2
   return 1
 }
 
 permissions_cmd() {
-  open_tabdump
-
+  local monitor_json
+  local status
+  local reason
+  local clean_note
   local browsers_csv
   local old_ifs
   local -a browsers=()
@@ -1123,6 +1153,32 @@ permissions_cmd() {
   local app_name
   local installed_label
   local missing_label
+
+  ensure_config
+  ensure_monitor
+  echo "[info] Running a safe permissions check (forced dump-only; tabs will not be closed)."
+  if ! monitor_json="$(run_monitor_json "dump-only")"; then
+    return 1
+  fi
+  status="$(read_json_field "${monitor_json}" "status")"
+  reason="$(read_json_field "${monitor_json}" "reason")"
+  clean_note="$(read_json_field "${monitor_json}" "cleanNote")"
+  if [[ "${status}" == "ok" && -n "${clean_note}" ]]; then
+    echo "[ok] Permissions check produced clean dump: ${clean_note}"
+  elif [[ "${status}" == "noop" ]]; then
+    if [[ -z "${reason}" ]]; then
+      reason="noop"
+    fi
+    echo "[info] Permissions check completed (${reason})."
+  else
+    if [[ -z "${status}" ]]; then
+      status="unknown"
+    fi
+    if [[ -z "${reason}" ]]; then
+      reason="unknown"
+    fi
+    echo "[warn] Permissions check returned status=${status} reason=${reason}."
+  fi
 
   browsers_csv="$(load_browsers_csv)"
   old_ifs="${IFS}"
@@ -1144,22 +1200,132 @@ permissions_cmd() {
   done
 
   if [[ "${#installed[@]}" -eq 0 ]]; then
-    echo "If prompts do not appear, open:"
-    echo "  System Settings → Privacy & Security → Automation → TabDump"
+    echo "[info] If prompts do not appear, open:"
+    echo "  System Settings -> Privacy & Security -> Automation -> TabDump"
     if [[ "${#missing[@]}" -gt 0 ]]; then
       missing_label="$(join_with_slash "${missing[@]}")"
-      echo "Configured but missing browsers: ${missing_label}"
+      echo "[warn] Configured but missing browsers: ${missing_label}"
     fi
     return 0
   fi
 
   installed_label="$(join_with_slash "${installed[@]}")"
-  echo "If prompts do not appear, open:"
-  echo "  System Settings → Privacy & Security → Automation → TabDump → ${installed_label}"
-  echo "Keep these browsers running when triggering permissions."
+  echo "[info] If prompts do not appear, open:"
+  echo "  System Settings -> Privacy & Security -> Automation -> TabDump -> ${installed_label}"
+  echo "[info] Keep these browsers running when triggering permissions."
   if [[ "${#missing[@]}" -gt 0 ]]; then
     missing_label="$(join_with_slash "${missing[@]}")"
-    echo "Configured but missing browsers: ${missing_label}"
+    echo "[warn] Configured but missing browsers: ${missing_label}"
+  fi
+}
+
+status_cmd() {
+  local status_payload
+  local uid_num
+  local service
+  local launch_output
+  local run_state
+  local last_exit
+  local out_log
+  local err_log
+
+  ensure_config
+  out_log="${LOG_DIR}/monitor.out.log"
+  err_log="${LOG_DIR}/monitor.err.log"
+
+  echo "TabDump status"
+  echo "- config: ${CONFIG_PATH}"
+
+  status_payload="$(
+    CONFIG_PATH="${CONFIG_PATH}" MONITOR_STATE_PATH="${MONITOR_STATE_PATH}" LEGACY_STATE_PATH="${LEGACY_STATE_PATH}" python3 - <<'PY'
+import json
+import os
+from pathlib import Path
+
+
+def load_json(path_str: str) -> dict:
+    path = Path(path_str).expanduser()
+    if not path.exists():
+        return {}
+    try:
+        return json.loads(path.read_text(encoding="utf-8")) or {}
+    except Exception:
+        return {}
+
+
+cfg_path = Path(os.environ["CONFIG_PATH"]).expanduser()
+monitor_state_path = Path(os.environ["MONITOR_STATE_PATH"]).expanduser()
+legacy_state_path = Path(os.environ["LEGACY_STATE_PATH"]).expanduser()
+
+cfg = load_json(str(cfg_path))
+monitor_state = load_json(str(monitor_state_path))
+legacy_state = load_json(str(legacy_state_path))
+
+dry_run = bool(cfg.get("dryRun", True))
+mode = "dump-only" if dry_run else "dump-close"
+policy = str(cfg.get("dryRunPolicy", "manual")).strip().lower()
+if policy not in {"manual", "auto"}:
+    policy = "manual"
+
+print(f"- mode: {mode} (dryRun={'true' if dry_run else 'false'}, dryRunPolicy={policy})")
+print(
+    "- gates: "
+    f"checkEveryMinutes={cfg.get('checkEveryMinutes', 'n/a')}, "
+    f"cooldownMinutes={cfg.get('cooldownMinutes', 'n/a')}, "
+    f"maxTabs={cfg.get('maxTabs', 'n/a')}"
+)
+
+browsers = cfg.get("browsers", [])
+if isinstance(browsers, list):
+    browsers_out = ", ".join(str(item) for item in browsers if str(item).strip())
+else:
+    browsers_out = ""
+if not browsers_out:
+    browsers_out = "n/a"
+print(f"- browsers: {browsers_out}")
+
+print(f"- monitor state: {monitor_state_path}")
+print(f"  lastStatus={monitor_state.get('lastStatus', '-')}")
+print(f"  lastReason={monitor_state.get('lastReason', '-')}")
+print(f"  lastResultAt={monitor_state.get('lastResultAt', '-')}")
+print(f"  lastProcessed={monitor_state.get('lastProcessed', '-')}")
+print(f"  lastClean={monitor_state.get('lastClean', '-')}")
+
+print(f"- app state (legacy self-gating): {legacy_state_path}")
+print(f"  lastCheck={legacy_state.get('lastCheck', '-')}")
+print(f"  lastDump={legacy_state.get('lastDump', '-')}")
+print(f"  lastTabs={legacy_state.get('lastTabs', '-')}")
+PY
+  )"
+  printf '%s\n' "${status_payload}"
+
+  uid_num="$(id -u)"
+  service="gui/${uid_num}/${LAUNCH_LABEL}"
+  if launch_output="$(launchctl print "${service}" 2>/dev/null)"; then
+    run_state="$(printf '%s\n' "${launch_output}" | awk -F'= ' '/^[[:space:]]*state = / {print $2; exit}')"
+    last_exit="$(printf '%s\n' "${launch_output}" | awk -F'= ' '/^[[:space:]]*last exit code = / {print $2; exit}')"
+    echo "- launch agent: loaded (${service})"
+    if [[ -n "${run_state}" ]]; then
+      echo "  state=${run_state}"
+    fi
+    if [[ -n "${last_exit}" ]]; then
+      echo "  last_exit=${last_exit}"
+    fi
+  else
+    echo "- launch agent: not loaded (${service})"
+  fi
+
+  echo "- log tail: ${out_log}"
+  if [[ -f "${out_log}" ]]; then
+    tail -n 8 "${out_log}" | sed 's/^/  /'
+  else
+    echo "  (missing)"
+  fi
+  echo "- log tail: ${err_log}"
+  if [[ -f "${err_log}" ]]; then
+    tail -n 8 "${err_log}" | sed 's/^/  /'
+  else
+    echo "  (missing)"
   fi
 }
 
@@ -1174,6 +1340,9 @@ case "${cmd}" in
     ;;
   mode)
     mode_cmd "${2:-show}"
+    ;;
+  status)
+    status_cmd
     ;;
   permissions)
     permissions_cmd
@@ -1288,24 +1457,16 @@ print_summary() {
   echo "Installed CLI:    ${CLI_PATH}"
   echo "Installed job:    ${LAUNCH_AGENT_PATH}"
   echo
-  echo "OpenClaw command:"
-  echo "  open ~/Applications/TabDump.app"
-  echo "On-demand dump:"
+  echo "Quick start:"
+  echo "  tabdump status"
+  echo "  tabdump mode show"
   echo "  tabdump now"
-  echo "On-demand dump+close:"
   echo "  tabdump now --close"
-  echo "Permissions helper:"
-  echo "  tabdump permissions"
+  echo "  tabdump permissions   # safe: forced dump-only, no tab closing"
   echo
   echo "Modes:"
-  echo "  tabdump mode show"
-  echo "  tabdump mode dump-only"
-  echo "  tabdump mode dump-close"
-  echo "  tabdump mode auto"
-  echo
-  echo "Dry-run behavior:"
-  echo "  🧪 Dump-only (dryRun=true): writes raw+clean notes and keeps tabs open."
-  echo "  ⚠️ Dump+close (dryRun=false): may close non-allowlisted/non-pinned tabs."
+  echo "  🧪 dump-only  (dryRun=true): writes raw+clean notes and keeps tabs open."
+  echo "  ⚠️ dump+close (dryRun=false): may close non-allowlisted/non-pinned tabs."
   if [[ "${DRY_RUN_VALUE}" == "true" ]]; then
     echo "  Auto mode is enabled by default and will switch to dump+close after the first clean dump."
   fi

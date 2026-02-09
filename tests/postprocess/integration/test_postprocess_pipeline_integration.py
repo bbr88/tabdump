@@ -194,6 +194,10 @@ def test_monitor_passes_llm_env_from_config(tmp_path, monkeypatch):
     assert captured_env["TABDUMP_LLM_TITLE_MAX"] == "123"
     assert captured_env["TABDUMP_MAX_ITEMS"] == "7"
 
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    assert state["lastStatus"] == "noop"
+    assert state["lastReason"] == "postprocess_noop"
+
 
 def test_monitor_auto_switches_dry_run_after_first_clean_dump(tmp_path, monkeypatch):
     vault_inbox = tmp_path / "inbox"
@@ -247,6 +251,46 @@ def test_monitor_auto_switches_dry_run_after_first_clean_dump(tmp_path, monkeypa
     assert state["lastClean"] == str(clean_path)
     assert state["autoSwitchReason"] == "first_clean_dump"
     assert isinstance(state["autoSwitchedAt"], float)
+    assert state["lastStatus"] == "ok"
+    assert state["lastReason"] == ""
+
+
+def test_monitor_records_check_every_gate_result(tmp_path, monkeypatch):
+    vault_inbox = tmp_path / "inbox"
+    vault_inbox.mkdir()
+
+    config_path = tmp_path / "config.json"
+    config_path.write_text(
+        (
+            json.dumps(
+                {
+                    "vaultInbox": str(vault_inbox),
+                    "checkEveryMinutes": 10,
+                    "dryRun": True,
+                    "dryRunPolicy": "manual",
+                    "llmEnabled": False,
+                },
+                indent=2,
+            )
+            + "\n"
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(monitor, "DEFAULT_CFG", config_path)
+    state_path = tmp_path / "state.json"
+    state_path.write_text(json.dumps({"lastCheck": time.time()}), encoding="utf-8")
+    monkeypatch.setattr(monitor, "STATE_PATH", state_path)
+    monkeypatch.setattr(monitor, "LOCK_PATH", state_path.with_suffix(".lock"))
+    monkeypatch.setattr(monitor, "run_tabdump_app", lambda: (_ for _ in ()).throw(AssertionError("should not run")))
+    monkeypatch.setattr(monitor.sys, "argv", ["monitor_tabs.py"])
+
+    rc = monitor.main()
+    assert rc == 0
+
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    assert state["lastStatus"] == "noop"
+    assert state["lastReason"] == "check_every_gate"
 
 
 def test_monitor_force_mode_override_is_temporary(tmp_path, monkeypatch, capsys):

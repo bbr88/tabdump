@@ -449,6 +449,30 @@ def test_generated_cli_permissions_handles_missing_chrome(tmp_path):
     install_run = _run_install(tmp_path, user_input="~/vault/inbox\n\nn\nn\n")
     assert install_run.returncode == 0, install_run.stdout + install_run.stderr
 
+    monitor_path = install_run.home / "Library" / "Application Support" / "TabDump" / "monitor_tabs.py"
+    monitor_path.write_text(
+        """#!/usr/bin/env python3
+import json
+import os
+import sys
+log = os.environ.get("TABDUMP_TEST_LOG")
+if log:
+  with open(log, "a", encoding="utf-8") as fh:
+    fh.write("monitor " + " ".join(sys.argv[1:]) + "\\n")
+payload = {
+  "status": "noop",
+  "reason": "no_new_dump",
+  "forced": True,
+  "mode": "dump-only",
+  "rawDump": "",
+  "cleanNote": "",
+  "autoSwitched": False,
+}
+print(json.dumps(payload, sort_keys=True))
+""",
+        encoding="utf-8",
+    )
+
     cli_run = _run_generated_cli(
         install_run,
         args=["permissions"],
@@ -457,11 +481,12 @@ def test_generated_cli_permissions_handles_missing_chrome(tmp_path):
     output = cli_run.stdout + cli_run.stderr
 
     assert cli_run.returncode == 0, output
+    assert "safe permissions check" in output
     assert "Chrome is configured but not installed. Skipping." in output
-    assert "System Settings → Privacy & Security → Automation → TabDump → Safari" in output
+    assert "System Settings -> Privacy & Security -> Automation -> TabDump -> Safari" in output
 
     log = install_run.log_path.read_text(encoding="utf-8")
-    assert f"open {install_run.home / 'Applications' / 'TabDump.app'}" in log
+    assert "monitor --force --mode dump-only --json" in log
 
 
 def test_generated_cli_mode_commands_update_config(tmp_path):
@@ -529,10 +554,44 @@ print(json.dumps(payload, sort_keys=True))
     cli_run = _run_generated_cli(install_run, args=["now"])
     output = cli_run.stdout + cli_run.stderr
     assert cli_run.returncode == 0, output
-    assert "✅ Clean dump: /tmp/clean.md" in output
+    assert "[ok] Clean dump: /tmp/clean.md" in output
 
     log = install_run.log_path.read_text(encoding="utf-8")
     assert "monitor --force --mode dump-only --json" in log
+
+
+def test_generated_cli_now_noop_returns_zero(tmp_path):
+    install_run = _run_install(tmp_path, user_input="~/vault/inbox\n\nn\nn\n")
+    assert install_run.returncode == 0, install_run.stdout + install_run.stderr
+
+    monitor_path = install_run.home / "Library" / "Application Support" / "TabDump" / "monitor_tabs.py"
+    monitor_path.write_text(
+        """#!/usr/bin/env python3
+import json
+import os
+import sys
+log = os.environ.get("TABDUMP_TEST_LOG")
+if log:
+  with open(log, "a", encoding="utf-8") as fh:
+    fh.write("monitor " + " ".join(sys.argv[1:]) + "\\n")
+payload = {
+  "status": "noop",
+  "reason": "check_every_gate",
+  "forced": True,
+  "mode": "dump-only",
+  "rawDump": "",
+  "cleanNote": "",
+  "autoSwitched": False,
+}
+print(json.dumps(payload, sort_keys=True))
+""",
+        encoding="utf-8",
+    )
+
+    cli_run = _run_generated_cli(install_run, args=["now"])
+    output = cli_run.stdout + cli_run.stderr
+    assert cli_run.returncode == 0, output
+    assert "[info] No clean dump produced (check_every_gate)." in output
 
 
 def test_generated_cli_now_close_json_passthrough(tmp_path):
@@ -573,3 +632,49 @@ print(json.dumps(payload, sort_keys=True))
 
     log = install_run.log_path.read_text(encoding="utf-8")
     assert "monitor --force --mode dump-close --json" in log
+
+
+def test_generated_cli_status_prints_expected_sections(tmp_path):
+    install_run = _run_install(tmp_path, user_input="~/vault/inbox\n\nn\nn\n")
+    assert install_run.returncode == 0, install_run.stdout + install_run.stderr
+
+    state_dir = install_run.home / "Library" / "Application Support" / "TabDump"
+    monitor_state_path = state_dir / "monitor_state.json"
+    legacy_state_path = state_dir / "state.json"
+    logs_dir = state_dir / "logs"
+    logs_dir.mkdir(parents=True, exist_ok=True)
+
+    monitor_state_path.write_text(
+        json.dumps(
+            {
+                "lastStatus": "noop",
+                "lastReason": "check_every_gate",
+                "lastProcessed": "/tmp/raw.md",
+                "lastClean": "/tmp/clean.md",
+            }
+        ),
+        encoding="utf-8",
+    )
+    legacy_state_path.write_text(
+        json.dumps(
+            {
+                "lastCheck": 1,
+                "lastDump": 2,
+                "lastTabs": 3,
+            }
+        ),
+        encoding="utf-8",
+    )
+    (logs_dir / "monitor.out.log").write_text("out line\n", encoding="utf-8")
+    (logs_dir / "monitor.err.log").write_text("err line\n", encoding="utf-8")
+
+    cli_run = _run_generated_cli(install_run, args=["status"])
+    output = cli_run.stdout + cli_run.stderr
+    assert cli_run.returncode == 0, output
+    assert "TabDump status" in output
+    assert "- mode:" in output
+    assert "- monitor state:" in output
+    assert "lastStatus=noop" in output
+    assert "- app state (legacy self-gating):" in output
+    assert "- launch agent: loaded" in output
+    assert "- log tail:" in output

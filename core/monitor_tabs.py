@@ -272,6 +272,26 @@ def emit_result(
         print(str(clean_note))
 
 
+def record_last_result(
+    state: dict,
+    *,
+    status: str,
+    reason: str = "",
+    raw_dump: Optional[Path] = None,
+    clean_note: Optional[Path] = None,
+    error_message: str = "",
+) -> None:
+    state["lastStatus"] = status
+    state["lastReason"] = reason
+    state["lastResultAt"] = time.time()
+    state["lastResultRawDump"] = str(raw_dump) if raw_dump else ""
+    state["lastResultCleanNote"] = str(clean_note) if clean_note else ""
+    if error_message:
+        state["lastError"] = error_message
+    else:
+        state.pop("lastError", None)
+
+
 def _applescript_escape(text: str) -> str:
     return text.replace("\\", "\\\\").replace('"', '\\"')
 
@@ -366,6 +386,8 @@ def main() -> int:
         last_check = float(state.get("lastCheck", 0))
         if not FORCE and check_every > 0 and last_check and (now - last_check) < check_every * 60:
             log(f"skip: checkEveryMinutes gate (check_every={check_every}, last_check={last_check}, now={now})")
+            record_last_result(state, status="noop", reason="check_every_gate")
+            save_state(state)
             emit_result(status="noop", reason="check_every_gate")
             return 0
         state["lastCheck"] = now
@@ -378,17 +400,20 @@ def main() -> int:
         newest = newest_tabdump(vault_inbox)
         if newest is None:
             log("skip: no new TabDump *.md found")
+            record_last_result(state, status="noop", reason="no_new_dump")
             save_state(state)
             emit_result(status="noop", reason="no_new_dump")
             return 0
         last_processed = state.get("lastProcessed")
         if last_processed and str(newest) == last_processed:
             log(f"skip: newest already processed ({newest})")
+            record_last_result(state, status="noop", reason="already_processed", raw_dump=newest)
             save_state(state)
             emit_result(status="noop", reason="already_processed", raw_dump=newest)
             return 0
         if newest.stat().st_mtime < (start_ts - 2):
             log(f"skip: newest predates run start ({newest})")
+            record_last_result(state, status="noop", reason="predates_run_start", raw_dump=newest)
             save_state(state)
             emit_result(status="noop", reason="predates_run_start", raw_dump=newest)
             return 0
@@ -425,6 +450,7 @@ def main() -> int:
             log("skip: postprocess indicated no-op (code 3)")
             state["lastProcessed"] = str(newest)
             state["lastProcessedAt"] = time.time()
+            record_last_result(state, status="noop", reason="postprocess_noop", raw_dump=newest)
             save_state(state)
             emit_result(status="noop", reason="postprocess_noop", raw_dump=newest)
             return 0
@@ -442,11 +468,29 @@ def main() -> int:
         state["lastClean"] = str(clean_path)
         auto_switched = maybe_auto_switch_dry_run(cfg_after_run_persistent, DEFAULT_CFG, state)
         maybe_notify_success(cfg_after_run_persistent, clean_path, auto_switched)
+        record_last_result(
+            state,
+            status="ok",
+            raw_dump=newest,
+            clean_note=clean_path,
+        )
         save_state(state)
         emit_result(status="ok", raw_dump=newest, clean_note=clean_path, auto_switched=auto_switched)
         log("done")
 
         return 0
+    except Exception as exc:
+        record_last_result(
+            state,
+            status="error",
+            reason="run_failed",
+            error_message=str(exc),
+        )
+        try:
+            save_state(state)
+        except Exception as state_exc:
+            log(f"warn: failed to persist error state ({state_exc})")
+        raise
     finally:
         if runtime_cfg_overridden:
             try:
