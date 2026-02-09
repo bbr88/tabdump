@@ -37,6 +37,7 @@ def _focus_line(items: List[dict]) -> str:
             "blog": "reading",
             "code_host": "repos",
             "video": "media",
+            "music": "media",
             "console": "tools",
             "generic": "browsing",
         }

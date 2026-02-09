@@ -445,6 +445,8 @@ def _kind_display_label(kind: str) -> str:
         return "Articles"
     if k == "paper":
         return "Papers"
+    if k == "music":
+        return "Music"
     if k == "spec":
         return "Specs"
     return "Other"
@@ -456,7 +458,7 @@ def _group_oneoffs_by_kind(flat_singletons: List[Tuple[str, dict]]) -> List[Tupl
         label = _kind_display_label(it.get("kind") or "")
         grouped.setdefault(label, []).append((source_domain, it))
 
-    order = ["Docs", "Articles", "Papers", "Specs", "Other"]
+    order = ["Docs", "Articles", "Papers", "Music", "Specs", "Other"]
     result: List[Tuple[str, List[Tuple[str, dict]]]] = []
     for label in order:
         arr = grouped.get(label, [])

@@ -5,6 +5,7 @@ from __future__ import annotations
 # Postprocess classification output contract.
 POSTPROCESS_KIND_ORDER = (
     "video",
+    "music",
     "repo",
     "paper",
     "docs",
@@ -45,12 +46,17 @@ VIDEO_DOMAINS = (
     "disneyplus.com",
     "hulu.com",
     "primevideo.com",
-    "music.apple.com",
     "tv.apple.com",
-    "open.spotify.com",
-    "music.youtube.com",
     "loom.com",
     "v.redd.it",
+)
+
+MUSIC_DOMAINS = (
+    "music.apple.com",
+    "open.spotify.com",
+    "music.youtube.com",
+    "uppbeat.io",
+    "music.yandex.ru",
 )
 
 DOC_PATH_HINTS = (
@@ -112,6 +118,8 @@ TOOL_DOMAINS = (
     "dropbox.com",
     "maps.google.com",
     "translate.google.com",
+    "contextmapper.org",
+    "smithery.ai",
 )
 
 SENSITIVE_HOSTS = (

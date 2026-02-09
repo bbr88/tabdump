@@ -45,6 +45,7 @@ def test_classify_domain_soft_auth_when_strong_not_required():
 def test_classify_domain_non_admin_categories():
     assert _classify("https://github.com/openai/gpt") == "code_host"
     assert _classify("https://netflix.com/title/123") == "video"
+    assert _classify("https://music.yandex.ru/") == "music"
     assert _classify("https://console.aws.amazon.com/ec2/home") == "console"
     assert _classify("https://example.com/api/users") == "docs_site"
     assert _classify("https://example.com/blog/post") == "blog"
@@ -57,6 +58,7 @@ def test_derive_kind_prioritizes_provided_and_domain_fallbacks():
     assert _derive_kind("admin_auth", "", "https://example.com") == "admin"
     assert _derive_kind("generic", "", "https://example.com/readme.pdf") == "paper"
     assert _derive_kind("video", "", "https://netflix.com/title/123") == "video"
+    assert _derive_kind("music", "", "https://music.yandex.ru/") == "music"
     assert _derive_kind("code_host", "", "https://github.com/openai/gpt") == "repo"
     assert _derive_kind("docs_site", "", "https://example.com/docs") == "docs"
     assert _derive_kind("generic", "", "https://example.com") == "article"

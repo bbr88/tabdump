@@ -9,6 +9,7 @@ from core.tab_policy.taxonomy import (
     BLOG_PATH_HINTS,
     CODE_HOST_DOMAINS,
     DOC_PATH_HINTS,
+    MUSIC_DOMAINS,
     RENDERER_ALLOWED_KINDS,
     SENSITIVE_QUERY_KEYS,
     TOOL_DOMAINS,
@@ -59,6 +60,7 @@ DEFAULT_CFG: Dict = {
     "chatDomains": ["chatgpt.com", "gemini.google.com", "claude.ai", "copilot.microsoft.com"],
     "codeHostDomains": list(CODE_HOST_DOMAINS),
     "videoDomains": list(VIDEO_DOMAINS),
+    "musicDomains": list(MUSIC_DOMAINS),
     "projectDomains": [
         "notion.so",
         "notion.site",
@@ -162,10 +164,10 @@ DEFAULT_CFG: Dict = {
 
 ALLOWED_KINDS = set(RENDERER_ALLOWED_KINDS)
 
-KIND_PRIORITY = ["paper", "spec", "docs", "repo", "article", "video", "tool", "misc", "admin"]
+KIND_PRIORITY = ["paper", "spec", "docs", "repo", "article", "video", "music", "tool", "misc", "admin"]
 KIND_PRIORITY_INDEX = {k: i for i, k in enumerate(KIND_PRIORITY)}
 
-DOMAIN_CATEGORY_ORDER = ["docs_site", "blog", "code_host", "console", "generic", "video"]
+DOMAIN_CATEGORY_ORDER = ["docs_site", "blog", "code_host", "console", "generic", "video", "music"]
 ADMIN_CATEGORY_ORDER = ["admin_auth", "admin_chat", "admin_local", "admin_internal"]
 
 AGGREGATOR_MARKERS = ["trending", "top", "best of", "weekly", "digest", "list of", "directory"]

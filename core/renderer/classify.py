@@ -83,6 +83,11 @@ def _classify_domain(
         return "code_host"
     if any(
         host_matches_base(hostname, str(base).lower(), enable_suffix=suffix_match)
+        for base in cfg.get("musicDomains", [])
+    ):
+        return "music"
+    if any(
+        host_matches_base(hostname, str(base).lower(), enable_suffix=suffix_match)
         for base in cfg.get("videoDomains", [])
     ):
         return "video"
@@ -108,6 +113,8 @@ def _derive_kind(domain_category: str, provided_kind: str, url: str) -> str:
         return "admin"
     if lower_url.endswith(".pdf"):
         return "paper"
+    if domain_category == "music":
+        return "music"
     if domain_category == "video":
         return "video"
     if domain_category == "code_host":

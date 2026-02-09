@@ -9,6 +9,7 @@ def test_safe_topic_prefers_non_empty_string_then_domain_then_misc():
 
 def test_safe_kind_accepts_known_values_only():
     assert safe_kind("Docs") == "docs"
+    assert safe_kind("music") == "music"
     assert safe_kind("unknown") == "misc"
     assert safe_kind(None) == "misc"
 

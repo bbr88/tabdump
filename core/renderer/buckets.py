@@ -74,7 +74,7 @@ def _bucket_for_item(item: dict, cfg: Dict) -> str:
 
     if domain_category.startswith("admin_") or kind == "admin" or provided_kind in {"local", "auth", "internal"}:
         return "ADMIN"
-    if kind == "video":
+    if kind in {"video", "music"}:
         return "MEDIA"
     if kind == "repo" or (domain_category == "code_host" and _looks_like_repo_path(path)):
         return "REPOS"
@@ -204,6 +204,23 @@ LEISURE_KEYWORDS = {
     "soundtrack",
     "imdb",
     "anime",
+    "серия",
+    "seriya",
+    "сезон",
+    "sezon",
+    "фильм",
+    "смотреть",
+    "smotret",
+    "музыка",
+    "muzyka",
+    "песня",
+    "pesnya",
+    "альбом",
+    "albom",
+    "подкаст",
+    "podkast",
+    "слушать",
+    "slushat",
 }
 SHOPPING_KEYWORDS = {
     "buy",
@@ -227,6 +244,16 @@ SHOPPING_KEYWORDS = {
     "alternatives",
     "shipping",
     "order",
+    "купить",
+    "kupit",
+    "цена",
+    "cena",
+    "скидка",
+    "skidka",
+    "заказ",
+    "zakaz",
+    "доставка",
+    "dostavka",
 }
 
 

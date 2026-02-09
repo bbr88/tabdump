@@ -72,6 +72,22 @@ def test_infer_local_kind_tool_domain_and_docs_path():
     assert infer_local_kind(docs_item) == "docs"
 
 
+def test_infer_local_kind_video_keywords_support_russian_and_translit():
+    cyr = _item("Очень странные дела 3 сезон 1 серия смотреть онлайн", "https://example.ru/show/season-3")
+    lat = _item("Stranger Things episode", "https://example.ru/3-seazons/1-seriya-3-sezon")
+
+    assert infer_local_kind(cyr) == "video"
+    assert infer_local_kind(lat) == "video"
+
+
+def test_infer_local_kind_music_keywords_support_russian_and_translit():
+    cyr = _item("Лучшая музыка и подкаст недели", "https://example.ru/audio")
+    lat = _item("Nova pesnya and albom release", "https://example.ru/releases")
+
+    assert infer_local_kind(cyr) == "music"
+    assert infer_local_kind(lat) == "music"
+
+
 def test_infer_local_action_cases():
     video = _item("Video", "https://youtube.com/watch?v=1")
     repo_issue = _item("Issue", "https://github.com/org/repo/issues/1")

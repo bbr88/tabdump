@@ -7,6 +7,7 @@ from core.tab_policy.taxonomy import (
     BLOG_PATH_HINTS,
     CODE_HOST_DOMAINS,
     DOC_PATH_HINTS,
+    MUSIC_DOMAINS,
     SENSITIVE_HOSTS,
     SENSITIVE_QUERY_KEYS,
     TOOL_DOMAINS,
@@ -29,6 +30,7 @@ TRACKING_PARAMS = {
 
 DOC_HINTS = DOC_PATH_HINTS
 BLOG_HINTS = BLOG_PATH_HINTS
+MUSIC_HINT_DOMAINS = MUSIC_DOMAINS
 
 DOC_HOST_OVERRIDES = {"docs.github.com"}
 
@@ -72,6 +74,29 @@ SOCIAL_DOMAINS = {
 UI_UX_HINTS = ("design-system", "figma", "storybook", "tailwind", "component")
 PAPER_HINTS = (".pdf", "arxiv.org", "researchgate", "vldb", "acm.org")
 PROJECT_HINTS = ("jira", "confluence", "linear.app", "notion.so/view")
+MCP_HINTS = ("mcp", "/server/")
+VIDEO_KEYWORD_HINTS = (
+    "серия",
+    "seriya",
+    "сезон",
+    "sezon",
+    "фильм",
+    "film",
+    "смотреть",
+    "smotret",
+)
+MUSIC_KEYWORD_HINTS = (
+    "музыка",
+    "muzyka",
+    "песня",
+    "pesnya",
+    "альбом",
+    "albom",
+    "подкаст",
+    "podkast",
+    "слушать",
+    "slushat",
+)
 
 GO_CONTEXT_HINTS = (
     "golang",

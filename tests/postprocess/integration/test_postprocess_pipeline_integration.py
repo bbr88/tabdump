@@ -208,6 +208,7 @@ def test_monitor_auto_switches_dry_run_after_first_clean_dump(tmp_path, monkeypa
                     "checkEveryMinutes": 0,
                     "dryRun": True,
                     "dryRunPolicy": "auto",
+                    "onboardingStartedAt": 1700000000,
                     "llmEnabled": False,
                 },
                 indent=2,
@@ -246,6 +247,217 @@ def test_monitor_auto_switches_dry_run_after_first_clean_dump(tmp_path, monkeypa
     assert state["lastClean"] == str(clean_path)
     assert state["autoSwitchReason"] == "first_clean_dump"
     assert isinstance(state["autoSwitchedAt"], float)
+
+
+def test_monitor_force_mode_override_is_temporary(tmp_path, monkeypatch, capsys):
+    vault_inbox = tmp_path / "inbox"
+    vault_inbox.mkdir()
+
+    base_cfg = {
+        "vaultInbox": str(vault_inbox),
+        "checkEveryMinutes": 99,
+        "cooldownMinutes": 45,
+        "maxTabs": 30,
+        "dryRun": True,
+        "dryRunPolicy": "manual",
+        "onboardingStartedAt": 1700000000,
+        "llmEnabled": False,
+    }
+    config_path = tmp_path / "config.json"
+    config_path.write_text(json.dumps(base_cfg, indent=2) + "\n", encoding="utf-8")
+
+    dump_path = _write_dump(vault_inbox / "TabDump 2026-02-07 00-00-00.md", with_id=True)
+    future = time.time() + 10
+    os.utime(dump_path, (future, future))
+
+    monkeypatch.setattr(monitor, "DEFAULT_CFG", config_path)
+    state_path = tmp_path / "state.json"
+    monkeypatch.setattr(monitor, "STATE_PATH", state_path)
+    monkeypatch.setattr(monitor, "LOCK_PATH", state_path.with_suffix(".lock"))
+    seen_cfg = {}
+
+    def fake_run_tabdump_app():
+        seen_cfg.update(json.loads(config_path.read_text(encoding="utf-8")))
+
+    monkeypatch.setattr(monitor, "run_tabdump_app", fake_run_tabdump_app)
+    monkeypatch.setattr(monitor.sys, "argv", ["monitor_tabs.py", "--force", "--mode", "dump-close", "--json"])
+
+    clean_path = vault_inbox / "TabDump 2026-02-07 00-00-00 (clean).md"
+
+    def fake_run(args, capture_output, text, timeout, env):
+        return SimpleNamespace(returncode=0, stdout=str(clean_path), stderr="")
+
+    monkeypatch.setattr(monitor.subprocess, "run", fake_run)
+
+    rc = monitor.main()
+    assert rc == 0
+
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert payload["status"] == "ok"
+    assert payload["forced"] is True
+    assert payload["mode"] == "dump-close"
+    assert payload["cleanNote"] == str(clean_path)
+
+    assert seen_cfg["checkEveryMinutes"] == 0
+    assert seen_cfg["cooldownMinutes"] == 0
+    assert seen_cfg["maxTabs"] == 0
+    assert seen_cfg["dryRun"] is False
+
+    restored_cfg = json.loads(config_path.read_text(encoding="utf-8"))
+    assert restored_cfg == base_cfg
+
+
+def test_monitor_force_override_preserves_auto_switch(tmp_path, monkeypatch):
+    vault_inbox = tmp_path / "inbox"
+    vault_inbox.mkdir()
+
+    config_path = tmp_path / "config.json"
+    config_path.write_text(
+        (
+            json.dumps(
+                {
+                    "vaultInbox": str(vault_inbox),
+                    "checkEveryMinutes": 99,
+                    "cooldownMinutes": 45,
+                    "maxTabs": 30,
+                    "dryRun": True,
+                    "dryRunPolicy": "auto",
+                    "onboardingStartedAt": 1700000000,
+                    "llmEnabled": False,
+                },
+                indent=2,
+            )
+            + "\n"
+        ),
+        encoding="utf-8",
+    )
+
+    dump_path = _write_dump(vault_inbox / "TabDump 2026-02-07 00-00-00.md", with_id=True)
+    future = time.time() + 10
+    os.utime(dump_path, (future, future))
+
+    monkeypatch.setattr(monitor, "DEFAULT_CFG", config_path)
+    state_path = tmp_path / "state.json"
+    monkeypatch.setattr(monitor, "STATE_PATH", state_path)
+    monkeypatch.setattr(monitor, "LOCK_PATH", state_path.with_suffix(".lock"))
+    monkeypatch.setattr(monitor, "run_tabdump_app", lambda: None)
+    monkeypatch.setattr(monitor.sys, "argv", ["monitor_tabs.py", "--force", "--mode", "dump-close"])
+
+    clean_path = vault_inbox / "TabDump 2026-02-07 00-00-00 (clean).md"
+
+    def fake_run(args, capture_output, text, timeout, env):
+        return SimpleNamespace(returncode=0, stdout=str(clean_path), stderr="")
+
+    monkeypatch.setattr(monitor.subprocess, "run", fake_run)
+
+    rc = monitor.main()
+    assert rc == 0
+
+    saved_cfg = json.loads(config_path.read_text(encoding="utf-8"))
+    assert saved_cfg["dryRun"] is False
+    assert saved_cfg["dryRunPolicy"] == "auto"
+    assert saved_cfg["checkEveryMinutes"] == 99
+    assert saved_cfg["cooldownMinutes"] == 45
+    assert saved_cfg["maxTabs"] == 30
+
+
+def test_monitor_trust_ramp_notification_includes_cta(tmp_path, monkeypatch):
+    vault_inbox = tmp_path / "inbox"
+    vault_inbox.mkdir()
+
+    config_path = tmp_path / "config.json"
+    config_path.write_text(
+        (
+            json.dumps(
+                {
+                    "vaultInbox": str(vault_inbox),
+                    "checkEveryMinutes": 0,
+                    "dryRun": False,
+                    "dryRunPolicy": "manual",
+                    "onboardingStartedAt": int(time.time()),
+                    "llmEnabled": False,
+                },
+                indent=2,
+            )
+            + "\n"
+        ),
+        encoding="utf-8",
+    )
+
+    dump_path = _write_dump(vault_inbox / "TabDump 2026-02-07 00-00-00.md", with_id=True)
+    future = time.time() + 10
+    os.utime(dump_path, (future, future))
+
+    monkeypatch.setattr(monitor, "DEFAULT_CFG", config_path)
+    state_path = tmp_path / "state.json"
+    monkeypatch.setattr(monitor, "STATE_PATH", state_path)
+    monkeypatch.setattr(monitor, "LOCK_PATH", state_path.with_suffix(".lock"))
+    monkeypatch.setattr(monitor, "run_tabdump_app", lambda: None)
+    monkeypatch.setattr(monitor.sys, "argv", ["monitor_tabs.py"])
+
+    clean_path = vault_inbox / "TabDump 2026-02-07 00-00-00 (clean).md"
+
+    def fake_run(args, capture_output, text, timeout, env):
+        return SimpleNamespace(returncode=0, stdout=str(clean_path), stderr="")
+
+    monkeypatch.setattr(monitor.subprocess, "run", fake_run)
+
+    calls = []
+    monkeypatch.setattr(monitor, "notify_user", lambda title, message: calls.append((title, message)))
+
+    rc = monitor.main()
+    assert rc == 0
+    assert any("Review top 3 items now." in message for _, message in calls)
+
+
+def test_monitor_post_ramp_notification_is_concise(tmp_path, monkeypatch):
+    vault_inbox = tmp_path / "inbox"
+    vault_inbox.mkdir()
+
+    config_path = tmp_path / "config.json"
+    config_path.write_text(
+        (
+            json.dumps(
+                {
+                    "vaultInbox": str(vault_inbox),
+                    "checkEveryMinutes": 0,
+                    "dryRun": False,
+                    "dryRunPolicy": "manual",
+                    "onboardingStartedAt": int(time.time()) - (monitor.TRUST_RAMP_DAYS + 1) * 86400,
+                    "llmEnabled": False,
+                },
+                indent=2,
+            )
+            + "\n"
+        ),
+        encoding="utf-8",
+    )
+
+    dump_path = _write_dump(vault_inbox / "TabDump 2026-02-07 00-00-00.md", with_id=True)
+    future = time.time() + 10
+    os.utime(dump_path, (future, future))
+
+    monkeypatch.setattr(monitor, "DEFAULT_CFG", config_path)
+    state_path = tmp_path / "state.json"
+    monkeypatch.setattr(monitor, "STATE_PATH", state_path)
+    monkeypatch.setattr(monitor, "LOCK_PATH", state_path.with_suffix(".lock"))
+    monkeypatch.setattr(monitor, "run_tabdump_app", lambda: None)
+    monkeypatch.setattr(monitor.sys, "argv", ["monitor_tabs.py"])
+
+    clean_path = vault_inbox / "TabDump 2026-02-07 00-00-00 (clean).md"
+
+    def fake_run(args, capture_output, text, timeout, env):
+        return SimpleNamespace(returncode=0, stdout=str(clean_path), stderr="")
+
+    monkeypatch.setattr(monitor.subprocess, "run", fake_run)
+
+    calls = []
+    monkeypatch.setattr(monitor, "notify_user", lambda title, message: calls.append((title, message)))
+
+    rc = monitor.main()
+    assert rc == 0
+    assert any("Clean dump ready:" in message for _, message in calls)
+    assert all("Review top 3 items now." not in message for _, message in calls)
 
 
 def test_local_classifier_used_when_llm_disabled(monkeypatch):
@@ -428,6 +640,93 @@ def test_case_documentation_trap_docs_reference():
     cls = ppt._classify_local(item)
     assert cls["kind"] == "docs"
     assert cls["action"] == "reference"
+
+
+def test_local_classifier_does_not_treat_release_slug_as_docs():
+    item = Item(
+        title="Release It! Second Edition: Design and Deploy Production-Ready Software by Michael Nygard",
+        url="https://pragprog.com/titles/mnee2/release-it-second-edition",
+        norm_url=ppt.normalize_url("https://pragprog.com/titles/mnee2/release-it-second-edition"),
+        clean_url=ppt.normalize_url("https://pragprog.com/titles/mnee2/release-it-second-edition"),
+        domain="pragprog.com",
+        browser=None,
+    )
+    cls = ppt._classify_local(item)
+    assert cls["kind"] == "article"
+
+
+def test_local_classifier_does_not_match_spec_inside_specific_word():
+    item = Item(
+        title="Context Mapper is an open source project providing a Domain-specific Language",
+        url="https://contextmapper.org/",
+        norm_url=ppt.normalize_url("https://contextmapper.org/"),
+        clean_url=ppt.normalize_url("https://contextmapper.org/"),
+        domain="contextmapper.org",
+        browser=None,
+    )
+    cls = ppt._classify_local(item)
+    assert cls["kind"] == "tool"
+
+
+def test_local_classifier_treats_mcp_servers_as_tools():
+    item = Item(
+        title="Context7 - MCP | Smithery",
+        url="https://smithery.ai/server/upstash/context7-mcp",
+        norm_url=ppt.normalize_url("https://smithery.ai/server/upstash/context7-mcp"),
+        clean_url=ppt.normalize_url("https://smithery.ai/server/upstash/context7-mcp"),
+        domain="smithery.ai",
+        browser=None,
+    )
+    cls = ppt._classify_local(item)
+    assert cls["kind"] == "tool"
+
+
+def test_local_classifier_treats_huggingface_course_as_docs():
+    item = Item(
+        title="Introduction - Hugging Face LLM Course",
+        url="https://huggingface.co/learn/llm-course/chapter1/1",
+        norm_url=ppt.normalize_url("https://huggingface.co/learn/llm-course/chapter1/1"),
+        clean_url=ppt.normalize_url("https://huggingface.co/learn/llm-course/chapter1/1"),
+        domain="huggingface.co",
+        browser=None,
+    )
+    cls = ppt._classify_local(item)
+    assert cls["kind"] == "docs"
+
+
+def test_local_classifier_treats_music_and_show_pages_distinctly():
+    music_items = [
+        Item(
+            title="Free Ambient Music - Royalty Free Download",
+            url="https://uppbeat.io/music/category/ambient",
+            norm_url=ppt.normalize_url("https://uppbeat.io/music/category/ambient"),
+            clean_url=ppt.normalize_url("https://uppbeat.io/music/category/ambient"),
+            domain="uppbeat.io",
+            browser=None,
+        ),
+        Item(
+            title="Яндекс Музыка — собираем музыку и подкасты для вас",
+            url="https://music.yandex.ru/",
+            norm_url=ppt.normalize_url("https://music.yandex.ru/"),
+            clean_url=ppt.normalize_url("https://music.yandex.ru/"),
+            domain="music.yandex.ru",
+            browser=None,
+        ),
+    ]
+    for item in music_items:
+        cls = ppt._classify_local(item)
+        assert cls["kind"] == "music"
+
+    show_item = Item(
+        title="Очень странные дела 3 сезон 1 серия смотреть онлайн",
+        url="https://stranger-things.ru/3-seazons/1-seriya-3-sezon",
+        norm_url=ppt.normalize_url("https://stranger-things.ru/3-seazons/1-seriya-3-sezon"),
+        clean_url=ppt.normalize_url("https://stranger-things.ru/3-seazons/1-seriya-3-sezon"),
+        domain="stranger-things.ru",
+        browser=None,
+    )
+    show_cls = ppt._classify_local(show_item)
+    assert show_cls["kind"] == "video"
 
 
 def test_case_social_thread_defaults_to_misc_article_score2():

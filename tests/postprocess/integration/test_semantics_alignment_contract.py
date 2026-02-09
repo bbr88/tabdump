@@ -91,3 +91,10 @@ def test_blog_urls_are_treated_as_articles_consistently():
 
     assert infer_local_kind(_item(url, title="blog entry")) == "article"
     assert _renderer_raw(url) == ("blog", "article")
+
+
+def test_music_urls_are_treated_as_music_consistently():
+    url = "https://music.yandex.ru/"
+
+    assert infer_local_kind(_item(url, title="music")) == "music"
+    assert _renderer_raw(url) == ("music", "music")

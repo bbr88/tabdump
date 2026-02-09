@@ -62,6 +62,7 @@ def test_bucket_for_item_routes_by_semantics():
 
     assert _bucket_for_item(_item(domain_category="admin_auth", kind="admin"), cfg) == "ADMIN"
     assert _bucket_for_item(_item(kind="video"), cfg) == "MEDIA"
+    assert _bucket_for_item(_item(kind="music"), cfg) == "MEDIA"
     assert _bucket_for_item(_item(kind="repo"), cfg) == "REPOS"
     assert _bucket_for_item(_item(domain_category="code_host", path="/org/repo"), cfg) == "REPOS"
     assert _bucket_for_item(_item(kind="tool"), cfg) == "TOOLS"
@@ -85,6 +86,18 @@ def test_quick_mini_classify_detects_domains_keywords_and_admin():
 
     leisure_kw = _item(domain="example.com", title="Watch trailer now")
     assert _quick_mini_classify(leisure_kw, cfg) == ("leisure", "leisure_keyword")
+
+    leisure_kw_ru = _item(domain="example.com", title="1 серия 3 сезон смотреть онлайн")
+    assert _quick_mini_classify(leisure_kw_ru, cfg) == ("leisure", "leisure_keyword")
+
+    leisure_kw_translit = _item(domain="example.com", title="1 seriya 3 sezon smotret online")
+    assert _quick_mini_classify(leisure_kw_translit, cfg) == ("leisure", "leisure_keyword")
+
+    shopping_kw_ru = _item(domain="example.com", title="купить сейчас, скидка и доставка")
+    assert _quick_mini_classify(shopping_kw_ru, cfg) == ("shopping", "shopping_keyword")
+
+    shopping_kw_translit = _item(domain="example.com", title="kupit cena skidka dostavka")
+    assert _quick_mini_classify(shopping_kw_translit, cfg) == ("shopping", "shopping_keyword")
 
 
 def test_tighten_quick_wins_moves_non_low_effort_to_backlog():

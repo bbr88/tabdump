@@ -15,6 +15,9 @@ from .constants import (
     DOC_HOST_OVERRIDES,
     GO_CONTEXT_HINTS,
     LOW_SIGNAL_HINTS,
+    MCP_HINTS,
+    MUSIC_KEYWORD_HINTS,
+    MUSIC_HINT_DOMAINS,
     PAPER_HINTS,
     PROJECT_HINTS,
     REFERENCE_HINTS,
@@ -22,6 +25,7 @@ from .constants import (
     TOOL_DOMAINS,
     TOPIC_KEYWORDS,
     UI_UX_HINTS,
+    VIDEO_KEYWORD_HINTS,
     VIDEO_DOMAINS,
 )
 from .models import Item
@@ -76,6 +80,23 @@ def topic_from_keywords(text_blob: str) -> Optional[str]:
     return None
 
 
+def _path_matches_hint(path: str, hint: str) -> bool:
+    """Match docs/blog hints on path segment boundaries, not arbitrary substrings."""
+    if not path or not hint:
+        return False
+    if hint.endswith("/"):
+        return hint in path
+    return path == hint or path.startswith(hint + "/")
+
+
+def _blob_matches_hint(blob: str, hint: str) -> bool:
+    if not blob or not hint:
+        return False
+    if re.search(r"[a-z0-9]", hint) and re.fullmatch(r"[a-z0-9-]+", hint):
+        return re.search(rf"(?<![a-z0-9]){re.escape(hint)}(?![a-z0-9])", blob) is not None
+    return hint in blob
+
+
 def infer_local_kind(item: Item) -> str:
     url = item.clean_url
     try:
@@ -96,28 +117,38 @@ def infer_local_kind(item: Item) -> str:
 
     if path.endswith(".pdf") or any(hint in blob for hint in PAPER_HINTS):
         return "paper"
-    if any(hint in path for hint in BLOG_HINTS):
+    if any(_path_matches_hint(path, hint) for hint in BLOG_HINTS):
         return "article"
+    if any(host_matches_base(host, base) for base in MUSIC_HINT_DOMAINS):
+        return "music"
     if any(host_matches_base(host, base) for base in VIDEO_DOMAINS):
         return "video"
+    if any(_blob_matches_hint(blob, hint) for hint in MUSIC_KEYWORD_HINTS):
+        return "music"
+    if any(_blob_matches_hint(blob, hint) for hint in VIDEO_KEYWORD_HINTS):
+        return "video"
+    if host_matches_base(host, "huggingface.co") and "/learn/" in path:
+        return "docs"
     if host in DOC_HOST_OVERRIDES:
         return "docs"
     if code_host and first_path not in CODE_HOST_RESERVED_PATHS:
         return "repo"
     if any(hint in blob for hint in PROJECT_HINTS):
         return "tool"
+    if any(hint in blob for hint in MCP_HINTS):
+        return "tool"
     if any(host_matches_base(host, base) for base in TOOL_DOMAINS):
         return "tool"
-    if host.startswith("docs.") or any(hint in path for hint in DOC_HINTS):
+    if host.startswith("docs.") or any(_path_matches_hint(path, hint) for hint in DOC_HINTS):
         return "docs"
-    if any(hint in blob for hint in REFERENCE_HINTS):
+    if any(_blob_matches_hint(blob, hint) for hint in REFERENCE_HINTS):
         return "docs"
     return "article"
 
 
 def infer_local_action(kind: str, item: Item) -> str:
     lower = f"{item.title} {item.clean_url}".lower()
-    if kind == "video":
+    if kind in {"video", "music"}:
         return "watch"
     if kind == "repo":
         if "/issues/" in lower or "/pull/" in lower or "/pulls/" in lower:
@@ -144,6 +175,7 @@ def infer_local_score(kind: str, action: str, item: Item) -> int:
         "article": 3,
         "tool": 3,
         "video": 3,
+        "music": 3,
         "misc": 2,
     }.get(kind, 3)
 

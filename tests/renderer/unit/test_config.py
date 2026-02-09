@@ -22,6 +22,7 @@ def test_merge_cfg_applies_payload_then_override():
 
 def test_defaults_include_shared_taxonomy_hints():
     assert "netflix.com" in DEFAULT_CFG["videoDomains"]
+    assert "music.yandex.ru" in DEFAULT_CFG["musicDomains"]
     assert "/api" in DEFAULT_CFG["docsPathHints"]
     assert "/post/" in DEFAULT_CFG["blogPathHints"]
     assert "access_token" in DEFAULT_CFG["authContainsHintsSoft"]
@@ -32,3 +33,4 @@ def test_allowed_kinds_keeps_renderer_specific_and_postprocess_values():
     assert "admin" in ALLOWED_KINDS
     assert "local" in ALLOWED_KINDS
     assert "video" in ALLOWED_KINDS
+    assert "music" in ALLOWED_KINDS
