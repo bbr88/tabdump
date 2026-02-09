@@ -260,6 +260,8 @@ def test_install_writes_default_config_and_artifacts(tmp_path):
     assert data["vaultInbox"] == f"{expected_vault}{os.sep}"
     assert data["dryRun"] is True
     assert data["dryRunPolicy"] == "auto"
+    assert isinstance(data["onboardingStartedAt"], int)
+    assert data["onboardingStartedAt"] > 0
     assert data["llmEnabled"] is False
     assert data["browsers"] == ["Chrome", "Safari"]
 
@@ -301,6 +303,8 @@ def test_install_noninteractive_skip_key_mode_disables_llm(tmp_path):
     data = _read_config(proc.home)
     assert data["dryRun"] is False
     assert data["dryRunPolicy"] == "manual"
+    assert isinstance(data["onboardingStartedAt"], int)
+    assert data["onboardingStartedAt"] > 0
     assert data["llmEnabled"] is False
     assert data["browsers"] == ["Safari", "Chrome", "Firefox"]
 
@@ -492,3 +496,80 @@ def test_generated_cli_mode_commands_update_config(tmp_path):
     data = _read_config(install_run.home)
     assert data["dryRun"] is True
     assert data["dryRunPolicy"] == "manual"
+
+
+def test_generated_cli_now_uses_monitor_and_prints_clean_path(tmp_path):
+    install_run = _run_install(tmp_path, user_input="~/vault/inbox\n\nn\nn\n")
+    assert install_run.returncode == 0, install_run.stdout + install_run.stderr
+
+    monitor_path = install_run.home / "Library" / "Application Support" / "TabDump" / "monitor_tabs.py"
+    monitor_path.write_text(
+        """#!/usr/bin/env python3
+import json
+import os
+import sys
+log = os.environ.get("TABDUMP_TEST_LOG")
+if log:
+  with open(log, "a", encoding="utf-8") as fh:
+    fh.write("monitor " + " ".join(sys.argv[1:]) + "\\n")
+payload = {
+  "status": "ok",
+  "reason": "",
+  "forced": True,
+  "mode": "dump-only",
+  "rawDump": "/tmp/raw.md",
+  "cleanNote": "/tmp/clean.md",
+  "autoSwitched": False,
+}
+print(json.dumps(payload, sort_keys=True))
+""",
+        encoding="utf-8",
+    )
+
+    cli_run = _run_generated_cli(install_run, args=["now"])
+    output = cli_run.stdout + cli_run.stderr
+    assert cli_run.returncode == 0, output
+    assert "✅ Clean dump: /tmp/clean.md" in output
+
+    log = install_run.log_path.read_text(encoding="utf-8")
+    assert "monitor --force --mode dump-only --json" in log
+
+
+def test_generated_cli_now_close_json_passthrough(tmp_path):
+    install_run = _run_install(tmp_path, user_input="~/vault/inbox\n\nn\nn\n")
+    assert install_run.returncode == 0, install_run.stdout + install_run.stderr
+
+    monitor_path = install_run.home / "Library" / "Application Support" / "TabDump" / "monitor_tabs.py"
+    monitor_path.write_text(
+        """#!/usr/bin/env python3
+import json
+import os
+import sys
+log = os.environ.get("TABDUMP_TEST_LOG")
+if log:
+  with open(log, "a", encoding="utf-8") as fh:
+    fh.write("monitor " + " ".join(sys.argv[1:]) + "\\n")
+payload = {
+  "status": "ok",
+  "reason": "",
+  "forced": True,
+  "mode": "dump-close",
+  "rawDump": "/tmp/raw-close.md",
+  "cleanNote": "/tmp/clean-close.md",
+  "autoSwitched": False,
+}
+print(json.dumps(payload, sort_keys=True))
+""",
+        encoding="utf-8",
+    )
+
+    cli_run = _run_generated_cli(install_run, args=["now", "--close", "--json"])
+    output = cli_run.stdout + cli_run.stderr
+    assert cli_run.returncode == 0, output
+
+    payload = json.loads(cli_run.stdout.strip())
+    assert payload["mode"] == "dump-close"
+    assert payload["cleanNote"] == "/tmp/clean-close.md"
+
+    log = install_run.log_path.read_text(encoding="utf-8")
+    assert "monitor --force --mode dump-close --json" in log

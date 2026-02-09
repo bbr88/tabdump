@@ -692,6 +692,7 @@ write_config() {
   python3 - <<'PY'
 import json
 import os
+import time
 
 vault_inbox = os.environ["VAULT_INBOX"]
 config_path = os.environ["CONFIG_PATH"]
@@ -726,6 +727,7 @@ data = {
   "outputIncludeMetadata": False,
   "dryRun": dry_run,
   "dryRunPolicy": dry_run_policy,
+  "onboardingStartedAt": int(time.time()),
   "maxTabs": 30,
   "checkEveryMinutes": 5,
   "cooldownMinutes": 30,
@@ -825,11 +827,13 @@ set -euo pipefail
 
 APP_PATH="$HOME/Applications/TabDump.app"
 CONFIG_PATH="$HOME/Library/Application Support/TabDump/config.json"
+MONITOR_PATH="$HOME/Library/Application Support/TabDump/monitor_tabs.py"
 
 usage() {
   cat <<'USAGE'
 Usage:
   tabdump [run|open]
+  tabdump now [--close] [--json]
   tabdump mode [show|dump-only|dump-close|auto]
   tabdump permissions
   tabdump help
@@ -923,6 +927,13 @@ join_with_slash() {
 ensure_config() {
   if [[ ! -f "${CONFIG_PATH}" ]]; then
     echo "[error] config.json not found at ${CONFIG_PATH}" >&2
+    exit 1
+  fi
+}
+
+ensure_monitor() {
+  if [[ ! -f "${MONITOR_PATH}" ]]; then
+    echo "[error] monitor_tabs.py not found at ${MONITOR_PATH}" >&2
     exit 1
   fi
 }
@@ -1023,6 +1034,83 @@ mode_cmd() {
   esac
 }
 
+read_json_field() {
+  local payload="$1"
+  local field="$2"
+  MONITOR_JSON="${payload}" MONITOR_FIELD="${field}" python3 - <<'PY'
+import json
+import os
+
+payload = os.environ.get("MONITOR_JSON", "")
+field = os.environ.get("MONITOR_FIELD", "")
+try:
+  data = json.loads(payload)
+except Exception:
+  print("")
+  raise SystemExit(0)
+value = data.get(field, "")
+if value is None:
+  value = ""
+print(str(value))
+PY
+}
+
+now_cmd() {
+  local mode_arg="dump-only"
+  local want_json=0
+  local arg
+  local monitor_json
+  local status
+  local clean_note
+  local reason
+
+  while [[ "$#" -gt 0 ]]; do
+    arg="$1"
+    case "${arg}" in
+      --close)
+        mode_arg="dump-close"
+        ;;
+      --json)
+        want_json=1
+        ;;
+      -h|--help)
+        echo "Usage: tabdump now [--close] [--json]"
+        return 0
+        ;;
+      *)
+        echo "[error] Unknown option for tabdump now: ${arg}" >&2
+        echo "Usage: tabdump now [--close] [--json]" >&2
+        return 1
+        ;;
+    esac
+    shift
+  done
+
+  ensure_config
+  ensure_monitor
+
+  monitor_json="$(python3 "${MONITOR_PATH}" --force --mode "${mode_arg}" --json)"
+  if [[ "${want_json}" -eq 1 ]]; then
+    echo "${monitor_json}"
+    return 0
+  fi
+
+  status="$(read_json_field "${monitor_json}" "status")"
+  clean_note="$(read_json_field "${monitor_json}" "cleanNote")"
+  reason="$(read_json_field "${monitor_json}" "reason")"
+
+  if [[ "${status}" == "ok" && -n "${clean_note}" ]]; then
+    echo "✅ Clean dump: ${clean_note}"
+    return 0
+  fi
+
+  if [[ -z "${reason}" ]]; then
+    reason="unknown"
+  fi
+  echo "[warn] No clean dump produced (${reason})." >&2
+  return 1
+}
+
 permissions_cmd() {
   open_tabdump
 
@@ -1079,6 +1167,10 @@ cmd="${1:-run}"
 case "${cmd}" in
   run|open)
     open_tabdump
+    ;;
+  now)
+    shift || true
+    now_cmd "$@"
     ;;
   mode)
     mode_cmd "${2:-show}"
@@ -1198,6 +1290,10 @@ print_summary() {
   echo
   echo "OpenClaw command:"
   echo "  open ~/Applications/TabDump.app"
+  echo "On-demand dump:"
+  echo "  tabdump now"
+  echo "On-demand dump+close:"
+  echo "  tabdump now --close"
   echo "Permissions helper:"
   echo "  tabdump permissions"
   echo

@@ -29,6 +29,7 @@
   "outputIncludeMetadata": false,
   "dryRun": true,
   "dryRunPolicy": "auto",
+  "onboardingStartedAt": 1760000000,
   "maxTabs": 30,
   "checkEveryMinutes": 5,
   "cooldownMinutes": 30,

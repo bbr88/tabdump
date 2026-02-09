@@ -50,6 +50,11 @@ APP_EXEC = Path(os.environ.get("TABDUMP_APP_EXEC", str(APP_PATH / "Contents/MacO
 STATE_PATH = Path(os.environ.get("TABDUMP_MONITOR_STATE", str(APP_SUPPORT / "monitor_state.json"))).expanduser()
 LOCK_PATH = STATE_PATH.with_suffix(".lock")
 VERBOSE = False
+FORCE = False
+JSON_OUTPUT = False
+PRINT_CLEAN = False
+MODE_OVERRIDE = "config"
+TRUST_RAMP_DAYS = 3
 
 
 def log(msg: str) -> None:
@@ -105,16 +110,46 @@ def newest_tabdump(vault_inbox: Path) -> Optional[Path]:
 
 
 def parse_args(argv: List[str]) -> None:
-    global VERBOSE
+    global VERBOSE, FORCE, JSON_OUTPUT, PRINT_CLEAN, MODE_OVERRIDE
+    VERBOSE = False
+    FORCE = False
+    JSON_OUTPUT = False
+    PRINT_CLEAN = False
+    MODE_OVERRIDE = "config"
     rest = []
-    for arg in argv[1:]:
+    args = list(argv[1:])
+    idx = 0
+    while idx < len(args):
+        arg = args[idx]
         if arg in ("-v", "--verbose"):
             VERBOSE = True
+        elif arg == "--force":
+            FORCE = True
+        elif arg == "--json":
+            JSON_OUTPUT = True
+        elif arg == "--print-clean":
+            PRINT_CLEAN = True
+        elif arg == "--mode":
+            if idx + 1 >= len(args):
+                raise SystemExit("--mode requires one of: config, dump-only, dump-close")
+            idx += 1
+            MODE_OVERRIDE = args[idx].strip().lower()
+            if MODE_OVERRIDE not in {"config", "dump-only", "dump-close"}:
+                raise SystemExit(f"invalid --mode value: {MODE_OVERRIDE}")
+        elif arg.startswith("--mode="):
+            MODE_OVERRIDE = arg.split("=", 1)[1].strip().lower()
+            if MODE_OVERRIDE not in {"config", "dump-only", "dump-close"}:
+                raise SystemExit(f"invalid --mode value: {MODE_OVERRIDE}")
         elif arg in ("-h", "--help"):
-            print("usage: monitor_tabs.py [--verbose]", file=sys.stderr)
+            print(
+                "usage: monitor_tabs.py [--verbose] [--force] [--mode config|dump-only|dump-close] "
+                "[--json|--print-clean]",
+                file=sys.stderr,
+            )
             raise SystemExit(0)
         else:
             rest.append(arg)
+        idx += 1
     if rest:
         raise SystemExit(f"unknown args: {' '.join(rest)}")
 
@@ -192,12 +227,108 @@ def _cfg_bool(value: object, default: bool = False) -> bool:
     return default
 
 
-def maybe_auto_switch_dry_run(cfg: dict, cfg_path: Path, state: dict) -> None:
+def build_runtime_cfg(cfg: dict) -> tuple[dict, bool]:
+    runtime_cfg = dict(cfg)
+    changed = False
+
+    if FORCE:
+        for key, value in (("checkEveryMinutes", 0), ("cooldownMinutes", 0), ("maxTabs", 0)):
+            if runtime_cfg.get(key) != value:
+                runtime_cfg[key] = value
+                changed = True
+
+    if MODE_OVERRIDE == "dump-only":
+        if not _cfg_bool(runtime_cfg.get("dryRun", True), default=True):
+            runtime_cfg["dryRun"] = True
+            changed = True
+    elif MODE_OVERRIDE == "dump-close":
+        if _cfg_bool(runtime_cfg.get("dryRun", True), default=True):
+            runtime_cfg["dryRun"] = False
+            changed = True
+
+    return runtime_cfg, changed
+
+
+def emit_result(
+    *,
+    status: str,
+    reason: str = "",
+    raw_dump: Optional[Path] = None,
+    clean_note: Optional[Path] = None,
+    auto_switched: bool = False,
+) -> None:
+    payload = {
+        "status": status,
+        "reason": reason,
+        "forced": FORCE,
+        "mode": MODE_OVERRIDE,
+        "rawDump": str(raw_dump) if raw_dump else "",
+        "cleanNote": str(clean_note) if clean_note else "",
+        "autoSwitched": auto_switched,
+    }
+    if JSON_OUTPUT:
+        print(json.dumps(payload, sort_keys=True))
+    elif PRINT_CLEAN and clean_note:
+        print(str(clean_note))
+
+
+def _applescript_escape(text: str) -> str:
+    return text.replace("\\", "\\\\").replace('"', '\\"')
+
+
+def notify_user(title: str, message: str) -> None:
+    if os.environ.get("PYTEST_CURRENT_TEST"):
+        return
+    enabled = str(os.environ.get("TABDUMP_NOTIFY", "1")).strip().lower()
+    if enabled in {"0", "false", "no", "off"}:
+        return
+    try:
+        script = f'display notification "{_applescript_escape(message)}" with title "{_applescript_escape(title)}"'
+        subprocess.Popen(
+            ["/usr/bin/osascript", "-e", script],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    except Exception as exc:
+        log(f"warn: notification failed ({exc})")
+
+
+def maybe_notify_success(cfg: dict, clean_path: Path, auto_switched: bool) -> None:
+    now = time.time()
+    raw_started = cfg.get("onboardingStartedAt")
+    started = None
+    if raw_started is not None:
+        try:
+            started = float(raw_started)
+        except Exception:
+            started = None
+    if not started or started <= 0:
+        started = now
+        cfg["onboardingStartedAt"] = int(now)
+        try:
+            save_cfg(DEFAULT_CFG, cfg)
+        except Exception as exc:
+            log(f"warn: failed to persist onboardingStartedAt ({exc})")
+
+    within_ramp = (now - started) <= TRUST_RAMP_DAYS * 86400
+    if within_ramp:
+        notify_user(
+            "TabDump",
+            f"✅ Clean dump ready: {clean_path.name}\nReview top 3 items now.",
+        )
+    else:
+        notify_user("TabDump", f"✅ Clean dump ready: {clean_path.name}")
+
+    if auto_switched:
+        notify_user("TabDump", "⚠️ Auto mode switched to Dump+Close for future runs.")
+
+
+def maybe_auto_switch_dry_run(cfg: dict, cfg_path: Path, state: dict) -> bool:
     policy = str(cfg.get("dryRunPolicy", "manual")).strip().lower()
     if policy != "auto":
-        return
+        return False
     if not _cfg_bool(cfg.get("dryRun", True), default=True):
-        return
+        return False
 
     cfg["dryRun"] = False
     cfg["dryRunPolicy"] = "auto"
@@ -205,12 +336,13 @@ def maybe_auto_switch_dry_run(cfg: dict, cfg_path: Path, state: dict) -> None:
         save_cfg(cfg_path, cfg)
     except Exception as exc:
         log(f"warn: failed to persist auto-switch to config ({exc})")
-        return
+        return False
 
     switched_at = time.time()
     state["autoSwitchedAt"] = switched_at
     state["autoSwitchReason"] = "first_clean_dump"
     log("auto-switch: dryRun=false (policy=auto, reason=first_clean_dump)")
+    return True
 
 
 def main() -> int:
@@ -219,83 +351,108 @@ def main() -> int:
     log("start")
     _verify_runtime_integrity(DEFAULT_CFG)
     cfg = load_cfg(DEFAULT_CFG)
-    vault_inbox = Path(cfg["vaultInbox"]).expanduser().resolve()
-
+    persistent_cfg = dict(cfg)
+    runtime_cfg, runtime_cfg_overridden = build_runtime_cfg(cfg)
+    if runtime_cfg_overridden:
+        save_cfg(DEFAULT_CFG, runtime_cfg)
+    cfg_for_run = runtime_cfg if runtime_cfg_overridden else cfg
+    vault_inbox = Path(cfg_for_run["vaultInbox"]).expanduser().resolve()
     state = load_state()
-    now = time.time()
-    check_every = int(cfg.get("checkEveryMinutes", 5))
-    last_check = float(state.get("lastCheck", 0))
-    if check_every > 0 and last_check and (now - last_check) < check_every * 60:
-        log(f"skip: checkEveryMinutes gate (check_every={check_every}, last_check={last_check}, now={now})")
-        return 0
-    state["lastCheck"] = now
+    auto_switched = False
+    cfg_after_run_persistent = dict(persistent_cfg)
+    try:
+        now = time.time()
+        check_every = int(cfg_for_run.get("checkEveryMinutes", 5))
+        last_check = float(state.get("lastCheck", 0))
+        if not FORCE and check_every > 0 and last_check and (now - last_check) < check_every * 60:
+            log(f"skip: checkEveryMinutes gate (check_every={check_every}, last_check={last_check}, now={now})")
+            emit_result(status="noop", reason="check_every_gate")
+            return 0
+        state["lastCheck"] = now
 
-    start_ts = time.time()
-    log("run TabDump.app")
-    run_tabdump_app()
+        start_ts = time.time()
+        log("run TabDump.app")
+        run_tabdump_app()
 
-    # Find newest dump and postprocess it (only if created after this run started)
-    newest = newest_tabdump(vault_inbox)
-    if newest is None:
-        log("skip: no new TabDump *.md found")
-        save_state(state)
-        return 0
-    last_processed = state.get("lastProcessed")
-    if last_processed and str(newest) == last_processed:
-        log(f"skip: newest already processed ({newest})")
-        save_state(state)
-        return 0
-    if newest.stat().st_mtime < (start_ts - 2):
-        log(f"skip: newest predates run start ({newest})")
-        save_state(state)
-        return 0
+        # Find newest dump and postprocess it (only if created after this run started)
+        newest = newest_tabdump(vault_inbox)
+        if newest is None:
+            log("skip: no new TabDump *.md found")
+            save_state(state)
+            emit_result(status="noop", reason="no_new_dump")
+            return 0
+        last_processed = state.get("lastProcessed")
+        if last_processed and str(newest) == last_processed:
+            log(f"skip: newest already processed ({newest})")
+            save_state(state)
+            emit_result(status="noop", reason="already_processed", raw_dump=newest)
+            return 0
+        if newest.stat().st_mtime < (start_ts - 2):
+            log(f"skip: newest predates run start ({newest})")
+            save_state(state)
+            emit_result(status="noop", reason="predates_run_start", raw_dump=newest)
+            return 0
 
-    def _env_bool(value: object, default: bool = False) -> str:
-        if value is None:
+        def _env_bool(value: object, default: bool = False) -> str:
+            if value is None:
+                return "1" if default else "0"
+            if isinstance(value, bool):
+                return "1" if value else "0"
+            if isinstance(value, (int, float)):
+                return "1" if value else "0"
+            v = str(value).strip().lower()
+            if v in {"1", "true", "yes", "y", "on"}:
+                return "1"
+            if v in {"0", "false", "no", "n", "off"}:
+                return "0"
             return "1" if default else "0"
-        if isinstance(value, bool):
-            return "1" if value else "0"
-        if isinstance(value, (int, float)):
-            return "1" if value else "0"
-        v = str(value).strip().lower()
-        if v in {"1", "true", "yes", "y", "on"}:
-            return "1"
-        if v in {"0", "false", "no", "n", "off"}:
-            return "0"
-        return "1" if default else "0"
 
-    env = dict(os.environ)
-    env["TABDUMP_LLM_ENABLED"] = _env_bool(cfg.get("llmEnabled", False), default=False)
-    env["TABDUMP_TAG_MODEL"] = str(cfg.get("tagModel", "gpt-4.1-mini"))
-    env["TABDUMP_LLM_REDACT"] = _env_bool(cfg.get("llmRedact", True), default=True)
-    env["TABDUMP_LLM_REDACT_QUERY"] = _env_bool(cfg.get("llmRedactQuery", True), default=True)
-    env["TABDUMP_LLM_TITLE_MAX"] = str(cfg.get("llmTitleMax", 200))
-    env["TABDUMP_MAX_ITEMS"] = str(cfg.get("maxItems", 0))
-    pp = subprocess.run([sys.executable, str(POSTPROCESS), str(newest)], capture_output=True, text=True, timeout=240,
-                        env=env)
-    if pp.returncode == 3:
-        log("skip: postprocess indicated no-op (code 3)")
+        env = dict(os.environ)
+        env["TABDUMP_LLM_ENABLED"] = _env_bool(cfg_for_run.get("llmEnabled", False), default=False)
+        env["TABDUMP_TAG_MODEL"] = str(cfg_for_run.get("tagModel", "gpt-4.1-mini"))
+        env["TABDUMP_LLM_REDACT"] = _env_bool(cfg_for_run.get("llmRedact", True), default=True)
+        env["TABDUMP_LLM_REDACT_QUERY"] = _env_bool(cfg_for_run.get("llmRedactQuery", True), default=True)
+        env["TABDUMP_LLM_TITLE_MAX"] = str(cfg_for_run.get("llmTitleMax", 200))
+        env["TABDUMP_MAX_ITEMS"] = str(cfg_for_run.get("maxItems", 0))
+        pp = subprocess.run(
+            [sys.executable, str(POSTPROCESS), str(newest)],
+            capture_output=True,
+            text=True,
+            timeout=240,
+            env=env,
+        )
+        if pp.returncode == 3:
+            log("skip: postprocess indicated no-op (code 3)")
+            state["lastProcessed"] = str(newest)
+            state["lastProcessedAt"] = time.time()
+            save_state(state)
+            emit_result(status="noop", reason="postprocess_noop", raw_dump=newest)
+            return 0
+        if pp.returncode != 0:
+            log(f"error: postprocess failed (code {pp.returncode}) {pp.stderr.strip() or pp.stdout.strip()}")
+            raise RuntimeError(f"postprocess failed: {pp.stderr.strip() or pp.stdout.strip()}")
+        clean_path = Path(pp.stdout.strip()).resolve()
+        log(f"postprocess ok: {clean_path}")
+
+        append_to_queue(vault_inbox, clean_path)
+        log("append to queue ok")
+
         state["lastProcessed"] = str(newest)
         state["lastProcessedAt"] = time.time()
+        state["lastClean"] = str(clean_path)
+        auto_switched = maybe_auto_switch_dry_run(cfg_after_run_persistent, DEFAULT_CFG, state)
+        maybe_notify_success(cfg_after_run_persistent, clean_path, auto_switched)
         save_state(state)
+        emit_result(status="ok", raw_dump=newest, clean_note=clean_path, auto_switched=auto_switched)
+        log("done")
+
         return 0
-    if pp.returncode != 0:
-        log(f"error: postprocess failed (code {pp.returncode}) {pp.stderr.strip() or pp.stdout.strip()}")
-        raise RuntimeError(f"postprocess failed: {pp.stderr.strip() or pp.stdout.strip()}")
-    clean_path = Path(pp.stdout.strip()).resolve()
-    log(f"postprocess ok: {clean_path}")
-
-    append_to_queue(vault_inbox, clean_path)
-    log("append to queue ok")
-
-    state["lastProcessed"] = str(newest)
-    state["lastProcessedAt"] = time.time()
-    state["lastClean"] = str(clean_path)
-    maybe_auto_switch_dry_run(cfg, DEFAULT_CFG, state)
-    save_state(state)
-    log("done")
-
-    return 0
+    finally:
+        if runtime_cfg_overridden:
+            try:
+                save_cfg(DEFAULT_CFG, cfg_after_run_persistent)
+            except Exception as exc:
+                log(f"warn: failed to restore config after runtime override ({exc})")
 
 
 if __name__ == "__main__":
