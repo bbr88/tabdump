@@ -1,0 +1,54 @@
+name: policy
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  manifest-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Enforce release label for manifest updates
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          GITHUB_EVENT_PATH: ${{ github.event_path }}
+        run: |
+          set -euo pipefail
+
+          changed_files="$(git diff --name-only "${BASE_SHA}" "${HEAD_SHA}")"
+
+          if ! printf '%s\n' "${changed_files}" | grep -qx 'scripts/runtime-manifest.sha256'; then
+            echo "No runtime manifest change detected."
+            exit 0
+          fi
+
+          labels="$(python - <<'PY'
+import json
+import os
+
+with open(os.environ['GITHUB_EVENT_PATH'], 'r', encoding='utf-8') as fh:
+    event = json.load(fh)
+
+pr = event.get('pull_request', {})
+label_names = sorted(label.get('name', '') for label in pr.get('labels', []))
+print(','.join(name for name in label_names if name))
+PY
+          )"
+
+          echo "Detected labels: ${labels:-<none>}"
+
+          if printf '%s' "${labels}" | tr ',' '\n' | grep -qx 'release-manifest'; then
+            echo "Manifest update allowed (release-manifest label present)."
+            exit 0
+          fi
+
+          echo "Manifest update blocked: add 'release-manifest' label to this PR."
+          exit 1
