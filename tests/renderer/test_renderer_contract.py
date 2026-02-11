@@ -30,9 +30,6 @@ def _section(md: str, header: str) -> str:
         return rest
     return rest[: m.start()]
 
-def test_always_fails():
-    assert True == False
-
 def test_golden_snapshot():
     payload = _load_payload()
     md = render_markdown(payload)
