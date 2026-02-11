@@ -8,6 +8,7 @@ Operational checklist to ship a Homebrew-ready TabDump release safely.
 2. Default branch protections are enabled.
 3. Release workflow and CI workflows are green on default branch.
 4. Signing key is configured for release publisher.
+5. Prebuilt app build script is available: `scripts/build-release.sh`.
 
 ## Required Repository Secrets
 Configure these in `Settings -> Secrets and variables -> Actions`:
@@ -48,10 +49,11 @@ Use this public key to verify release artifact signatures (`*.sig`):
 3. Push tag:
    - `git push origin vX.Y.Z`
 4. Confirm CI tag verification passes.
-5. Confirm release workflow publishes:
-   - `TabDump-vX.Y.Z-*.tar.gz|zip`
-   - `.sha256`
-   - `.sig`
+5. Confirm release workflow builds a prebuilt app bundle via `scripts/build-release.sh`.
+6. Confirm release workflow publishes:
+   - `tabdump-app-vX.Y.Z.tar.gz`
+   - `tabdump-app-vX.Y.Z.tar.gz.sha256`
+   - `tabdump-app-vX.Y.Z.tar.gz.sig`
 
 ## Phase C: Verify Published Artifacts
 1. Verify artifact checksum equals published `.sha256`.

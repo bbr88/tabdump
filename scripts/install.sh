@@ -21,6 +21,7 @@ POSTPROCESS_DEST_DIR="${CORE_PKG_DEST}/postprocess"
 TAB_POLICY_DEST_DIR="${CORE_PKG_DEST}/tab_policy"
 POSTPROCESS_CLI_DEST="${POSTPROCESS_DEST_DIR}/cli.py"
 APP_PATH="${HOME}/Applications/TabDump.app"
+APP_ARCHIVE_DEFAULT="${ROOT_DIR}/dist/tabdump-app.tar.gz"
 BUNDLE_ID="io.orc-visioner.tabdump"
 BIN_DIR="${HOME}/.local/bin"
 CLI_PATH="${BIN_DIR}/tabdump"
@@ -30,10 +31,10 @@ LAUNCH_AGENT_PATH="${LAUNCH_AGENT_DIR}/${LAUNCH_LABEL}.plist"
 LOG_DIR="${CONFIG_DIR}/logs"
 KEYCHAIN_SERVICE="${TABDUMP_KEYCHAIN_SERVICE:-TabDump}"
 KEYCHAIN_ACCOUNT="${TABDUMP_KEYCHAIN_ACCOUNT:-openai}"
-PLISTBUDDY_BIN="/usr/libexec/PlistBuddy"
 
 ASSUME_YES=0
 VAULT_INBOX_INPUT=""
+APP_ARCHIVE_INPUT=""
 DRY_RUN_OVERRIDE=""
 LLM_OVERRIDE=""
 BROWSERS_INPUT=""
@@ -43,6 +44,7 @@ REPLACE_KEYCHAIN_OVERRIDE=""
 DELETE_KEYCHAIN_OVERRIDE=""
 
 VAULT_INBOX=""
+APP_ARCHIVE_PATH="${TABDUMP_APP_ARCHIVE:-${APP_ARCHIVE_DEFAULT}}"
 PYTHON_BIN=""
 BROWSERS_CSV="Chrome,Safari"
 DRY_RUN_VALUE="true"
@@ -64,6 +66,7 @@ Usage:
 Options:
   --yes                               Run non-interactively with defaults where possible.
   --vault-inbox <path>                Required in --yes mode. Vault inbox path.
+  --app-archive <path>                Prebuilt TabDump.app archive (.tar.gz).
   --browsers <csv>                    Comma-separated browsers (supported: Chrome,Safari,Firefox).
   --set-dry-run <true|false>          Final dryRun value for config.json.
   --enable-llm <true|false>           Final llmEnabled value for config.json.
@@ -360,6 +363,20 @@ print(path)
 PY
 }
 
+normalize_file_path() {
+  INPUT_PATH_RAW="$1" python3 - <<'PY'
+import os
+import sys
+
+raw = os.environ.get("INPUT_PATH_RAW", "").strip()
+if not raw:
+    sys.exit(1)
+
+path = os.path.abspath(os.path.expanduser(raw))
+print(path)
+PY
+}
+
 prompt_required_vault_inbox() {
   local input
   local normalized
@@ -472,6 +489,20 @@ verify_runtime_manifest() {
   fi
 }
 
+resolve_app_archive_path() {
+  if [[ -n "${APP_ARCHIVE_INPUT}" ]]; then
+    APP_ARCHIVE_PATH="${APP_ARCHIVE_INPUT}"
+  fi
+
+  if ! APP_ARCHIVE_PATH="$(normalize_file_path "${APP_ARCHIVE_PATH}")"; then
+    die "Invalid --app-archive value: ${APP_ARCHIVE_PATH}"
+  fi
+
+  if [[ ! -f "${APP_ARCHIVE_PATH}" ]]; then
+    die "Prebuilt app archive not found: ${APP_ARCHIVE_PATH}. Run scripts/build-release.sh first."
+  fi
+}
+
 parse_args() {
   while [[ "$#" -gt 0 ]]; do
     case "$1" in
@@ -482,6 +513,11 @@ parse_args() {
       --vault-inbox)
         require_value "$1" "${2:-}"
         VAULT_INBOX_INPUT="$2"
+        shift 2
+        ;;
+      --app-archive)
+        require_value "$1" "${2:-}"
+        APP_ARCHIVE_INPUT="$2"
         shift 2
         ;;
       --browsers)
@@ -553,6 +589,7 @@ enforce_option_combinations() {
 
 collect_install_choices() {
   local normalized
+  resolve_app_archive_path
 
   echo "This will create/update:"
   echo "  - ${ENGINE_DEST}"
@@ -563,6 +600,7 @@ collect_install_choices() {
   echo "  - ${APP_PATH}"
   echo "  - ${CLI_PATH}"
   echo "  - ${LAUNCH_AGENT_PATH}"
+  echo "  - App archive: ${APP_ARCHIVE_PATH}"
   echo "  - Python: ${PYTHON_BIN}"
 
   if [[ -n "${VAULT_INBOX_INPUT}" ]]; then
@@ -812,18 +850,37 @@ configure_llm_key_mode() {
   esac
 }
 
-build_app_and_cli() {
-  osacompile -o "${APP_PATH}" "${ENGINE_DEST}"
+install_prebuilt_app_bundle() {
+  local tmp_dir
+  local extracted_app
 
-  local plist_path
-  plist_path="${APP_PATH}/Contents/Info.plist"
-  if "${PLISTBUDDY_BIN}" -c "Print :CFBundleIdentifier" "${plist_path}" >/dev/null 2>&1; then
-    "${PLISTBUDDY_BIN}" -c "Set :CFBundleIdentifier ${BUNDLE_ID}" "${plist_path}"
-  else
-    "${PLISTBUDDY_BIN}" -c "Add :CFBundleIdentifier string ${BUNDLE_ID}" "${plist_path}"
+  tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/tabdump-app.XXXXXX")"
+
+  if ! tar -xzf "${APP_ARCHIVE_PATH}" -C "${tmp_dir}"; then
+    rm -rf "${tmp_dir}"
+    die "Failed to extract prebuilt app archive: ${APP_ARCHIVE_PATH}"
   fi
 
-  codesign --force --deep --sign - "${APP_PATH}"
+  if [[ -d "${tmp_dir}/TabDump.app" ]]; then
+    extracted_app="${tmp_dir}/TabDump.app"
+  else
+    extracted_app="$(find "${tmp_dir}" -maxdepth 4 -type d -name 'TabDump.app' | head -n 1 || true)"
+  fi
+
+  if [[ -z "${extracted_app}" || ! -d "${extracted_app}" ]]; then
+    rm -rf "${tmp_dir}"
+    die "Archive did not contain TabDump.app: ${APP_ARCHIVE_PATH}"
+  fi
+
+  if [[ -d "${APP_PATH}" ]]; then
+    rm -rf "${APP_PATH}"
+  fi
+  cp -R "${extracted_app}" "${APP_PATH}"
+  rm -rf "${tmp_dir}"
+}
+
+build_app_and_cli() {
+  install_prebuilt_app_bundle
 
   cat > "${CLI_PATH}" <<'EOF'
 #!/usr/bin/env bash
@@ -1497,13 +1554,9 @@ main() {
   step "Preflight checks"
   require_cmd python3
   require_cmd shasum
-  require_cmd osacompile
-  require_cmd codesign
+  require_cmd tar
   require_cmd security
   require_cmd launchctl
-  if [[ ! -x "${PLISTBUDDY_BIN}" ]]; then
-    die "Required command not found: ${PLISTBUDDY_BIN}"
-  fi
   PYTHON_BIN="$(command -v python3)"
   verify_runtime_manifest
   print_ok "Preflight checks passed."
@@ -1528,10 +1581,10 @@ main() {
   step "Configure LLM key mode"
   configure_llm_key_mode
 
-  step "Build app and CLI"
+  step "Install app and CLI"
   build_app_and_cli
   configure_cli_path
-  print_ok "Built app bundle and CLI shim."
+  print_ok "Installed prebuilt app bundle and CLI shim."
 
   step "Install launch agent"
   write_launch_agent

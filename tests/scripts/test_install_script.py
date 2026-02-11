@@ -3,6 +3,7 @@ import os
 import stat
 import subprocess
 import sys
+import tarfile
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -154,6 +155,24 @@ exit 0
     )
 
 
+def _create_prebuilt_app_archive(tmp_path: Path) -> Path:
+    stage_dir = tmp_path / "prebuilt-app"
+    app_contents = stage_dir / "TabDump.app" / "Contents"
+    app_contents.mkdir(parents=True, exist_ok=True)
+    (app_contents / "Info.plist").write_text(
+        """<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict></dict></plist>
+""",
+        encoding="utf-8",
+    )
+
+    archive_path = tmp_path / "tabdump-app.tar.gz"
+    with tarfile.open(archive_path, "w:gz") as tf:
+        tf.add(stage_dir / "TabDump.app", arcname="TabDump.app")
+    return archive_path
+
+
 def _run_install(
     tmp_path: Path,
     user_input: str = "",
@@ -171,6 +190,7 @@ def _run_install(
     env["HOME"] = str(home)
     env["PATH"] = f"{fake_bin}:{env['PATH']}"
     env["TABDUMP_TEST_LOG"] = str(log_path)
+    env["TABDUMP_APP_ARCHIVE"] = str(_create_prebuilt_app_archive(tmp_path))
     if extra_env:
         env.update(extra_env)
 
@@ -237,6 +257,18 @@ def test_install_requires_vault_inbox_path_in_yes_mode(tmp_path):
     assert "--vault-inbox is required when running with --yes." in output
 
 
+def test_install_fails_when_prebuilt_app_archive_missing(tmp_path):
+    proc = _run_install(
+        tmp_path,
+        args=["--yes", "--vault-inbox", "~/vault/inbox"],
+        extra_env={"TABDUMP_APP_ARCHIVE": str(tmp_path / "missing-app.tar.gz")},
+    )
+    output = proc.stdout + proc.stderr
+
+    assert proc.returncode == 1
+    assert "Prebuilt app archive not found:" in output
+
+
 def test_install_writes_default_config_and_artifacts(tmp_path):
     proc = _run_install(tmp_path, user_input="~/vault/inbox\n\nn\nn\n")
     output = proc.stdout + proc.stderr
@@ -275,8 +307,8 @@ def test_install_writes_default_config_and_artifacts(tmp_path):
 
     log = proc.log_path.read_text(encoding="utf-8")
     assert "shasum -a 256 -c" in log
-    assert "osacompile -o" in log
-    assert "codesign --force --deep --sign -" in log
+    assert "osacompile -o" not in log
+    assert "codesign --force --deep --sign -" not in log
     assert "launchctl bootstrap" in log
 
 
