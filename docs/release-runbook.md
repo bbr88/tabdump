@@ -21,6 +21,11 @@ Configure these in `Settings -> Secrets and variables -> Actions`:
 - Content: private SSH key used to sign release artifacts in CI.
 - Keep this key dedicated to release signing.
 
+## Artifact Verification Public Key
+Use this public key to verify release artifact signatures (`*.sig`):
+
+`ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDPdAPr5A+78p73lIXJ0csNUlcmSZVGFmTpox7SCqBBI tabdump-release-signing`
+
 ## Inputs
 - Target version (example: `v1.2.0`)
 - Release notes/changelog entries
