@@ -1,0 +1,8 @@
+# Release-critical paths
+/scripts/install.sh @bbr88
+/scripts/update-runtime-manifest.sh @bbr88
+/scripts/runtime-manifest.sha256 @bbr88
+/docs/release-policy.md @bbr88
+/docs/release-runbook.md @bbr88
+/docs/versioning.md @bbr88
+/.github/workflows/* @bbr88
