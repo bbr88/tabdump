@@ -1,0 +1,129 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify-tag-signature:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate tag object type
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          obj_type="$(git cat-file -t "${TAG}")"
+          if [[ "${obj_type}" != "tag" ]]; then
+            echo "Release tags must be annotated and signed. Found type: ${obj_type}" >&2
+            exit 1
+          fi
+
+      - name: Configure SSH allowed signers
+        env:
+          RELEASE_TAG_ALLOWED_SIGNERS: ${{ secrets.RELEASE_TAG_ALLOWED_SIGNERS }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${RELEASE_TAG_ALLOWED_SIGNERS}" ]]; then
+            echo "Missing required secret: RELEASE_TAG_ALLOWED_SIGNERS" >&2
+            echo "Expected format: '<principal> <ssh-public-key>' (one per line)." >&2
+            exit 1
+          fi
+
+          mkdir -p "${HOME}/.config/git"
+          printf '%s\n' "${RELEASE_TAG_ALLOWED_SIGNERS}" > "${HOME}/.config/git/allowed_signers"
+          chmod 600 "${HOME}/.config/git/allowed_signers"
+
+          git config --global gpg.format ssh
+          git config --global gpg.ssh.allowedSignersFile "${HOME}/.config/git/allowed_signers"
+
+      - name: Verify signed tag
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          git tag -v "${TAG}"
+
+  build-and-publish:
+    needs: verify-tag-signature
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build release artifacts
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          VERSION="${TAG#v}"
+          COMMIT_SHA="$(git rev-list -n 1 "${TAG}")"
+          PREFIX="tabdump-${VERSION}"
+          ARTIFACT="tabdump-${TAG}-source.tar.gz"
+
+          mkdir -p dist
+          git archive --format=tar.gz --prefix="${PREFIX}/" --output="dist/${ARTIFACT}" "${COMMIT_SHA}"
+          (cd dist && shasum -a 256 "${ARTIFACT}" > "${ARTIFACT}.sha256")
+
+          cat > "dist/RELEASE_NOTES.md" <<NOTES
+          Release ${TAG}
+
+          Artifacts:
+          - ${ARTIFACT}
+          - ${ARTIFACT}.sha256
+          - ${ARTIFACT}.sig
+          NOTES
+
+      - name: Sign release artifact
+        env:
+          TAG: ${{ github.ref_name }}
+          RELEASE_ARTIFACT_SIGNING_KEY: ${{ secrets.RELEASE_ARTIFACT_SIGNING_KEY }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${RELEASE_ARTIFACT_SIGNING_KEY}" ]]; then
+            echo "Missing required secret: RELEASE_ARTIFACT_SIGNING_KEY" >&2
+            echo "Provide the private SSH key PEM/OpenSSH block used for release artifact signing." >&2
+            exit 1
+          fi
+
+          ARTIFACT="tabdump-${TAG}-source.tar.gz"
+
+          mkdir -p "${HOME}/.ssh"
+          chmod 700 "${HOME}/.ssh"
+          printf '%s\n' "${RELEASE_ARTIFACT_SIGNING_KEY}" > "${HOME}/.ssh/release_signing_key"
+          chmod 600 "${HOME}/.ssh/release_signing_key"
+
+          ssh-keygen -Y sign -f "${HOME}/.ssh/release_signing_key" -n file "dist/${ARTIFACT}"
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          if gh release view "${TAG}" >/dev/null 2>&1; then
+            gh release upload "${TAG}" dist/* --clobber
+          else
+            gh release create "${TAG}" \
+              --title "TabDump ${TAG}" \
+              --notes-file dist/RELEASE_NOTES.md \
+              dist/*
+          fi

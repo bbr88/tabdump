@@ -9,6 +9,18 @@ Operational checklist to ship a Homebrew-ready TabDump release safely.
 3. Release workflow and CI workflows are green on default branch.
 4. Signing key is configured for release publisher.
 
+## Required Repository Secrets
+Configure these in `Settings -> Secrets and variables -> Actions`:
+
+1. `RELEASE_TAG_ALLOWED_SIGNERS`
+- Content: one or more allowed-signers lines in OpenSSH format.
+- Example:
+  `i.bisarnov@innopolis.ru ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA...`
+
+2. `RELEASE_ARTIFACT_SIGNING_KEY`
+- Content: private SSH key used to sign release artifacts in CI.
+- Keep this key dedicated to release signing.
+
 ## Inputs
 - Target version (example: `v1.2.0`)
 - Release notes/changelog entries
