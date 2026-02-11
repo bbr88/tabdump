@@ -30,18 +30,7 @@ jobs:
             exit 0
           fi
 
-          labels="$(python - <<'PY'
-import json
-import os
-
-with open(os.environ['GITHUB_EVENT_PATH'], 'r', encoding='utf-8') as fh:
-    event = json.load(fh)
-
-pr = event.get('pull_request', {})
-label_names = sorted(label.get('name', '') for label in pr.get('labels', []))
-print(','.join(name for name in label_names if name))
-PY
-          )"
+          labels="$(python -c "import json, os; event=json.load(open(os.environ['GITHUB_EVENT_PATH'], 'r', encoding='utf-8')); pr=event.get('pull_request', {}); print(','.join(sorted(label.get('name', '') for label in pr.get('labels', []) if label.get('name', ''))))")"
 
           echo "Detected labels: ${labels:-<none>}"
 
