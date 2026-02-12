@@ -43,6 +43,7 @@ jobs:
 
       - name: Shell syntax check
         run: |
+          bash -n scripts/build-homebrew-package.sh
           bash -n scripts/build-local.sh
           bash -n scripts/build-release.sh
           bash -n scripts/install.sh
@@ -59,3 +60,6 @@ jobs:
 
       - name: Python compile check
         run: python -m compileall -q core tests
+
+      - name: Formula syntax check
+        run: ruby -c Formula/tabdump.rb

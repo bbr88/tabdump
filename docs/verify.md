@@ -22,7 +22,12 @@ Expected:
 Download release assets for the tag:
 
 ```bash
-gh release download vX.Y.Z -p "tabdump-app-vX.Y.Z.tar.gz" -p "tabdump-app-vX.Y.Z.tar.gz.sha256" -D /tmp/tabdump-verify
+gh release download vX.Y.Z \
+  -p "tabdump-app-vX.Y.Z.tar.gz" \
+  -p "tabdump-app-vX.Y.Z.tar.gz.sha256" \
+  -p "tabdump-homebrew-vX.Y.Z.tar.gz" \
+  -p "tabdump-homebrew-vX.Y.Z.tar.gz.sha256" \
+  -D /tmp/tabdump-verify
 ```
 
 Verify checksum:
@@ -30,10 +35,12 @@ Verify checksum:
 ```bash
 cd /tmp/tabdump-verify
 shasum -a 256 -c tabdump-app-vX.Y.Z.tar.gz.sha256
+shasum -a 256 -c tabdump-homebrew-vX.Y.Z.tar.gz.sha256
 ```
 
 Expected:
 - `tabdump-app-vX.Y.Z.tar.gz: OK`
+- `tabdump-homebrew-vX.Y.Z.tar.gz: OK`
 
 ## 3) Verify Artifact Signature (`.sig`)
 Create an allowed signers file with the published release signing key:
@@ -53,6 +60,12 @@ ssh-keygen -Y verify \
   -I tabdump-release-signing \
   -n file \
   -s tabdump-app-vX.Y.Z.tar.gz.sig < tabdump-app-vX.Y.Z.tar.gz
+
+ssh-keygen -Y verify \
+  -f allowed_signers \
+  -I tabdump-release-signing \
+  -n file \
+  -s tabdump-homebrew-vX.Y.Z.tar.gz.sig < tabdump-homebrew-vX.Y.Z.tar.gz
 ```
 
 Expected:

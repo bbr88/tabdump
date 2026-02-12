@@ -25,6 +25,9 @@ Recommended pattern:
 - `tabdump-app-vX.Y.Z.tar.gz`
 - `tabdump-app-vX.Y.Z.tar.gz.sha256`
 - `tabdump-app-vX.Y.Z.tar.gz.sig`
+- `tabdump-homebrew-vX.Y.Z.tar.gz`
+- `tabdump-homebrew-vX.Y.Z.tar.gz.sha256`
+- `tabdump-homebrew-vX.Y.Z.tar.gz.sig`
 
 ## Homebrew Mapping
 - Formula version maps 1:1 to release tag version.

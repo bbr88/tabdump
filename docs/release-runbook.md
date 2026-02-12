@@ -58,6 +58,9 @@ Use this public key to verify release artifact signatures (`*.sig`):
    - `tabdump-app-vX.Y.Z.tar.gz`
    - `tabdump-app-vX.Y.Z.tar.gz.sha256`
    - `tabdump-app-vX.Y.Z.tar.gz.sig`
+   - `tabdump-homebrew-vX.Y.Z.tar.gz`
+   - `tabdump-homebrew-vX.Y.Z.tar.gz.sha256`
+   - `tabdump-homebrew-vX.Y.Z.tar.gz.sig`
 
 ## Phase C: Verify Published Artifacts
 1. Verify artifact checksum equals published `.sha256`.
