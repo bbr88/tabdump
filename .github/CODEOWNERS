@@ -4,5 +4,7 @@
 /scripts/runtime-manifest.sha256 @bbr88
 /docs/release-policy.md @bbr88
 /docs/release-runbook.md @bbr88
+/docs/verify.md @bbr88
 /docs/versioning.md @bbr88
 /.github/workflows/* @bbr88
+/Formula/* @bbr88

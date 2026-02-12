@@ -74,10 +74,15 @@ jobs:
       - name: Build release artifacts
         env:
           TAG: ${{ github.ref_name }}
+          RELEASE_CODESIGN_IDENTITY: ${{ secrets.RELEASE_CODESIGN_IDENTITY }}
         run: |
           set -euo pipefail
 
-          scripts/build-release.sh --version "${TAG}" --output-dir dist --no-codesign
+          if [[ -n "${RELEASE_CODESIGN_IDENTITY}" ]]; then
+            scripts/build-release.sh --version "${TAG}" --output-dir dist --codesign-identity "${RELEASE_CODESIGN_IDENTITY}"
+          else
+            scripts/build-release.sh --version "${TAG}" --output-dir dist
+          fi
 
           ARTIFACT="tabdump-app-${TAG}.tar.gz"
           CHECKSUM="${ARTIFACT}.sha256"

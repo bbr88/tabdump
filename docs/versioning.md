@@ -22,9 +22,9 @@ Examples:
 Include version in all release artifacts.
 
 Recommended pattern:
-- `TabDump-vX.Y.Z-macos-universal.tar.gz`
-- `TabDump-vX.Y.Z-macos-universal.sha256`
-- `TabDump-vX.Y.Z-macos-universal.sig`
+- `tabdump-app-vX.Y.Z.tar.gz`
+- `tabdump-app-vX.Y.Z.tar.gz.sha256`
+- `tabdump-app-vX.Y.Z.tar.gz.sig`
 
 ## Homebrew Mapping
 - Formula version maps 1:1 to release tag version.

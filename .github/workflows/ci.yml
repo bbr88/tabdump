@@ -49,5 +49,13 @@ jobs:
           bash -n scripts/uninstall.sh
           bash -n scripts/update-runtime-manifest.sh
 
+      - name: Guard installer against build/sign logic
+        run: |
+          set -euo pipefail
+          if grep -nE '(^|[^[:alnum:]_])(osacompile|codesign)([^[:alnum:]_]|$)|PlistBuddy' scripts/install.sh; then
+            echo "[error] scripts/install.sh must remain runtime-only (no app build/sign logic)." >&2
+            exit 1
+          fi
+
       - name: Python compile check
         run: python -m compileall -q core tests

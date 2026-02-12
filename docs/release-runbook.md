@@ -22,6 +22,10 @@ Configure these in `Settings -> Secrets and variables -> Actions`:
 - Content: private SSH key used to sign release artifacts in CI.
 - Keep this key dedicated to release signing.
 
+3. `RELEASE_CODESIGN_IDENTITY` (optional)
+- Content: codesign identity string for CI release builds.
+- If omitted, CI uses ad-hoc signing identity (`-`).
+
 ## Artifact Verification Public Key
 Use this public key to verify release artifact signatures (`*.sig`):
 

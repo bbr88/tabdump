@@ -41,7 +41,7 @@ A single person should not perform all three roles for production releases.
 1. Tags must be signed and verified in CI.
 2. Release artifacts must be generated in CI from the signed tag.
 3. Release must publish:
-   - packaged artifact (`.tar.gz` or `.zip`)
+   - packaged artifact (`tabdump-app-vX.Y.Z.tar.gz`)
    - checksum file (`.sha256`)
    - signature file (`.sig`)
 4. Artifact filenames must include exact version.
