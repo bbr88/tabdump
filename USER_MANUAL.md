@@ -12,16 +12,42 @@ By default, installed TabDump starts in safe dump-only mode.
 
 ## Install
 
-Run installer:
+Build a prebuilt app archive (required once per local source checkout):
 
 ```bash
-bash scripts/install.sh
+bash scripts/build-release.sh --version v0.1.0-local --output-dir dist --no-codesign
 ```
 
-Non-interactive install example:
+Run installer (explicit archive path):
+
+```bash
+bash scripts/install.sh --yes --vault-inbox "~/obsidian/Inbox/" --app-archive "./dist/tabdump-app-v0.1.0-local.tar.gz"
+```
+
+If `./dist/tabdump-app.tar.gz` exists, `--app-archive` is optional:
 
 ```bash
 bash scripts/install.sh --yes --vault-inbox "~/obsidian/Inbox/"
+```
+
+## Local Developer App Build
+
+Build only the local `.app` bundle (does not install runtime/config/launch agent):
+
+```bash
+bash scripts/build-local.sh
+```
+
+Custom output/bundle id/version:
+
+```bash
+bash scripts/build-local.sh --output "~/Applications/TabDumpDev.app" --bundle-id "io.example.tabdump.dev" --version "v1.2.3"
+```
+
+Skip codesign for rapid local iteration:
+
+```bash
+bash scripts/build-local.sh --no-codesign
 ```
 
 ## Core Commands
