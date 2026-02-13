@@ -79,7 +79,8 @@ Formula source of truth:
 5. Validate clean install:
    - `brew update`
    - `brew install <tap>/tabdump`
-   - `tabdump --help`
+   - `tabdump init --yes --vault-inbox ~/obsidian/Inbox/`
+   - `tabdump status`
 
 ## Phase E: Post-Release Validation
 1. Validate one-shot command on clean host.
@@ -108,7 +109,8 @@ git tag -v vX.Y.Z
 # Homebrew smoke checks
 brew update
 brew install <tap>/tabdump
-tabdump --help
+tabdump init --yes --vault-inbox ~/obsidian/Inbox/
+tabdump status
 ```
 
 ## Exit Criteria
