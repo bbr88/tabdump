@@ -50,6 +50,14 @@ jobs:
           bash -n scripts/uninstall.sh
           bash -n scripts/update-runtime-manifest.sh
 
+      - name: Install shellcheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+
+      - name: Shellcheck
+        run: shellcheck -s bash -S error scripts/*.sh
+
       - name: Guard installer against build/sign logic
         run: |
           set -euo pipefail
@@ -60,3 +68,33 @@ jobs:
 
       - name: Python compile check
         run: python -m compileall -q core tests
+
+  tamper-e2e:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Tamper runtime file and assert installer fails manifest verification
+        run: |
+          set -euo pipefail
+
+          mkdir -p /tmp/tabdump-ci-inbox
+          echo "# ci tamper test" >> core/monitor_tabs.py
+
+          set +e
+          output="$(scripts/install.sh --yes --vault-inbox /tmp/tabdump-ci-inbox/ --app-archive /tmp/tabdump-does-not-matter.tar.gz 2>&1)"
+          status=$?
+          set -e
+
+          if [[ "${status}" -eq 0 ]]; then
+            echo "[error] Installer succeeded unexpectedly after runtime tamper." >&2
+            echo "${output}" >&2
+            exit 1
+          fi
+
+          if ! printf '%s\n' "${output}" | grep -q "Runtime manifest verification failed"; then
+            echo "[error] Expected manifest verification failure was not reported." >&2
+            echo "${output}" >&2
+            exit 1
+          fi
