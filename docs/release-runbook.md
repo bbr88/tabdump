@@ -69,6 +69,9 @@ Use this public key to verify release artifact signatures (`*.sig`):
 4. Confirm assets are attached to the correct release tag.
 
 ## Phase D: Homebrew Update
+Formula source of truth:
+- `bbr88/homebrew-tap` repository, `Formula/tabdump.rb`
+
 1. Update formula URL to `vX.Y.Z` artifact.
 2. Update formula `sha256` to published checksum.
 3. Run formula lint/tests in tap CI.

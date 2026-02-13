@@ -60,6 +60,3 @@ jobs:
 
       - name: Python compile check
         run: python -m compileall -q core tests
-
-      - name: Formula syntax check
-        run: ruby -c Formula/tabdump.rb
