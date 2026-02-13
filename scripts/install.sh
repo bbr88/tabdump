@@ -895,10 +895,13 @@ LEGACY_STATE_PATH="$STATE_DIR/state.json"
 LOG_DIR="$STATE_DIR/logs"
 LAUNCH_LABEL="io.orc-visioner.tabdump.monitor"
 LAUNCH_AGENT_PATH="$HOME/Library/LaunchAgents/${LAUNCH_LABEL}.plist"
+BREW_FORMULA_NAME="tabdump"
 
 usage() {
   cat <<'USAGE'
 Usage:
+  tabdump init [install-options]
+  tabdump uninstall [uninstall-options]
   tabdump [run|open]
   tabdump now [--close] [--json]
   tabdump mode [show|dump-only|dump-close|auto]
@@ -914,6 +917,59 @@ open_tabdump() {
     exit 1
   fi
   open "${APP_PATH}"
+}
+
+find_brew_libexec_root() {
+  local prefix
+
+  if command -v brew >/dev/null 2>&1; then
+    prefix="$(brew --prefix "${BREW_FORMULA_NAME}" 2>/dev/null || true)"
+    if [[ -n "${prefix}" && -d "${prefix}/libexec" ]]; then
+      echo "${prefix}/libexec"
+      return 0
+    fi
+  fi
+
+  if [[ -d "/opt/homebrew/opt/${BREW_FORMULA_NAME}/libexec" ]]; then
+    echo "/opt/homebrew/opt/${BREW_FORMULA_NAME}/libexec"
+    return 0
+  fi
+  if [[ -d "/usr/local/opt/${BREW_FORMULA_NAME}/libexec" ]]; then
+    echo "/usr/local/opt/${BREW_FORMULA_NAME}/libexec"
+    return 0
+  fi
+
+  return 1
+}
+
+init_cmd() {
+  local libexec archive
+
+  if ! libexec="$(find_brew_libexec_root)"; then
+    echo "[error] Could not locate Homebrew runtime package for '${BREW_FORMULA_NAME}'." >&2
+    echo "[hint] Ensure '${BREW_FORMULA_NAME}' is installed via Homebrew and run again." >&2
+    return 1
+  fi
+
+  archive="$(find "${libexec}/dist" -maxdepth 1 -type f -name 'tabdump-app-v*.tar.gz' | head -n 1 || true)"
+  if [[ -z "${archive}" ]]; then
+    echo "[error] prebuilt app archive not found under ${libexec}/dist" >&2
+    return 1
+  fi
+
+  exec "${libexec}/scripts/install.sh" --app-archive "${archive}" "$@"
+}
+
+uninstall_cmd() {
+  local libexec
+
+  if ! libexec="$(find_brew_libexec_root)"; then
+    echo "[error] Could not locate Homebrew runtime package for '${BREW_FORMULA_NAME}'." >&2
+    echo "[hint] If you installed from source, run scripts/uninstall.sh from your clone." >&2
+    return 1
+  fi
+
+  exec "${libexec}/scripts/uninstall.sh" "$@"
 }
 
 browser_app_name() {
@@ -1388,6 +1444,14 @@ PY
 
 cmd="${1:-run}"
 case "${cmd}" in
+  init)
+    shift || true
+    init_cmd "$@"
+    ;;
+  uninstall)
+    shift || true
+    uninstall_cmd "$@"
+    ;;
   run|open)
     open_tabdump
     ;;
