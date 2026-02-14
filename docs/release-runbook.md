@@ -1,121 +1,98 @@
 # TabDump Release Runbook
 
 ## Purpose
-Operational checklist to ship a Homebrew-ready TabDump release safely.
+Single release guide for versioning, publishing, verification, and Homebrew promotion.
 
 ## Preconditions
-1. GitHub repository is configured.
-2. Default branch protections are enabled.
-3. Release workflow and CI workflows are green on default branch.
-4. Signing key is configured for release publisher.
-5. Prebuilt app build script is available: `scripts/build-release.sh`.
+1. `main` protections and required CI checks are enabled.
+2. Release workflow is green on `main`.
+3. Tap CI is green in `bbr88/homebrew-tap`.
+4. Release secrets are configured.
 
-## Required Repository Secrets
-Configure these in `Settings -> Secrets and variables -> Actions`:
+## Required Secrets
+Set in `Settings -> Secrets and variables -> Actions`:
 
 1. `RELEASE_TAG_ALLOWED_SIGNERS`
-- Content: one or more allowed-signers lines in OpenSSH format.
-- Example:
-  `i.bisarnov@innopolis.ru ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA...`
-
 2. `RELEASE_ARTIFACT_SIGNING_KEY`
-- Content: private SSH key used to sign release artifacts in CI.
-- Keep this key dedicated to release signing.
-
 3. `RELEASE_CODESIGN_IDENTITY` (optional)
-- Content: codesign identity string for CI release builds.
-- If omitted, CI uses ad-hoc signing identity (`-`).
 
-## Artifact Verification Public Key
-Use this public key to verify release artifact signatures (`*.sig`):
-
-`ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDPdAPr5A+78p73lIXJ0csNUlcmSZVGFmTpox7SCqBBI tabdump-release-signing`
-
-## Inputs
-- Target version (example: `v1.2.0`)
-- Release notes/changelog entries
-- Expected artifact names
-
-## Phase A: Prepare Release PR
-1. Create branch `release/vX.Y.Z`.
-2. Update versioned metadata per `docs/versioning.md`.
-3. Update changelog/release notes draft.
-4. If runtime manifest changes:
-   - regenerate manifest
-   - include rationale in PR
-5. Run full CI and required tests.
-6. Obtain required approvals.
-
-## Phase B: Tag and Publish
-1. Merge release PR.
-2. Create annotated signed tag:
-   - `git tag -s vX.Y.Z -m "Release vX.Y.Z"`
-3. Push tag:
-   - `git push origin vX.Y.Z`
-4. Confirm CI tag verification passes.
-5. Confirm release workflow builds a prebuilt app bundle via `scripts/build-release.sh`.
-6. Confirm release workflow publishes:
+## Versioning Rules
+1. Use semver tags: `vMAJOR.MINOR.PATCH`.
+2. Tags must be annotated and signed.
+3. Tag must point to merged `main`.
+4. Artifact names must include exact version:
    - `tabdump-app-vX.Y.Z.tar.gz`
    - `tabdump-app-vX.Y.Z.tar.gz.sha256`
    - `tabdump-app-vX.Y.Z.tar.gz.sig`
    - `tabdump-homebrew-vX.Y.Z.tar.gz`
    - `tabdump-homebrew-vX.Y.Z.tar.gz.sha256`
    - `tabdump-homebrew-vX.Y.Z.tar.gz.sig`
+5. If `scripts/runtime-manifest.sha256` changes, it must be release-scoped and rationale must be documented in the PR.
 
-## Phase C: Verify Published Artifacts
-1. Verify artifact checksum equals published `.sha256`.
-2. Verify artifact signature using project public key.
-3. Ensure artifact names include exact version.
-4. Confirm assets are attached to the correct release tag.
+## Release Flow
 
-## Phase D: Homebrew Update
-Formula source of truth:
-- `bbr88/homebrew-tap` repository, `Formula/tabdump.rb`
+### A) Prepare Release PR
+1. Create branch `release/vX.Y.Z`.
+2. Update code/docs/changelog for `vX.Y.Z`.
+3. If manifest changed, run:
+   - `scripts/update-runtime-manifest.sh update`
+   - add PR label `release-manifest`
+4. Get PR checks green and approvals.
 
-1. Update formula URL to `vX.Y.Z` artifact.
-2. Update formula `sha256` to published checksum.
-3. Run formula lint/tests in tap CI.
-4. Merge tap PR.
-5. Validate clean install:
+### B) Tag and Publish
+1. Merge release PR.
+2. Create and push signed tag:
+   - `git tag -s vX.Y.Z -m "Release vX.Y.Z"`
+   - `git push origin vX.Y.Z`
+3. Confirm `release.yml` publishes all artifacts listed above.
+
+### C) Verify Published Artifacts
+Use this public key for artifact signature verification:
+
+`ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDPdAPr5A+78p73lIXJ0csNUlcmSZVGFmTpox7SCqBBI tabdump-release-signing`
+
+1. Verify tag signature:
+   - `git fetch --tags`
+   - `git tag -v vX.Y.Z`
+2. Download assets:
+   - `gh release download vX.Y.Z -p "tabdump-app-vX.Y.Z.tar.gz" -p "tabdump-app-vX.Y.Z.tar.gz.sha256" -p "tabdump-app-vX.Y.Z.tar.gz.sig" -p "tabdump-homebrew-vX.Y.Z.tar.gz" -p "tabdump-homebrew-vX.Y.Z.tar.gz.sha256" -p "tabdump-homebrew-vX.Y.Z.tar.gz.sig" -D /tmp/tabdump-verify`
+3. Verify checksums:
+   - `cd /tmp/tabdump-verify`
+   - `shasum -a 256 -c tabdump-app-vX.Y.Z.tar.gz.sha256`
+   - `shasum -a 256 -c tabdump-homebrew-vX.Y.Z.tar.gz.sha256`
+4. Verify signatures:
+   - `cat > allowed_signers <<'EOF'`
+   - `tabdump-release-signing ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDPdAPr5A+78p73lIXJ0csNUlcmSZVGFmTpox7SCqBBI`
+   - `EOF`
+   - `ssh-keygen -Y verify -f allowed_signers -I tabdump-release-signing -n file -s tabdump-app-vX.Y.Z.tar.gz.sig < tabdump-app-vX.Y.Z.tar.gz`
+   - `ssh-keygen -Y verify -f allowed_signers -I tabdump-release-signing -n file -s tabdump-homebrew-vX.Y.Z.tar.gz.sig < tabdump-homebrew-vX.Y.Z.tar.gz`
+
+### D) Update Homebrew Tap
+Source of truth: `bbr88/homebrew-tap`, `Formula/tabdump.rb`.
+
+1. Create tap branch: `bump/vX.Y.Z`.
+2. Bump formula from release:
+   - `scripts/bump-tabdump-formula.sh --tag vX.Y.Z --from-release`
+3. Merge tap PR after tap CI is green.
+4. Smoke test:
    - `brew update`
-   - `brew install <tap>/tabdump`
+   - `brew install bbr88/tap/tabdump` (or `brew upgrade tabdump`)
    - `tabdump init --yes --vault-inbox ~/obsidian/Inbox/`
    - `tabdump status`
 
-## Phase E: Post-Release Validation
-1. Validate one-shot command on clean host.
-2. Validate service start/stop behavior.
-3. Validate uninstall path.
-4. Record release audit fields:
-   - tag, checksum, signature result, formula commit, rollback tag.
+## Post-Release Checklist
+1. Validate one-shot run and service behavior on a clean machine.
+2. Validate uninstall:
+   - `tabdump uninstall --yes --remove-config --purge`
+   - `brew uninstall tabdump`
+3. Record release audit data:
+   - tag
+   - checksums
+   - signature verification result
+   - tap formula commit
+   - rollback target tag
 
-## Rollback Procedure
-Trigger rollback if release is broken or compromised.
-
-1. Stop promoting latest release in docs/tap.
-2. Repoint Homebrew formula to previous known-good version and checksum.
-3. Publish incident note with scope and mitigation.
-4. Prepare and ship signed patch release.
-
-## Quick Commands (Template)
-```bash
-# Create and push signed tag
-git tag -s vX.Y.Z -m "Release vX.Y.Z"
-git push origin vX.Y.Z
-
-# Verify tag locally
-git tag -v vX.Y.Z
-
-# Homebrew smoke checks
-brew update
-brew install <tap>/tabdump
-tabdump init --yes --vault-inbox ~/obsidian/Inbox/
-tabdump status
-```
-
-## Exit Criteria
-- Signed tag verified
-- Assets published with checksum/signature
-- Tap updated with matching sha256
-- Fresh install and smoke tests pass
-- Audit record completed
+## Rollback
+1. Repoint tap formula to previous known-good version+sha.
+2. Publish incident note with scope and mitigation.
+3. Ship signed patch release.
