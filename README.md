@@ -51,7 +51,5 @@ tabdump permissions
 ## Docs
 
 - Detailed usage: `docs/user-manual.md`
-- Release runbook: `docs/release-runbook.md`
-- Artifact/tag verification: `docs/verify.md`
+- Release guide (runbook + verification + versioning): `docs/release-runbook.md`
 - Release policy: `docs/release-policy.md`
-- Versioning policy: `docs/versioning.md`
