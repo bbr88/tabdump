@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import threading
 import time
 from pathlib import Path
 from types import SimpleNamespace
@@ -167,15 +168,18 @@ def test_monitor_passes_llm_env_from_config(tmp_path, monkeypatch):
         encoding="utf-8",
     )
 
-    dump_path = _write_dump(vault_inbox / "TabDump 2026-02-07 00-00-00.md", with_id=True)
-    future = time.time() + 10
-    os.utime(dump_path, (future, future))
-
     monkeypatch.setattr(monitor, "DEFAULT_CFG", config_path)
     state_path = tmp_path / "state.json"
     monkeypatch.setattr(monitor, "STATE_PATH", state_path)
     monkeypatch.setattr(monitor, "LOCK_PATH", state_path.with_suffix(".lock"))
-    monkeypatch.setattr(monitor, "run_tabdump_app", lambda: None)
+    dump_path = vault_inbox / "TabDump 2026-02-07 00-00-00.md"
+
+    def fake_run_tabdump_app():
+        _write_dump(dump_path, with_id=True)
+        ts = time.time()
+        os.utime(dump_path, (ts, ts))
+
+    monkeypatch.setattr(monitor, "run_tabdump_app", fake_run_tabdump_app)
     monkeypatch.setattr(monitor.sys, "argv", ["monitor_tabs.py"])
 
     captured_env = {}
@@ -197,6 +201,66 @@ def test_monitor_passes_llm_env_from_config(tmp_path, monkeypatch):
     state = json.loads(state_path.read_text(encoding="utf-8"))
     assert state["lastStatus"] == "noop"
     assert state["lastReason"] == "postprocess_noop"
+
+
+def test_monitor_waits_for_new_dump_after_app_launch(tmp_path, monkeypatch):
+    vault_inbox = tmp_path / "inbox"
+    vault_inbox.mkdir()
+
+    config_path = tmp_path / "config.json"
+    config_path.write_text(
+        (
+            json.dumps(
+                {
+                    "vaultInbox": str(vault_inbox),
+                    "checkEveryMinutes": 0,
+                    "llmEnabled": False,
+                },
+                indent=2,
+            )
+            + "\n"
+        ),
+        encoding="utf-8",
+    )
+
+    old_dump = _write_dump(vault_inbox / "TabDump 2026-02-07 00-00-00.md", with_id=True)
+    old_mtime = time.time() - 120
+    os.utime(old_dump, (old_mtime, old_mtime))
+
+    monkeypatch.setattr(monitor, "DEFAULT_CFG", config_path)
+    state_path = tmp_path / "state.json"
+    monkeypatch.setattr(monitor, "STATE_PATH", state_path)
+    monkeypatch.setattr(monitor, "LOCK_PATH", state_path.with_suffix(".lock"))
+    monkeypatch.setattr(monitor, "NEW_DUMP_WAIT_SECONDS", 0.5)
+    monkeypatch.setattr(monitor, "NEW_DUMP_POLL_SECONDS", 0.01)
+    monkeypatch.setattr(monitor.sys, "argv", ["monitor_tabs.py"])
+
+    new_dump = vault_inbox / "TabDump 2026-02-07 00-00-01.md"
+
+    def fake_run_tabdump_app():
+        def _writer():
+            time.sleep(0.05)
+            _write_dump(new_dump, with_id=True)
+            ts = time.time()
+            os.utime(new_dump, (ts, ts))
+
+        threading.Thread(target=_writer, daemon=True).start()
+
+    monkeypatch.setattr(monitor, "run_tabdump_app", fake_run_tabdump_app)
+
+    def fake_run(args, capture_output, text, timeout, env):
+        assert args[-1] == str(new_dump)
+        return SimpleNamespace(returncode=3, stdout="", stderr="")
+
+    monkeypatch.setattr(monitor.subprocess, "run", fake_run)
+
+    rc = monitor.main()
+    assert rc == 0
+
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    assert state["lastStatus"] == "noop"
+    assert state["lastReason"] == "postprocess_noop"
+    assert state["lastResultRawDump"] == str(new_dump)
 
 
 def test_monitor_auto_switches_dry_run_after_first_clean_dump(tmp_path, monkeypatch):
@@ -222,15 +286,18 @@ def test_monitor_auto_switches_dry_run_after_first_clean_dump(tmp_path, monkeypa
         encoding="utf-8",
     )
 
-    dump_path = _write_dump(vault_inbox / "TabDump 2026-02-07 00-00-00.md", with_id=True)
-    future = time.time() + 10
-    os.utime(dump_path, (future, future))
-
     monkeypatch.setattr(monitor, "DEFAULT_CFG", config_path)
     state_path = tmp_path / "state.json"
     monkeypatch.setattr(monitor, "STATE_PATH", state_path)
     monkeypatch.setattr(monitor, "LOCK_PATH", state_path.with_suffix(".lock"))
-    monkeypatch.setattr(monitor, "run_tabdump_app", lambda: None)
+    dump_path = vault_inbox / "TabDump 2026-02-07 00-00-00.md"
+
+    def fake_run_tabdump_app():
+        _write_dump(dump_path, with_id=True)
+        ts = time.time()
+        os.utime(dump_path, (ts, ts))
+
+    monkeypatch.setattr(monitor, "run_tabdump_app", fake_run_tabdump_app)
     monkeypatch.setattr(monitor.sys, "argv", ["monitor_tabs.py"])
 
     clean_path = vault_inbox / "TabDump 2026-02-07 00-00-00 (clean).md"
@@ -311,8 +378,8 @@ def test_monitor_force_mode_override_is_temporary(tmp_path, monkeypatch, capsys)
     config_path.write_text(json.dumps(base_cfg, indent=2) + "\n", encoding="utf-8")
 
     dump_path = _write_dump(vault_inbox / "TabDump 2026-02-07 00-00-00.md", with_id=True)
-    future = time.time() + 10
-    os.utime(dump_path, (future, future))
+    old_ts = time.time() - 60
+    os.utime(dump_path, (old_ts, old_ts))
 
     monkeypatch.setattr(monitor, "DEFAULT_CFG", config_path)
     state_path = tmp_path / "state.json"
@@ -322,6 +389,8 @@ def test_monitor_force_mode_override_is_temporary(tmp_path, monkeypatch, capsys)
 
     def fake_run_tabdump_app():
         seen_cfg.update(json.loads(config_path.read_text(encoding="utf-8")))
+        ts = time.time()
+        os.utime(dump_path, (ts, ts))
 
     monkeypatch.setattr(monitor, "run_tabdump_app", fake_run_tabdump_app)
     monkeypatch.setattr(monitor.sys, "argv", ["monitor_tabs.py", "--force", "--mode", "dump-close", "--json"])
@@ -377,14 +446,18 @@ def test_monitor_force_override_preserves_auto_switch(tmp_path, monkeypatch):
     )
 
     dump_path = _write_dump(vault_inbox / "TabDump 2026-02-07 00-00-00.md", with_id=True)
-    future = time.time() + 10
-    os.utime(dump_path, (future, future))
+    old_ts = time.time() - 60
+    os.utime(dump_path, (old_ts, old_ts))
 
     monkeypatch.setattr(monitor, "DEFAULT_CFG", config_path)
     state_path = tmp_path / "state.json"
     monkeypatch.setattr(monitor, "STATE_PATH", state_path)
     monkeypatch.setattr(monitor, "LOCK_PATH", state_path.with_suffix(".lock"))
-    monkeypatch.setattr(monitor, "run_tabdump_app", lambda: None)
+    monkeypatch.setattr(
+        monitor,
+        "run_tabdump_app",
+        lambda: os.utime(dump_path, (time.time(), time.time())),
+    )
     monkeypatch.setattr(monitor.sys, "argv", ["monitor_tabs.py", "--force", "--mode", "dump-close"])
 
     clean_path = vault_inbox / "TabDump 2026-02-07 00-00-00 (clean).md"
@@ -429,14 +502,18 @@ def test_monitor_trust_ramp_notification_includes_cta(tmp_path, monkeypatch):
     )
 
     dump_path = _write_dump(vault_inbox / "TabDump 2026-02-07 00-00-00.md", with_id=True)
-    future = time.time() + 10
-    os.utime(dump_path, (future, future))
+    old_ts = time.time() - 60
+    os.utime(dump_path, (old_ts, old_ts))
 
     monkeypatch.setattr(monitor, "DEFAULT_CFG", config_path)
     state_path = tmp_path / "state.json"
     monkeypatch.setattr(monitor, "STATE_PATH", state_path)
     monkeypatch.setattr(monitor, "LOCK_PATH", state_path.with_suffix(".lock"))
-    monkeypatch.setattr(monitor, "run_tabdump_app", lambda: None)
+    monkeypatch.setattr(
+        monitor,
+        "run_tabdump_app",
+        lambda: os.utime(dump_path, (time.time(), time.time())),
+    )
     monkeypatch.setattr(monitor.sys, "argv", ["monitor_tabs.py"])
 
     clean_path = vault_inbox / "TabDump 2026-02-07 00-00-00 (clean).md"
@@ -478,14 +555,18 @@ def test_monitor_post_ramp_notification_is_concise(tmp_path, monkeypatch):
     )
 
     dump_path = _write_dump(vault_inbox / "TabDump 2026-02-07 00-00-00.md", with_id=True)
-    future = time.time() + 10
-    os.utime(dump_path, (future, future))
+    old_ts = time.time() - 60
+    os.utime(dump_path, (old_ts, old_ts))
 
     monkeypatch.setattr(monitor, "DEFAULT_CFG", config_path)
     state_path = tmp_path / "state.json"
     monkeypatch.setattr(monitor, "STATE_PATH", state_path)
     monkeypatch.setattr(monitor, "LOCK_PATH", state_path.with_suffix(".lock"))
-    monkeypatch.setattr(monitor, "run_tabdump_app", lambda: None)
+    monkeypatch.setattr(
+        monitor,
+        "run_tabdump_app",
+        lambda: os.utime(dump_path, (time.time(), time.time())),
+    )
     monkeypatch.setattr(monitor.sys, "argv", ["monitor_tabs.py"])
 
     clean_path = vault_inbox / "TabDump 2026-02-07 00-00-00 (clean).md"
