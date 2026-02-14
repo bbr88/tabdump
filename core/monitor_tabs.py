@@ -382,7 +382,7 @@ def main() -> int:
     cfg_after_run_persistent = dict(persistent_cfg)
     try:
         now = time.time()
-        check_every = int(cfg_for_run.get("checkEveryMinutes", 5))
+        check_every = int(cfg_for_run.get("checkEveryMinutes", 60))
         last_check = float(state.get("lastCheck", 0))
         if not FORCE and check_every > 0 and last_check and (now - last_check) < check_every * 60:
             log(f"skip: checkEveryMinutes gate (check_every={check_every}, last_check={last_check}, now={now})")

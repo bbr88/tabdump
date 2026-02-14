@@ -641,6 +641,8 @@ collect_install_choices() {
     echo "LLM enrichment is optional and enabled by default."
     if prompt_yes_no "Enable LLM enrichment now?" "y"; then
       LLM_ENABLED="true"
+    else
+      LLM_ENABLED="false"
     fi
   fi
 
@@ -663,15 +665,19 @@ collect_install_choices() {
     if [[ -n "${OPENAI_KEY_SOURCE}" ]]; then
       OPENAI_KEY_VALUE="$(resolve_openai_key_value "${OPENAI_KEY_SOURCE}")"
     elif [[ "${ASSUME_YES}" -eq 1 ]]; then
-      die "--openai-key is required when using --key-mode keychain with --yes."
+      OPENAI_KEY_VALUE="${OPENAI_API_KEY:-}"
     else
       echo "Paste your OpenAI API key (input hidden), then press Enter:"
       if ! read -rs OPENAI_KEY_VALUE; then
         die "Input cancelled."
       fi
       echo
-      OPENAI_KEY_VALUE="$(trim "${OPENAI_KEY_VALUE}")"
-      if [[ -z "${OPENAI_KEY_VALUE}" ]]; then
+    fi
+    OPENAI_KEY_VALUE="$(trim "${OPENAI_KEY_VALUE}")"
+    if [[ -z "${OPENAI_KEY_VALUE}" ]]; then
+      if [[ "${ASSUME_YES}" -eq 1 ]]; then
+        print_warn "No OpenAI key provided for keychain mode; skipping keychain write and relying on existing keychain item or OPENAI_API_KEY env var."
+      else
         print_warn "Empty OpenAI key input; switching to local classifier (llmEnabled=false)."
         KEY_MODE="skip"
       fi
@@ -771,8 +777,8 @@ data = {
   "dryRunPolicy": dry_run_policy,
   "onboardingStartedAt": int(time.time()),
   "maxTabs": 30,
-  "checkEveryMinutes": 5,
-  "cooldownMinutes": 30,
+  "checkEveryMinutes": 60,
+  "cooldownMinutes": 1440,
   "llmEnabled": llm_enabled,
   "tagModel": "gpt-4.1-mini",
   "llmRedact": True,
@@ -809,14 +815,22 @@ configure_llm_key_mode() {
         fi
 
         if [[ "${REPLACE_KEYCHAIN}" == "true" ]]; then
-          security add-generic-password -s "${KEYCHAIN_SERVICE}" -a "${KEYCHAIN_ACCOUNT}" -w "${OPENAI_KEY_VALUE}" -U >/dev/null
-          print_ok "Stored OpenAI key in Keychain (service=${KEYCHAIN_SERVICE}, account=${KEYCHAIN_ACCOUNT})."
+          if [[ -n "${OPENAI_KEY_VALUE}" ]]; then
+            security add-generic-password -s "${KEYCHAIN_SERVICE}" -a "${KEYCHAIN_ACCOUNT}" -w "${OPENAI_KEY_VALUE}" -U >/dev/null
+            print_ok "Stored OpenAI key in Keychain (service=${KEYCHAIN_SERVICE}, account=${KEYCHAIN_ACCOUNT})."
+          else
+            print_warn "Requested keychain replacement but no key value was provided; keeping existing Keychain item."
+          fi
         else
           print_warn "Kept existing Keychain item."
         fi
       else
-        security add-generic-password -s "${KEYCHAIN_SERVICE}" -a "${KEYCHAIN_ACCOUNT}" -w "${OPENAI_KEY_VALUE}" >/dev/null
-        print_ok "Stored OpenAI key in Keychain (service=${KEYCHAIN_SERVICE}, account=${KEYCHAIN_ACCOUNT})."
+        if [[ -n "${OPENAI_KEY_VALUE}" ]]; then
+          security add-generic-password -s "${KEYCHAIN_SERVICE}" -a "${KEYCHAIN_ACCOUNT}" -w "${OPENAI_KEY_VALUE}" >/dev/null
+          print_ok "Stored OpenAI key in Keychain (service=${KEYCHAIN_SERVICE}, account=${KEYCHAIN_ACCOUNT})."
+        else
+          print_warn "No OpenAI key value provided; keychain was not updated. Runtime resolution order is Keychain, then OPENAI_API_KEY env var."
+        fi
       fi
       ;;
     env)
@@ -1490,7 +1504,7 @@ import os
 config_path = os.environ["CONFIG_PATH"]
 with open(config_path, "r", encoding="utf-8") as fh:
     data = json.load(fh)
-minutes = int(data.get("checkEveryMinutes", 5))
+minutes = int(data.get("checkEveryMinutes", 60))
 if minutes < 1:
     minutes = 1
 print(minutes * 60)

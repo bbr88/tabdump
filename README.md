@@ -7,7 +7,7 @@ TabDump helps reduce browser tab overload on macOS by dumping tabs to Markdown n
 ```bash
 brew tap bbr88/tap
 brew install tabdump
-tabdump init --yes --vault-inbox ~/obsidian/Inbox/
+tabdump init --yes --vault-inbox ~/obsidian/Inbox --enable-llm true --key-mode keychain
 ```
 
 Sanity check:
