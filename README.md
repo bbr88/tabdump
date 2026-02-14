@@ -51,5 +51,6 @@ tabdump permissions
 ## Docs
 
 - Detailed usage: `docs/user-manual.md`
+- Config reference: `docs/config-reference.md`
 - Release guide (runbook + verification + versioning): `docs/release-runbook.md`
 - Release policy: `docs/release-policy.md`

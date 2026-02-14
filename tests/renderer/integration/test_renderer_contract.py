@@ -4,18 +4,20 @@ from pathlib import Path
 
 from core.renderer.renderer import build_state, render_markdown, _score_item, _host_matches_base
 
-TESTS_DIR = Path(__file__).resolve().parents[1]
+TESTS_DIR = Path(__file__).resolve().parents[2]
 FIXTURES_DIR = TESTS_DIR / "fixtures"
-FIXTURE_JSON = FIXTURES_DIR / "sample_payload_v3.json"
-FIXTURE_MD = FIXTURES_DIR / "expected_sample_payload_v3.md"
-FIXTURE_YT_JSON = FIXTURES_DIR / "title_cleanup_youtube.json"
-FIXTURE_GH_JSON = FIXTURES_DIR / "title_cleanup_github.json"
-FIXTURE_ADMIN_AUTH_JSON = FIXTURES_DIR / "admin_auth_false_positive.json"
-FIXTURE_DOCS_SUBGROUP_JSON = FIXTURES_DIR / "docs_subgroup_intent.json"
-FIXTURE_DOCS_DENOISE_JSON = FIXTURES_DIR / "docs_denoise_dom_omit.json"
-FIXTURE_QW_SUFFIX_JSON = FIXTURES_DIR / "quickwins_suffix_disneyplus.json"
-FIXTURE_QW_4CHAN_JSON = FIXTURES_DIR / "quickwins_leisure_4chan.json"
-FIXTURE_QW_NO_BEST_VS_JSON = FIXTURES_DIR / "quickwins_no_best_vs.json"
+RENDERER_FIXTURES_DIR = FIXTURES_DIR / "renderer"
+
+FIXTURE_JSON = RENDERER_FIXTURES_DIR / "core" / "sample_payload_v3.json"
+FIXTURE_MD = RENDERER_FIXTURES_DIR / "core" / "expected_sample_payload_v3.md"
+FIXTURE_YT_JSON = RENDERER_FIXTURES_DIR / "title_cleanup" / "title_cleanup_youtube.json"
+FIXTURE_GH_JSON = RENDERER_FIXTURES_DIR / "title_cleanup" / "title_cleanup_github.json"
+FIXTURE_ADMIN_AUTH_JSON = RENDERER_FIXTURES_DIR / "admin" / "admin_auth_false_positive.json"
+FIXTURE_DOCS_SUBGROUP_JSON = RENDERER_FIXTURES_DIR / "docs" / "docs_subgroup_intent.json"
+FIXTURE_DOCS_DENOISE_JSON = RENDERER_FIXTURES_DIR / "docs" / "docs_denoise_dom_omit.json"
+FIXTURE_QW_SUFFIX_JSON = RENDERER_FIXTURES_DIR / "quickwins" / "quickwins_suffix_disneyplus.json"
+FIXTURE_QW_4CHAN_JSON = RENDERER_FIXTURES_DIR / "quickwins" / "quickwins_leisure_4chan.json"
+FIXTURE_QW_NO_BEST_VS_JSON = RENDERER_FIXTURES_DIR / "quickwins" / "quickwins_no_best_vs.json"
 
 
 def _load_payload():
