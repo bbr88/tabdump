@@ -40,6 +40,20 @@ If `./dist/tabdump-app.tar.gz` exists, `--app-archive` is optional:
 bash scripts/install.sh --yes --vault-inbox "~/obsidian/Inbox/"
 ```
 
+Manual (no build/install pipeline):
+
+1. Copy `macos/standalone-tabDump-template.scpt`.
+2. Update `vaultInbox` and optional allowlist in the script.
+3. Keep `closeDumpedTabs` as `false` for dump-only behavior, or set it to `true` to enable close mode.
+
+Reference config schema:
+
+`docs/examples/config.example.json`
+
+Property-by-property reference:
+
+`docs/config-reference.md`
+
 ## Local Developer App Build
 
 Build only the local `.app` bundle (does not install runtime/config/launch agent):

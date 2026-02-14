@@ -1,5 +1,5 @@
 {
-  "vaultInbox": "/Users/i.bisarnov/obsidian/3d brain/Inbox/123/",
+  "vaultInbox": "/Users/<your-user>/obsidian/Inbox/",
   "outputFilenameTemplate": "TabDump {ts}.md",
   "browsers": [
     "Chrome",
@@ -29,7 +29,7 @@
   "outputIncludeMetadata": false,
   "dryRun": true,
   "dryRunPolicy": "auto",
-  "onboardingStartedAt": 1760000000,
+  "onboardingStartedAt": 0,
   "maxTabs": 30,
   "checkEveryMinutes": 5,
   "cooldownMinutes": 30,

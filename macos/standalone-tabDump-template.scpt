@@ -6,15 +6,16 @@ Behavior:
 - Skips allowlisted URLs (keeps them open)
 - Skips internal URL schemes (chrome://, about:, etc.)
 - Optionally keeps pinned tabs (Chrome reliably; Safari best-effort)
-- Closes only the dumped tabs
+- Optionally closes only the dumped tabs
 *)
 
 -- ====== CONFIG ======
-set vaultInbox to "/Users/..."
+set vaultInbox to "/Users/<your-user>/obsidian/Inbox/"
+set closeDumpedTabs to false
 set keepPinnedTabs to true
 
 -- If URL contains any of these substrings => KEEP OPEN (not dumped, not closed)
-set allowlistPatterns to {"mail.google.com", "calendar.google.com", "slack.com", "notion.so", "github.com", "postgres.ai", "gemini.google.com"}
+set allowlistPatterns to {"mail.google.com", "calendar.google.com", "slack.com", "notion.so"}
 
 -- Skip internal pages from dumping/closing
 set skipUrlPrefixes to {"chrome://", "chrome-extension://", "about:", "file://", "safari-web-extension://", "favorites://", "safari://"}
@@ -197,7 +198,7 @@ end try
 -- =========================
 -- 4) CLOSE TABS — CHROME (reverse order, stable window IDs)
 -- =========================
-if chromeRunning then
+if closeDumpedTabs and chromeRunning then
   tell application "Google Chrome"
     set chromeWinIds2 to {}
     repeat with w in (every window)
@@ -243,7 +244,7 @@ end if
 -- =========================
 -- 5) CLOSE TABS — SAFARI (ONLY if already running)
 -- =========================
-if safariRunning then
+if closeDumpedTabs and safariRunning then
   tell application "Safari"
     repeat with w in (every window)
       repeat with i from (count of tabs of w) to 1 by -1
@@ -266,4 +267,8 @@ if safariRunning then
   end tell
 end if
 
-display notification "Dumped tabs to Obsidian Inbox and closed them (except allowlist/pinned)." with title "TabDump"
+if closeDumpedTabs then
+  display notification "Dumped tabs and closed eligible tabs (except allowlist/pinned)." with title "TabDump"
+else
+  display notification "Dumped tabs only (no tabs were closed)." with title "TabDump"
+end if
