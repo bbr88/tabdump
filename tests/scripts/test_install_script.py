@@ -302,7 +302,7 @@ def test_install_writes_default_config_and_artifacts(tmp_path):
     assert os.access(wrapper_path, os.X_OK)
     assert os.access(cli_path, os.X_OK)
     plist_text = plist_path.read_text(encoding="utf-8")
-    assert "<integer>300</integer>" in plist_text
+    assert "<integer>3600</integer>" in plist_text
     assert f"<string>{wrapper_path}</string>" in plist_text
 
     log = proc.log_path.read_text(encoding="utf-8")
@@ -447,7 +447,7 @@ def test_install_interactive_defaults_to_enabling_llm(tmp_path):
     assert data["llmEnabled"] is True
 
 
-def test_install_requires_openai_key_for_keychain_mode_in_yes_mode(tmp_path):
+def test_install_allows_keychain_mode_in_yes_mode_without_inline_key(tmp_path):
     proc = _run_install(
         tmp_path,
         args=[
@@ -462,8 +462,10 @@ def test_install_requires_openai_key_for_keychain_mode_in_yes_mode(tmp_path):
     )
     output = proc.stdout + proc.stderr
 
-    assert proc.returncode == 1
-    assert "--openai-key is required when using --key-mode keychain with --yes." in output
+    assert proc.returncode == 0, output
+    data = _read_config(proc.home)
+    assert data["llmEnabled"] is True
+    assert "No OpenAI key provided for keychain mode; skipping keychain write" in output
 
 
 def test_install_reprompts_on_invalid_key_mode_choice(tmp_path):

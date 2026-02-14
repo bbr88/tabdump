@@ -50,8 +50,8 @@ property DRY_RUN : true
 
 -- Automation defaults (used by external runner)
 property MAX_TABS : 30
-property CHECK_EVERY_MINUTES : 5
-property COOLDOWN_MINUTES : 30
+property CHECK_EVERY_MINUTES : 60
+property COOLDOWN_MINUTES : 1440
 
 -- Post-processing model hint (used by external runner)
 property TAG_MODEL : "gpt-4.1-mini"
