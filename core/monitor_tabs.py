@@ -55,6 +55,8 @@ JSON_OUTPUT = False
 PRINT_CLEAN = False
 MODE_OVERRIDE = "config"
 TRUST_RAMP_DAYS = 3
+NEW_DUMP_WAIT_SECONDS = float(os.environ.get("TABDUMP_NEW_DUMP_WAIT_SECONDS", "8"))
+NEW_DUMP_POLL_SECONDS = float(os.environ.get("TABDUMP_NEW_DUMP_POLL_SECONDS", "0.25"))
 
 
 def log(msg: str) -> None:
@@ -107,6 +109,40 @@ def newest_tabdump(vault_inbox: Path) -> Optional[Path]:
         candidates.append(p)
     candidates.sort(key=lambda p: p.stat().st_mtime, reverse=True)
     return candidates[0] if candidates else None
+
+
+def _snapshot_newest_tabdump(vault_inbox: Path) -> tuple[Optional[Path], float]:
+    newest = newest_tabdump(vault_inbox)
+    if newest is None:
+        return None, 0.0
+    try:
+        return newest, newest.stat().st_mtime
+    except FileNotFoundError:
+        return None, 0.0
+
+
+def wait_for_new_tabdump(
+    vault_inbox: Path,
+    baseline_path: Optional[Path],
+    baseline_mtime: float,
+) -> Optional[Path]:
+    """Wait briefly for a new raw dump file produced by the app launch."""
+    deadline = time.time() + max(0.0, NEW_DUMP_WAIT_SECONDS)
+    poll = max(0.05, NEW_DUMP_POLL_SECONDS)
+    while True:
+        newest = newest_tabdump(vault_inbox)
+        if newest is not None:
+            try:
+                mtime = newest.stat().st_mtime
+            except FileNotFoundError:
+                mtime = 0.0
+            if baseline_path is None:
+                return newest
+            if newest != baseline_path or mtime > baseline_mtime:
+                return newest
+        if time.time() >= deadline:
+            return None
+        time.sleep(poll)
 
 
 def parse_args(argv: List[str]) -> None:
@@ -392,12 +428,12 @@ def main() -> int:
             return 0
         state["lastCheck"] = now
 
-        start_ts = time.time()
+        baseline_path, baseline_mtime = _snapshot_newest_tabdump(vault_inbox)
         log("run TabDump.app")
         run_tabdump_app()
 
-        # Find newest dump and postprocess it (only if created after this run started)
-        newest = newest_tabdump(vault_inbox)
+        # Wait briefly for a fresh dump produced by this launch.
+        newest = wait_for_new_tabdump(vault_inbox, baseline_path, baseline_mtime)
         if newest is None:
             log("skip: no new TabDump *.md found")
             record_last_result(state, status="noop", reason="no_new_dump")
@@ -410,12 +446,6 @@ def main() -> int:
             record_last_result(state, status="noop", reason="already_processed", raw_dump=newest)
             save_state(state)
             emit_result(status="noop", reason="already_processed", raw_dump=newest)
-            return 0
-        if newest.stat().st_mtime < (start_ts - 2):
-            log(f"skip: newest predates run start ({newest})")
-            record_last_result(state, status="noop", reason="predates_run_start", raw_dump=newest)
-            save_state(state)
-            emit_result(status="noop", reason="predates_run_start", raw_dump=newest)
             return 0
 
         def _env_bool(value: object, default: bool = False) -> str:
