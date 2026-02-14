@@ -122,7 +122,7 @@ main() {
   cp -R "${ROOT_DIR}/core" "${package_root}/core"
   cp -R "${ROOT_DIR}/macos" "${package_root}/macos"
   cp -R "${ROOT_DIR}/scripts" "${package_root}/scripts"
-  cp -f "${ROOT_DIR}/USER_MANUAL.md" "${package_root}/USER_MANUAL.md"
+  cp -f "${ROOT_DIR}/docs/user-manual.md" "${package_root}/USER_MANUAL.md"
   mkdir -p "${package_root}/dist"
   cp -f "${APP_ARCHIVE}" "${package_root}/dist/$(basename "${APP_ARCHIVE}")"
   cp -f "${app_archive_default}" "${package_root}/dist/$(basename "${app_archive_default}")"
