@@ -42,6 +42,9 @@ KEY_MODE_OVERRIDE=""
 OPENAI_KEY_SOURCE=""
 REPLACE_KEYCHAIN_OVERRIDE=""
 DELETE_KEYCHAIN_OVERRIDE=""
+MAX_TABS_OVERRIDE=""
+CHECK_EVERY_MINUTES_OVERRIDE=""
+COOLDOWN_MINUTES_OVERRIDE=""
 
 VAULT_INBOX=""
 APP_ARCHIVE_PATH="${TABDUMP_APP_ARCHIVE:-${APP_ARCHIVE_DEFAULT}}"
@@ -53,6 +56,9 @@ KEY_MODE="skip"
 OPENAI_KEY_VALUE=""
 REPLACE_KEYCHAIN="false"
 DELETE_KEYCHAIN="false"
+MAX_TABS_VALUE="30"
+CHECK_EVERY_MINUTES_VALUE="60"
+COOLDOWN_MINUTES_VALUE="1440"
 
 TOTAL_STEPS=9
 CURRENT_STEP=0
@@ -70,6 +76,9 @@ Options:
   --browsers <csv>                    Comma-separated browsers (supported: Chrome,Safari,Firefox).
   --set-dry-run <true|false>          Final dryRun value for config.json.
   --enable-llm <true|false>           Final llmEnabled value for config.json.
+  --max-tabs <int>=0                  Final maxTabs value for config.json.
+  --check-every-minutes <int>=0       Final checkEveryMinutes value for config.json.
+  --cooldown-minutes <int>=0          Final cooldownMinutes value for config.json.
   --key-mode <keychain|env|skip>      LLM key handling strategy when llmEnabled=true.
   --openai-key <value|env:VAR>        OpenAI API key source for keychain mode.
   --replace-keychain <true|false>     Replace existing keychain item in keychain mode.
@@ -131,6 +140,15 @@ parse_bool_option() {
     die "Invalid value for ${option}: ${raw}. Expected true or false."
   fi
   echo "${parsed}"
+}
+
+parse_nonnegative_int_option() {
+  local option="$1"
+  local raw="$2"
+  if [[ ! "${raw}" =~ ^[0-9]+$ ]]; then
+    die "Invalid value for ${option}: ${raw}. Expected a non-negative integer."
+  fi
+  echo "${raw}"
 }
 
 trim() {
@@ -535,6 +553,21 @@ parse_args() {
         LLM_OVERRIDE="$(parse_bool_option "$1" "$2")"
         shift 2
         ;;
+      --max-tabs)
+        require_value "$1" "${2:-}"
+        MAX_TABS_OVERRIDE="$(parse_nonnegative_int_option "$1" "$2")"
+        shift 2
+        ;;
+      --check-every-minutes)
+        require_value "$1" "${2:-}"
+        CHECK_EVERY_MINUTES_OVERRIDE="$(parse_nonnegative_int_option "$1" "$2")"
+        shift 2
+        ;;
+      --cooldown-minutes)
+        require_value "$1" "${2:-}"
+        COOLDOWN_MINUTES_OVERRIDE="$(parse_nonnegative_int_option "$1" "$2")"
+        shift 2
+        ;;
       --key-mode)
         require_value "$1" "${2:-}"
         case "$2" in
@@ -620,6 +653,16 @@ collect_install_choices() {
     BROWSERS_CSV="${normalized}"
   elif [[ "${ASSUME_YES}" -eq 0 ]]; then
     BROWSERS_CSV="$(prompt_browsers)"
+  fi
+
+  if [[ -n "${MAX_TABS_OVERRIDE}" ]]; then
+    MAX_TABS_VALUE="${MAX_TABS_OVERRIDE}"
+  fi
+  if [[ -n "${CHECK_EVERY_MINUTES_OVERRIDE}" ]]; then
+    CHECK_EVERY_MINUTES_VALUE="${CHECK_EVERY_MINUTES_OVERRIDE}"
+  fi
+  if [[ -n "${COOLDOWN_MINUTES_OVERRIDE}" ]]; then
+    COOLDOWN_MINUTES_VALUE="${COOLDOWN_MINUTES_OVERRIDE}"
   fi
 
   if [[ -n "${DRY_RUN_OVERRIDE}" ]]; then
@@ -737,6 +780,9 @@ write_config() {
   DRY_RUN_VALUE="${DRY_RUN_VALUE}" \
   LLM_ENABLED="${LLM_ENABLED}" \
   BROWSERS_CSV="${BROWSERS_CSV}" \
+  MAX_TABS_VALUE="${MAX_TABS_VALUE}" \
+  CHECK_EVERY_MINUTES_VALUE="${CHECK_EVERY_MINUTES_VALUE}" \
+  COOLDOWN_MINUTES_VALUE="${COOLDOWN_MINUTES_VALUE}" \
   python3 - <<'PY'
 import json
 import os
@@ -749,6 +795,9 @@ dry_run_policy = "auto" if dry_run else "manual"
 llm_enabled = os.environ["LLM_ENABLED"].strip().lower() == "true"
 browsers_csv = os.environ.get("BROWSERS_CSV", "Chrome,Safari")
 browsers = [item.strip() for item in browsers_csv.split(",") if item.strip()]
+max_tabs = int(os.environ.get("MAX_TABS_VALUE", "30"))
+check_every_minutes = int(os.environ.get("CHECK_EVERY_MINUTES_VALUE", "60"))
+cooldown_minutes = int(os.environ.get("COOLDOWN_MINUTES_VALUE", "1440"))
 
 data = {
   "vaultInbox": vault_inbox,
@@ -776,9 +825,9 @@ data = {
   "dryRun": dry_run,
   "dryRunPolicy": dry_run_policy,
   "onboardingStartedAt": int(time.time()),
-  "maxTabs": 30,
-  "checkEveryMinutes": 60,
-  "cooldownMinutes": 1440,
+  "maxTabs": max_tabs,
+  "checkEveryMinutes": check_every_minutes,
+  "cooldownMinutes": cooldown_minutes,
   "llmEnabled": llm_enabled,
   "tagModel": "gpt-4.1-mini",
   "llmRedact": True,
@@ -919,6 +968,7 @@ Usage:
   tabdump [run|open]
   tabdump now [--close] [--json]
   tabdump mode [show|dump-only|dump-close|auto]
+  tabdump config [show|get <key>|set <key> <value> ...]
   tabdump status
   tabdump permissions
   tabdump help
@@ -1168,6 +1218,261 @@ mode_cmd() {
       echo "[error] Unknown mode: ${subcmd}" >&2
       echo "Usage: tabdump mode [show|dump-only|dump-close|auto]" >&2
       exit 1
+      ;;
+  esac
+}
+
+reload_launch_agent_if_present() {
+  local uid_num target
+  uid_num="$(id -u)"
+  target="gui/${uid_num}"
+
+  if [[ ! -f "${LAUNCH_AGENT_PATH}" ]]; then
+    echo "[warn] Launch agent plist not found at ${LAUNCH_AGENT_PATH}. Skipping reload."
+    return 0
+  fi
+
+  launchctl bootout "${target}" "${LAUNCH_AGENT_PATH}" >/dev/null 2>&1 || true
+  if ! launchctl bootstrap "${target}" "${LAUNCH_AGENT_PATH}" >/dev/null 2>&1; then
+    echo "[warn] Failed to bootstrap launch agent after config update." >&2
+    return 0
+  fi
+  launchctl enable "${target}/${LAUNCH_LABEL}" >/dev/null 2>&1 || true
+  launchctl kickstart -k "${target}/${LAUNCH_LABEL}" >/dev/null 2>&1 || true
+  echo "[ok] Reloaded launch agent to apply schedule changes."
+}
+
+config_show_cmd() {
+  ensure_config
+  CONFIG_PATH="${CONFIG_PATH}" python3 - <<'PY'
+import json
+import os
+from pathlib import Path
+
+config_path = Path(os.environ["CONFIG_PATH"]).expanduser()
+with open(config_path, "r", encoding="utf-8") as fh:
+  data = json.load(fh) or {}
+
+def bool_txt(value, default=False):
+  return "true" if bool(value if value is not None else default) else "false"
+
+browsers = data.get("browsers", [])
+if isinstance(browsers, list):
+  browsers_out = ",".join(str(item).strip() for item in browsers if str(item).strip())
+else:
+  browsers_out = ""
+
+print("TabDump config")
+print(f"path={config_path}")
+print(f"vaultInbox={data.get('vaultInbox', '')}")
+print(f"browsers={browsers_out}")
+print(f"dryRun={bool_txt(data.get('dryRun', True), True)}")
+print(f"dryRunPolicy={str(data.get('dryRunPolicy', 'manual')).strip().lower() or 'manual'}")
+print(f"maxTabs={int(data.get('maxTabs', 30))}")
+print(f"checkEveryMinutes={int(data.get('checkEveryMinutes', 60))}")
+print(f"cooldownMinutes={int(data.get('cooldownMinutes', 1440))}")
+print(f"llmEnabled={bool_txt(data.get('llmEnabled', False), False)}")
+print(f"tagModel={str(data.get('tagModel', 'gpt-4.1-mini'))}")
+print(f"llmRedact={bool_txt(data.get('llmRedact', True), True)}")
+print(f"llmRedactQuery={bool_txt(data.get('llmRedactQuery', True), True)}")
+print(f"llmTitleMax={int(data.get('llmTitleMax', 200))}")
+print(f"maxItems={int(data.get('maxItems', 0))}")
+PY
+}
+
+config_get_cmd() {
+  local key="${1:-}"
+  if [[ -z "${key}" ]]; then
+    echo "[error] Usage: tabdump config get <key>" >&2
+    return 1
+  fi
+  ensure_config
+  CONFIG_PATH="${CONFIG_PATH}" CONFIG_KEY="${key}" python3 - <<'PY'
+import json
+import os
+import sys
+
+config_path = os.environ["CONFIG_PATH"]
+key = os.environ["CONFIG_KEY"].strip()
+supported = {
+  "vaultInbox",
+  "browsers",
+  "dryRun",
+  "dryRunPolicy",
+  "maxTabs",
+  "checkEveryMinutes",
+  "cooldownMinutes",
+  "llmEnabled",
+  "tagModel",
+  "llmRedact",
+  "llmRedactQuery",
+  "llmTitleMax",
+  "maxItems",
+}
+if key not in supported:
+  print(f"Unsupported config key: {key}", file=sys.stderr)
+  raise SystemExit(1)
+
+with open(config_path, "r", encoding="utf-8") as fh:
+  data = json.load(fh) or {}
+
+value = data.get(key)
+if key == "browsers":
+  if isinstance(value, list):
+    print(",".join(str(item).strip() for item in value if str(item).strip()))
+  else:
+    print("")
+elif isinstance(value, bool):
+  print("true" if value else "false")
+elif value is None:
+  print("")
+else:
+  print(str(value))
+PY
+}
+
+config_set_cmd() {
+  ensure_config
+  if [[ "$#" -lt 2 || $(( $# % 2 )) -ne 0 ]]; then
+    echo "[error] Usage: tabdump config set <key> <value> [<key> <value> ...]" >&2
+    return 1
+  fi
+
+  local reload_needed=0
+  local key
+  local idx=1
+  while [[ "${idx}" -le "$#" ]]; do
+    key="${!idx}"
+    if [[ "${key}" == "checkEveryMinutes" ]]; then
+      reload_needed=1
+    fi
+    idx=$((idx + 2))
+  done
+
+  if ! CONFIG_PATH="${CONFIG_PATH}" python3 - "$@" <<'PY'
+import json
+import os
+import stat
+import sys
+
+config_path = os.environ["CONFIG_PATH"]
+args = sys.argv[1:]
+
+with open(config_path, "r", encoding="utf-8") as fh:
+  data = json.load(fh) or {}
+
+mapping = {"chrome": "Chrome", "safari": "Safari", "firefox": "Firefox"}
+
+def parse_bool(raw: str) -> bool:
+  value = raw.strip().lower()
+  if value in {"1", "true", "yes", "y", "on"}:
+    return True
+  if value in {"0", "false", "no", "n", "off"}:
+    return False
+  raise ValueError("expected boolean")
+
+def parse_nonneg_int(raw: str) -> int:
+  value = raw.strip()
+  if not value.isdigit():
+    raise ValueError("expected non-negative integer")
+  return int(value)
+
+updated = []
+try:
+  for i in range(0, len(args), 2):
+    key = args[i].strip()
+    raw = args[i + 1]
+
+    if key == "vaultInbox":
+      out = os.path.abspath(os.path.expanduser(raw.strip()))
+      if not out:
+        raise ValueError("vaultInbox cannot be empty")
+      if not out.endswith(os.sep):
+        out += os.sep
+      data[key] = out
+    elif key == "browsers":
+      parts = [item.strip() for item in raw.split(",") if item.strip()]
+      normalized = []
+      seen = set()
+      for part in parts:
+        val = mapping.get(part.lower())
+        if not val:
+          raise ValueError(f"invalid browser: {part}")
+        if val in seen:
+          continue
+        seen.add(val)
+        normalized.append(val)
+      if not normalized:
+        raise ValueError("browsers cannot be empty")
+      data[key] = normalized
+    elif key in {"dryRun", "llmEnabled", "llmRedact", "llmRedactQuery", "keepPinnedTabs", "outputGroupByWindow", "outputIncludeMetadata"}:
+      data[key] = parse_bool(raw)
+    elif key == "dryRunPolicy":
+      policy = raw.strip().lower()
+      if policy not in {"manual", "auto"}:
+        raise ValueError("dryRunPolicy must be manual or auto")
+      data[key] = policy
+    elif key in {"maxTabs", "checkEveryMinutes", "cooldownMinutes", "maxItems"}:
+      data[key] = parse_nonneg_int(raw)
+    elif key == "llmTitleMax":
+      value = parse_nonneg_int(raw)
+      if value < 1:
+        raise ValueError("llmTitleMax must be >= 1")
+      data[key] = value
+    elif key in {"tagModel", "outputFilenameTemplate"}:
+      value = raw.strip()
+      if not value:
+        raise ValueError(f"{key} cannot be empty")
+      data[key] = value
+    else:
+      raise ValueError(f"unsupported config key: {key}")
+    updated.append(key)
+except ValueError as exc:
+  print(str(exc), file=sys.stderr)
+  raise SystemExit(1)
+
+with open(config_path, "w", encoding="utf-8") as fh:
+  json.dump(data, fh, indent=2)
+  fh.write("\n")
+os.chmod(config_path, stat.S_IRUSR | stat.S_IWUSR)
+
+print("[ok] Updated config keys: " + ", ".join(updated))
+PY
+  then
+    return 1
+  fi
+
+  if [[ "${reload_needed}" -eq 1 ]]; then
+    reload_launch_agent_if_present
+  fi
+}
+
+config_cmd() {
+  local subcmd="${1:-show}"
+  case "${subcmd}" in
+    show)
+      config_show_cmd
+      ;;
+    get)
+      shift || true
+      config_get_cmd "${1:-}"
+      ;;
+    set)
+      shift || true
+      config_set_cmd "$@"
+      ;;
+    help|-h|--help)
+      cat <<'USAGE'
+Usage:
+  tabdump config show
+  tabdump config get <key>
+  tabdump config set <key> <value> [<key> <value> ...]
+USAGE
+      ;;
+    *)
+      echo "[error] Unknown config command: ${subcmd}" >&2
+      echo "Usage: tabdump config [show|get <key>|set <key> <value> ...]" >&2
+      return 1
       ;;
   esac
 }
@@ -1476,6 +1781,10 @@ case "${cmd}" in
   mode)
     mode_cmd "${2:-show}"
     ;;
+  config)
+    shift || true
+    config_cmd "$@"
+    ;;
   status)
     status_cmd
     ;;
@@ -1584,6 +1893,7 @@ print_summary() {
   echo "Wrote config:     ${CONFIG_PATH}"
   echo "Vault Inbox:      ${VAULT_INBOX}"
   echo "Browsers:         ${BROWSERS_CSV}"
+  echo "Gates:            checkEveryMinutes=${CHECK_EVERY_MINUTES_VALUE}, cooldownMinutes=${COOLDOWN_MINUTES_VALUE}, maxTabs=${MAX_TABS_VALUE}"
   echo "Installed engine: ${ENGINE_DEST}"
   echo "Installed monitor:${MONITOR_DEST}"
   echo "Installed wrapper:${MONITOR_WRAPPER_DEST}"
@@ -1594,6 +1904,7 @@ print_summary() {
   echo
   echo "Quick start:"
   echo "  tabdump status"
+  echo "  tabdump config show"
   echo "  tabdump mode show"
   echo "  tabdump now"
   echo "  tabdump now --close"

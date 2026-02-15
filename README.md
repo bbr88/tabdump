@@ -42,6 +42,7 @@ bash scripts/install.sh --yes --vault-inbox "~/obsidian/Inbox/" --app-archive ".
 
 ```bash
 tabdump status
+tabdump config show
 tabdump mode show
 tabdump now
 tabdump now --close

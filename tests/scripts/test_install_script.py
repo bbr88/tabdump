@@ -341,6 +341,34 @@ def test_install_noninteractive_skip_key_mode_disables_llm(tmp_path):
     assert data["browsers"] == ["Safari", "Chrome", "Firefox"]
 
 
+def test_install_applies_gate_overrides_from_args(tmp_path):
+    proc = _run_install(
+        tmp_path,
+        args=[
+            "--yes",
+            "--vault-inbox",
+            "~/vault/inbox",
+            "--max-tabs",
+            "55",
+            "--check-every-minutes",
+            "15",
+            "--cooldown-minutes",
+            "720",
+        ],
+    )
+    output = proc.stdout + proc.stderr
+
+    assert proc.returncode == 0, output
+    data = _read_config(proc.home)
+    assert data["maxTabs"] == 55
+    assert data["checkEveryMinutes"] == 15
+    assert data["cooldownMinutes"] == 720
+
+    plist_path = proc.home / "Library" / "LaunchAgents" / "io.orc-visioner.tabdump.monitor.plist"
+    plist_text = plist_path.read_text(encoding="utf-8")
+    assert "<integer>900</integer>" in plist_text
+
+
 def test_install_rejects_invalid_browsers(tmp_path):
     proc = _run_install(
         tmp_path,
@@ -555,6 +583,63 @@ def test_generated_cli_mode_commands_update_config(tmp_path):
     data = _read_config(install_run.home)
     assert data["dryRun"] is True
     assert data["dryRunPolicy"] == "manual"
+
+
+def test_generated_cli_config_show_get_set(tmp_path):
+    install_run = _run_install(tmp_path, user_input="~/vault/inbox\n\nn\nn\n")
+    assert install_run.returncode == 0, install_run.stdout + install_run.stderr
+
+    show_run = _run_generated_cli(install_run, args=["config", "show"])
+    show_output = show_run.stdout + show_run.stderr
+    assert show_run.returncode == 0, show_output
+    assert "TabDump config" in show_output
+    assert "checkEveryMinutes=60" in show_output
+    assert "cooldownMinutes=1440" in show_output
+    assert "maxTabs=30" in show_output
+
+    get_run = _run_generated_cli(install_run, args=["config", "get", "checkEveryMinutes"])
+    get_output = get_run.stdout + get_run.stderr
+    assert get_run.returncode == 0, get_output
+    assert get_run.stdout.strip() == "60"
+
+    set_run = _run_generated_cli(
+        install_run,
+        args=[
+            "config",
+            "set",
+            "checkEveryMinutes",
+            "30",
+            "cooldownMinutes",
+            "2880",
+            "maxTabs",
+            "45",
+            "browsers",
+            "Safari,Firefox",
+            "llmEnabled",
+            "true",
+        ],
+    )
+    set_output = set_run.stdout + set_run.stderr
+    assert set_run.returncode == 0, set_output
+    assert "[ok] Updated config keys:" in set_output
+    assert "Reloaded launch agent to apply schedule changes." in set_output
+
+    data = _read_config(install_run.home)
+    assert data["checkEveryMinutes"] == 30
+    assert data["cooldownMinutes"] == 2880
+    assert data["maxTabs"] == 45
+    assert data["browsers"] == ["Safari", "Firefox"]
+    assert data["llmEnabled"] is True
+
+
+def test_generated_cli_config_set_rejects_invalid_key(tmp_path):
+    install_run = _run_install(tmp_path, user_input="~/vault/inbox\n\nn\nn\n")
+    assert install_run.returncode == 0, install_run.stdout + install_run.stderr
+
+    set_run = _run_generated_cli(install_run, args=["config", "set", "nope", "1"])
+    output = set_run.stdout + set_run.stderr
+    assert set_run.returncode == 1
+    assert "unsupported config key: nope" in output
 
 
 def test_generated_cli_now_uses_monitor_and_prints_clean_path(tmp_path):
