@@ -2,6 +2,8 @@
 
 Scope: `~/Library/Application Support/TabDump/config.json` and `docs/examples/config.example.json`.
 
+Tip: Use `tabdump config show|get|set` for routine updates instead of editing JSON by hand.
+
 Note: Properties are consumed by the runtime (`macos/configurable-tabDump.scpt`, `core/monitor_tabs.py`, or postprocess env wiring).
 Renderer tuning defaults in `core/renderer/config.py` are internal defaults and are not loaded from `config.json`.
 

@@ -34,6 +34,12 @@ Run installer (explicit archive path):
 bash scripts/install.sh --yes --vault-inbox "~/obsidian/Inbox/" --app-archive "./dist/tabdump-app-v0.1.0-local.tar.gz"
 ```
 
+Optional gate overrides at install time:
+
+```bash
+bash scripts/install.sh --yes --vault-inbox "~/obsidian/Inbox/" --max-tabs 40 --check-every-minutes 30 --cooldown-minutes 1440
+```
+
 If `./dist/tabdump-app.tar.gz` exists, `--app-archive` is optional:
 
 ```bash
@@ -110,6 +116,14 @@ Inspect current state:
 
 ```bash
 tabdump status
+```
+
+Inspect and update config:
+
+```bash
+tabdump config show
+tabdump config get checkEveryMinutes
+tabdump config set checkEveryMinutes 30 cooldownMinutes 1440 maxTabs 40
 ```
 
 ## Modes
@@ -220,6 +234,12 @@ Common keys:
 6. `checkEveryMinutes`
 7. `cooldownMinutes`
 8. `llmEnabled`
+
+CLI helpers:
+
+1. `tabdump config show`
+2. `tabdump config get <key>`
+3. `tabdump config set <key> <value> [<key> <value> ...]`
 
 ## Troubleshooting
 
