@@ -1,4 +1,4 @@
-from core.postprocess.coerce import safe_action, safe_kind, safe_prio, safe_score, safe_topic
+from core.postprocess.coerce import safe_action, safe_effort, safe_kind, safe_prio, safe_score, safe_topic
 
 
 def test_safe_topic_prefers_non_empty_string_then_domain_then_misc():
@@ -26,6 +26,14 @@ def test_safe_score_parses_and_clamps():
     assert safe_score(-2) == 0
     assert safe_score("bad") is None
     assert safe_score(None) is None
+
+
+def test_safe_effort_accepts_known_values_only():
+    assert safe_effort("Quick") == "quick"
+    assert safe_effort("medium") == "medium"
+    assert safe_effort("deep") == "deep"
+    assert safe_effort("slow") is None
+    assert safe_effort(None) is None
 
 
 def test_safe_prio_accepts_known_priorities():

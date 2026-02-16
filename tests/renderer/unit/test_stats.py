@@ -1,12 +1,15 @@
 from core.renderer.stats import (
     _badge_cfg,
     _build_badges,
+    _effort_band,
     _focus_line,
     _ordering_cfg,
     _primary_badge,
+    _status_pill,
     _tagify,
     _top_domains,
     _top_kinds,
+    _top_topics,
 )
 
 
@@ -32,6 +35,17 @@ def test_top_domains_and_kinds_exclude_admin_entries():
 
     assert _top_domains(items, 2) == ["a.com", "b.com"]
     assert _top_kinds(items, 2) == ["docs", "video"]
+
+
+def test_top_topics_excludes_misc_and_admin_entries():
+    items = [
+        _item(topics=[{"slug": "postgres"}]),
+        _item(topics=[{"slug": "postgres"}]),
+        _item(topics=[{"slug": "llm"}]),
+        _item(topics=[{"slug": "misc"}]),
+        _item(topics=[{"slug": "security"}], domain_category="admin_auth"),
+    ]
+    assert _top_topics(items, 3) == ["postgres", "llm"]
 
 
 def test_focus_line_uses_category_display_mapping():
@@ -72,7 +86,29 @@ def test_build_badges_for_high_and_quick_contexts():
 
     high = _build_badges(_item(), badges_cfg, context="high")
     quick = _build_badges(_item(kind="misc"), badges_cfg, context="quick")
+    project_misc = _build_badges(_item(kind="misc"), badges_cfg, context="projects")
+    tool_misc = _build_badges(_item(kind="misc"), badges_cfg, context="tools")
 
     assert "docs" in high
     assert "#distributed-systems" in high
     assert "why:shopping_domain" in quick
+    assert project_misc.startswith("project")
+    assert tool_misc.startswith("tool")
+
+
+def test_effort_band_and_status_pill_from_explicit_and_fallback_values():
+    explicit = _item(kind="article", effort="deep", intent={"action": "read"})
+    assert _effort_band(explicit) == "deep"
+    assert _status_pill(explicit) == "[high effort]"
+
+    paper = _item(kind="paper", effort="", intent={"action": "read"})
+    assert _effort_band(paper) == "deep"
+    assert _status_pill(paper) == "[high effort]"
+
+    video = _item(kind="video", effort="", intent={"action": "watch"})
+    assert _effort_band(video) == "quick"
+    assert _status_pill(video) == "[low effort]"
+
+    medium = _item(kind="docs", effort="", intent={"action": "read"})
+    assert _effort_band(medium) == "medium"
+    assert _status_pill(medium) == "[medium effort]"

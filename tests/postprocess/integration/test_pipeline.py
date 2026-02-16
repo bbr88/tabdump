@@ -60,8 +60,10 @@ def test_build_clean_note_uses_llm_and_skips_sensitive_items():
     assert payload["items"][0]["kind"] == "auth"
     assert payload["items"][0]["intent"]["action"] == "ignore"
     assert payload["items"][0]["intent"]["confidence"] == 0.6
+    assert payload["items"][0]["effort"] == "quick"
     assert payload["items"][1]["kind"] == "docs"
     assert payload["items"][1]["topics"][0]["slug"] == "python"
+    assert payload["items"][1]["effort"] == "medium"
 
 
 def test_build_clean_note_falls_back_to_local_when_llm_enabled_but_key_missing():
@@ -93,6 +95,7 @@ def test_build_clean_note_falls_back_to_local_when_llm_enabled_but_key_missing()
     assert "LLM disabled: OpenAI API key not found" in stderr.getvalue()
     assert captured["payload"]["items"][0]["kind"] == "article"
     assert captured["payload"]["items"][0]["topics"][0]["slug"] == "local-topic"
+    assert captured["payload"]["items"][0]["effort"] == "medium"
 
 
 def test_build_clean_note_does_not_use_local_fallback_when_llm_enabled_with_key():
@@ -120,3 +123,4 @@ def test_build_clean_note_does_not_use_local_fallback_when_llm_enabled_with_key(
     assert entry["kind"] == "misc"
     assert entry["intent"]["action"] == "triage"
     assert entry["topics"][0]["slug"] == "example-com"
+    assert entry["effort"] == "medium"

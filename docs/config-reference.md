@@ -52,3 +52,4 @@ Renderer tuning defaults in `core/renderer/config.py` are internal defaults and 
 | `llmRedactQuery` | boolean | `true` | monitor -> postprocess | Redact URL query params before LLM calls. |
 | `llmTitleMax` | integer | `200` | monitor -> postprocess | Title length cap for LLM prompt payloads. |
 | `maxItems` | integer | `0` | monitor -> postprocess | Max items per LLM classification batch (`0` = no explicit cap). |
+| `docsMoreLinksGroupingMode` | `kind` or `energy` | `kind` | monitor -> postprocess -> renderer | Controls “More Links” grouping in clean notes. `kind` keeps Docs/Articles/Papers; `energy` switches to Deep Reads/Quick References. |

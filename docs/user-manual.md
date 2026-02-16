@@ -221,6 +221,17 @@ TabDump produces:
 4. `forced`
 5. `tabCount`
 
+## Clean Note UX Cues
+
+The clean renderer adds quick orientation cues:
+
+1. `Start Here` includes a `Today's Context` line (top topics, with domain fallback).
+2. Bullets include effort pills such as `[low effort]`, `[medium effort]`, `[high effort]`.
+3. Non-admin sections use two-line bullets for better title readability, while `Accounts & Settings` stays compact one-line.
+4. `docsMoreLinksGroupingMode` controls singleton grouping:
+   - `kind` (default): `Docs` / `Articles` / `Papers`...
+   - `energy`: `Deep Reads` / `Quick References`
+
 ## Understanding `tabdump status`
 
 `tabdump status` shows:
