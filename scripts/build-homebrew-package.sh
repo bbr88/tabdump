@@ -6,6 +6,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OUTPUT_DIR="${ROOT_DIR}/dist"
 VERSION=""
 APP_ARCHIVE=""
+SKILL_DIR="${ROOT_DIR}/skills/tabdump-macos"
 
 usage() {
   cat <<'USAGE'
@@ -107,6 +108,11 @@ main() {
     exit 1
   fi
 
+  if [[ ! -f "${SKILL_DIR}/SKILL.md" ]]; then
+    echo "[error] OpenClaw skill package not found at ${SKILL_DIR}" >&2
+    exit 1
+  fi
+
   local app_archive_default
   app_archive_default="${OUTPUT_DIR}/tabdump-app.tar.gz"
   if [[ ! -f "${app_archive_default}" ]]; then
@@ -122,6 +128,7 @@ main() {
   cp -R "${ROOT_DIR}/core" "${package_root}/core"
   cp -R "${ROOT_DIR}/macos" "${package_root}/macos"
   cp -R "${ROOT_DIR}/scripts" "${package_root}/scripts"
+  cp -R "${ROOT_DIR}/skills" "${package_root}/skills"
   cp -f "${ROOT_DIR}/docs/user-manual.md" "${package_root}/USER_MANUAL.md"
   mkdir -p "${package_root}/dist"
   cp -f "${APP_ARCHIVE}" "${package_root}/dist/$(basename "${APP_ARCHIVE}")"

@@ -44,11 +44,18 @@ jobs:
       - name: Shell syntax check
         run: |
           bash -n scripts/build-homebrew-package.sh
+          bash -n scripts/build-openclaw-skill-package.sh
           bash -n scripts/build-local.sh
           bash -n scripts/build-release.sh
           bash -n scripts/install.sh
           bash -n scripts/uninstall.sh
           bash -n scripts/update-runtime-manifest.sh
+          bash -n skills/tabdump-macos/scripts/tabdump_install_from_repo.sh
+          bash -n skills/tabdump-macos/scripts/tabdump_permissions_reset.sh
+          bash -n skills/tabdump-macos/scripts/tabdump_reload_launchagent.sh
+          bash -n skills/tabdump-macos/scripts/tabdump_run_once.sh
+          bash -n skills/tabdump-macos/scripts/tabdump_status.sh
+          bash -n skills/tabdump-macos/scripts/test_skill_smoke.sh
 
       - name: Install shellcheck
         run: |
@@ -56,7 +63,7 @@ jobs:
           sudo apt-get install -y shellcheck
 
       - name: Shellcheck
-        run: shellcheck -s bash -S error scripts/*.sh
+        run: shellcheck -s bash -S error scripts/*.sh skills/tabdump-macos/scripts/*.sh
 
       - name: Guard installer against build/sign logic
         run: |
