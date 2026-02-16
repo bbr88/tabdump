@@ -1,0 +1,270 @@
+{
+  "version": "v1",
+  "description": "24-case generic classifier benchmark that avoids tech-heavy skew.",
+  "cases": [
+    {
+      "id": "calendar_planner",
+      "title": "Weekly planner calendar",
+      "url": "https://calendar.google.com/calendar/u/0/r",
+      "expected": {
+        "topic": "productivity",
+        "kind": "tool",
+        "action": "triage",
+        "score": 3
+      }
+    },
+    {
+      "id": "shopping_amazon_deal",
+      "title": "Air fryer deal under $100",
+      "url": "https://www.amazon.com/dp/B0ABC12345",
+      "expected": {
+        "topic": "shopping",
+        "kind": "article",
+        "action": "read",
+        "score": 3
+      }
+    },
+    {
+      "id": "travel_blog_itinerary",
+      "title": "Summer trip itinerary ideas",
+      "url": "https://example.com/blog/summer-trip-itinerary",
+      "expected": {
+        "topic": "travel",
+        "kind": "article",
+        "action": "read",
+        "score": 3
+      }
+    },
+    {
+      "id": "finance_budget_retirement",
+      "title": "Budget planning for retirement and ETFs",
+      "url": "https://money.example.com/retirement-planning",
+      "expected": {
+        "topic": "finance",
+        "kind": "article",
+        "action": "read",
+        "score": 3
+      }
+    },
+    {
+      "id": "health_mindfulness",
+      "title": "Mental health mindfulness routine",
+      "url": "https://health.example.org/mindfulness-routine",
+      "expected": {
+        "topic": "health",
+        "kind": "article",
+        "action": "read",
+        "score": 3
+      }
+    },
+    {
+      "id": "fitness_workout_video",
+      "title": "20 minute workout routine",
+      "url": "https://www.youtube.com/watch?v=fit123",
+      "expected": {
+        "topic": "fitness",
+        "kind": "video",
+        "action": "watch",
+        "score": 2
+      }
+    },
+    {
+      "id": "food_recipe_page",
+      "title": "Quick pasta recipe for dinner",
+      "url": "https://www.bbcgoodfood.com/recipes/quick-pasta",
+      "expected": {
+        "topic": "food",
+        "kind": "article",
+        "action": "read",
+        "score": 3
+      }
+    },
+    {
+      "id": "education_course_page",
+      "title": "Study skills course for exam prep",
+      "url": "https://www.coursera.org/learn/study-skills",
+      "expected": {
+        "topic": "education",
+        "kind": "article",
+        "action": "read",
+        "score": 3
+      }
+    },
+    {
+      "id": "career_interview_guide",
+      "title": "Interview questions and salary negotiation guide",
+      "url": "https://careers.example.com/interview-negotiation",
+      "expected": {
+        "topic": "career",
+        "kind": "article",
+        "action": "read",
+        "score": 4
+      }
+    },
+    {
+      "id": "parenting_toddler_checklist",
+      "title": "Toddler bedtime checklist for parents",
+      "url": "https://family.example.com/toddler-bedtime-checklist",
+      "expected": {
+        "topic": "parenting",
+        "kind": "article",
+        "action": "read",
+        "score": 4
+      }
+    },
+    {
+      "id": "home_diy_garden",
+      "title": "DIY home improvement and garden ideas",
+      "url": "https://home.example.com/diy-garden-ideas",
+      "expected": {
+        "topic": "home",
+        "kind": "article",
+        "action": "read",
+        "score": 3
+      }
+    },
+    {
+      "id": "automotive_roadtrip_checklist",
+      "title": "Road trip car maintenance checklist",
+      "url": "https://auto.example.com/car-maintenance-checklist",
+      "expected": {
+        "topic": "automotive",
+        "kind": "article",
+        "action": "read",
+        "score": 4
+      }
+    },
+    {
+      "id": "music_spotify_playlist",
+      "title": "Focus music playlist",
+      "url": "https://open.spotify.com/playlist/37i9dQZF1DX0XUsuxWHRQd",
+      "expected": {
+        "topic": "entertainment",
+        "kind": "music",
+        "action": "watch",
+        "score": 2
+      }
+    },
+    {
+      "id": "movie_netflix_page",
+      "title": "New movie trailer",
+      "url": "https://www.netflix.com/title/12345678",
+      "expected": {
+        "topic": "entertainment",
+        "kind": "video",
+        "action": "watch",
+        "score": 2
+      }
+    },
+    {
+      "id": "notion_todo_habits",
+      "title": "Personal to-do habit tracker",
+      "url": "https://www.notion.so/workspace/todo-habit-tracker",
+      "expected": {
+        "topic": "productivity",
+        "kind": "tool",
+        "action": "triage",
+        "score": 3
+      }
+    },
+    {
+      "id": "finance_mortgage_calc",
+      "title": "Mortgage calculator and payment estimate",
+      "url": "https://www.bankrate.com/mortgages/mortgage-calculator",
+      "expected": {
+        "topic": "finance",
+        "kind": "article",
+        "action": "read",
+        "score": 3
+      }
+    },
+    {
+      "id": "social_misc_thread",
+      "title": "Interesting thread",
+      "url": "https://x.com/example/status/1001",
+      "expected": {
+        "topic": "misc",
+        "kind": "article",
+        "action": "read",
+        "score": 2
+      }
+    },
+    {
+      "id": "maps_trip_route",
+      "title": "Vacation trip route planner",
+      "url": "https://maps.google.com/maps?hl=en&q=route",
+      "expected": {
+        "topic": "travel",
+        "kind": "tool",
+        "action": "triage",
+        "score": 3
+      }
+    },
+    {
+      "id": "docs_budget_credit_guide",
+      "title": "Guide to budget and credit card payments",
+      "url": "https://support.apple.com/guide/iphone/use-apple-pay",
+      "expected": {
+        "topic": "finance",
+        "kind": "docs",
+        "action": "read",
+        "score": 5
+      }
+    },
+    {
+      "id": "health_reference_nutrition",
+      "title": "Nutrition reference for healthy diet basics",
+      "url": "https://example-health.org/reference/nutrition-basics",
+      "expected": {
+        "topic": "health",
+        "kind": "docs",
+        "action": "reference",
+        "score": 4
+      }
+    },
+    {
+      "id": "shopping_top10_review_video",
+      "title": "Top 10 phone deals review",
+      "url": "https://www.youtube.com/watch?v=shop987",
+      "expected": {
+        "topic": "shopping",
+        "kind": "video",
+        "action": "watch",
+        "score": 1
+      }
+    },
+    {
+      "id": "travel_airbnb_listing",
+      "title": "Family trip apartment on Airbnb",
+      "url": "https://www.airbnb.com/rooms/12345678",
+      "expected": {
+        "topic": "travel",
+        "kind": "article",
+        "action": "read",
+        "score": 3
+      }
+    },
+    {
+      "id": "education_docs_howto",
+      "title": "How-to study plan docs",
+      "url": "https://www.duolingo.com/docs/how-to-study",
+      "expected": {
+        "topic": "education",
+        "kind": "docs",
+        "action": "reference",
+        "score": 5
+      }
+    },
+    {
+      "id": "career_linkedin_jobs",
+      "title": "Product manager jobs in Seattle",
+      "url": "https://www.linkedin.com/jobs/view/123456789",
+      "expected": {
+        "topic": "career",
+        "kind": "article",
+        "action": "read",
+        "score": 2
+      }
+    }
+  ]
+}

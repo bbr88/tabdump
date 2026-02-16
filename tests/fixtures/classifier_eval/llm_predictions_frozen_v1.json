@@ -1,0 +1,443 @@
+{
+  "models": {
+    "gpt-4.1": {
+      "automotive_roadtrip_checklist": {
+        "action": "read",
+        "kind": "article",
+        "score": 4,
+        "topic": "automotive"
+      },
+      "calendar_planner": {
+        "action": "triage",
+        "kind": "tool",
+        "score": 3,
+        "topic": "productivity"
+      },
+      "career_interview_guide": {
+        "action": "read",
+        "kind": "article",
+        "score": 4,
+        "topic": "career"
+      },
+      "career_linkedin_jobs": {
+        "action": "read",
+        "kind": "article",
+        "score": 2,
+        "topic": "career"
+      },
+      "docs_budget_credit_guide": {
+        "action": "read",
+        "kind": "docs",
+        "score": 5,
+        "topic": "finance"
+      },
+      "education_course_page": {
+        "action": "read",
+        "kind": "article",
+        "score": 3,
+        "topic": "education"
+      },
+      "education_docs_howto": {
+        "action": "reference",
+        "kind": "docs",
+        "score": 5,
+        "topic": "education"
+      },
+      "finance_budget_retirement": {
+        "action": "read",
+        "kind": "article",
+        "score": 3,
+        "topic": "finance"
+      },
+      "finance_mortgage_calc": {
+        "action": "read",
+        "kind": "article",
+        "score": 3,
+        "topic": "finance"
+      },
+      "fitness_workout_video": {
+        "action": "watch",
+        "kind": "video",
+        "score": 2,
+        "topic": "fitness"
+      },
+      "food_recipe_page": {
+        "action": "read",
+        "kind": "article",
+        "score": 3,
+        "topic": "food"
+      },
+      "health_mindfulness": {
+        "action": "read",
+        "kind": "article",
+        "score": 3,
+        "topic": "health"
+      },
+      "health_reference_nutrition": {
+        "action": "reference",
+        "kind": "docs",
+        "score": 4,
+        "topic": "health"
+      },
+      "home_diy_garden": {
+        "action": "read",
+        "kind": "article",
+        "score": 3,
+        "topic": "home"
+      },
+      "maps_trip_route": {
+        "action": "triage",
+        "kind": "tool",
+        "score": 3,
+        "topic": "travel"
+      },
+      "movie_netflix_page": {
+        "action": "watch",
+        "kind": "video",
+        "score": 3,
+        "topic": "entertainment"
+      },
+      "music_spotify_playlist": {
+        "action": "watch",
+        "kind": "music",
+        "score": 2,
+        "topic": "entertainment"
+      },
+      "notion_todo_habits": {
+        "action": "triage",
+        "kind": "tool",
+        "score": 3,
+        "topic": "productivity"
+      },
+      "parenting_toddler_checklist": {
+        "action": "read",
+        "kind": "article",
+        "score": 4,
+        "topic": "parenting"
+      },
+      "shopping_amazon_deal": {
+        "action": "read",
+        "kind": "article",
+        "score": 3,
+        "topic": "shopping"
+      },
+      "shopping_top10_review_video": {
+        "action": "watch",
+        "kind": "video",
+        "score": 1,
+        "topic": "shopping"
+      },
+      "social_misc_thread": {
+        "action": "read",
+        "kind": "article",
+        "score": 2,
+        "topic": "misc"
+      },
+      "travel_airbnb_listing": {
+        "action": "read",
+        "kind": "article",
+        "score": 3,
+        "topic": "travel"
+      },
+      "travel_blog_itinerary": {
+        "action": "read",
+        "kind": "article",
+        "score": 3,
+        "topic": "travel"
+      }
+    },
+    "gpt-4.1-mini": {
+      "automotive_roadtrip_checklist": {
+        "action": "read",
+        "kind": "article",
+        "score": 4,
+        "topic": "automotive"
+      },
+      "calendar_planner": {
+        "action": "triage",
+        "kind": "tool",
+        "score": 3,
+        "topic": "productivity"
+      },
+      "career_interview_guide": {
+        "action": "read",
+        "kind": "article",
+        "score": 4,
+        "topic": "career"
+      },
+      "career_linkedin_jobs": {
+        "action": "read",
+        "kind": "article",
+        "score": 2,
+        "topic": "career"
+      },
+      "docs_budget_credit_guide": {
+        "action": "read",
+        "kind": "docs",
+        "score": 5,
+        "topic": "finance"
+      },
+      "education_course_page": {
+        "action": "read",
+        "kind": "article",
+        "score": 3,
+        "topic": "education"
+      },
+      "education_docs_howto": {
+        "action": "reference",
+        "kind": "docs",
+        "score": 5,
+        "topic": "education"
+      },
+      "finance_budget_retirement": {
+        "action": "read",
+        "kind": "article",
+        "score": 3,
+        "topic": "finance"
+      },
+      "finance_mortgage_calc": {
+        "action": "read",
+        "kind": "article",
+        "score": 3,
+        "topic": "finance"
+      },
+      "fitness_workout_video": {
+        "action": "watch",
+        "kind": "video",
+        "score": 2,
+        "topic": "fitness"
+      },
+      "food_recipe_page": {
+        "action": "read",
+        "kind": "article",
+        "score": 3,
+        "topic": "food"
+      },
+      "health_mindfulness": {
+        "action": "read",
+        "kind": "article",
+        "score": 3,
+        "topic": "health"
+      },
+      "health_reference_nutrition": {
+        "action": "read",
+        "kind": "article",
+        "score": 3,
+        "topic": "health"
+      },
+      "home_diy_garden": {
+        "action": "read",
+        "kind": "article",
+        "score": 3,
+        "topic": "home"
+      },
+      "maps_trip_route": {
+        "action": "triage",
+        "kind": "tool",
+        "score": 3,
+        "topic": "travel"
+      },
+      "movie_netflix_page": {
+        "action": "watch",
+        "kind": "video",
+        "score": 2,
+        "topic": "entertainment"
+      },
+      "music_spotify_playlist": {
+        "action": "watch",
+        "kind": "music",
+        "score": 2,
+        "topic": "entertainment"
+      },
+      "notion_todo_habits": {
+        "action": "triage",
+        "kind": "tool",
+        "score": 3,
+        "topic": "productivity"
+      },
+      "parenting_toddler_checklist": {
+        "action": "read",
+        "kind": "article",
+        "score": 4,
+        "topic": "parenting"
+      },
+      "shopping_amazon_deal": {
+        "action": "read",
+        "kind": "article",
+        "score": 3,
+        "topic": "shopping"
+      },
+      "shopping_top10_review_video": {
+        "action": "read",
+        "kind": "article",
+        "score": 2,
+        "topic": "shopping"
+      },
+      "social_misc_thread": {
+        "action": "read",
+        "kind": "article",
+        "score": 2,
+        "topic": "social-media"
+      },
+      "travel_airbnb_listing": {
+        "action": "triage",
+        "kind": "tool",
+        "score": 3,
+        "topic": "travel"
+      },
+      "travel_blog_itinerary": {
+        "action": "read",
+        "kind": "article",
+        "score": 3,
+        "topic": "travel"
+      }
+    },
+    "gpt-5-nano": {
+      "automotive_roadtrip_checklist": {
+        "action": "read",
+        "kind": "article",
+        "score": 4,
+        "topic": "automotive"
+      },
+      "calendar_planner": {
+        "action": "triage",
+        "kind": "tool",
+        "score": 3,
+        "topic": "productivity"
+      },
+      "career_interview_guide": {
+        "action": "read",
+        "kind": "article",
+        "score": 4,
+        "topic": "career"
+      },
+      "career_linkedin_jobs": {
+        "action": "read",
+        "kind": "article",
+        "score": 2,
+        "topic": "misc"
+      },
+      "docs_budget_credit_guide": {
+        "action": "read",
+        "kind": "article",
+        "score": 4,
+        "topic": "finance"
+      },
+      "education_course_page": {
+        "action": "read",
+        "kind": "article",
+        "score": 3,
+        "topic": "career"
+      },
+      "education_docs_howto": {
+        "action": "reference",
+        "kind": "docs",
+        "score": 5,
+        "topic": "education"
+      },
+      "finance_budget_retirement": {
+        "action": "read",
+        "kind": "article",
+        "score": 3,
+        "topic": "finance"
+      },
+      "finance_mortgage_calc": {
+        "action": "read",
+        "kind": "article",
+        "score": 3,
+        "topic": "finance"
+      },
+      "fitness_workout_video": {
+        "action": "watch",
+        "kind": "video",
+        "score": 2,
+        "topic": "fitness"
+      },
+      "food_recipe_page": {
+        "action": "read",
+        "kind": "article",
+        "score": 3,
+        "topic": "food"
+      },
+      "health_mindfulness": {
+        "action": "read",
+        "kind": "article",
+        "score": 3,
+        "topic": "health"
+      },
+      "health_reference_nutrition": {
+        "action": "reference",
+        "kind": "docs",
+        "score": 4,
+        "topic": "health"
+      },
+      "home_diy_garden": {
+        "action": "read",
+        "kind": "article",
+        "score": 3,
+        "topic": "home"
+      },
+      "maps_trip_route": {
+        "action": "triage",
+        "kind": "tool",
+        "score": 3,
+        "topic": "productivity"
+      },
+      "movie_netflix_page": {
+        "action": "watch",
+        "kind": "video",
+        "score": 2,
+        "topic": "entertainment"
+      },
+      "music_spotify_playlist": {
+        "action": "watch",
+        "kind": "music",
+        "score": 2,
+        "topic": "entertainment"
+      },
+      "notion_todo_habits": {
+        "action": "read",
+        "kind": "article",
+        "score": 3,
+        "topic": "productivity"
+      },
+      "parenting_toddler_checklist": {
+        "action": "read",
+        "kind": "article",
+        "score": 4,
+        "topic": "parenting"
+      },
+      "shopping_amazon_deal": {
+        "action": "read",
+        "kind": "article",
+        "score": 3,
+        "topic": "finance"
+      },
+      "shopping_top10_review_video": {
+        "action": "watch",
+        "kind": "video",
+        "score": 1,
+        "topic": "shopping"
+      },
+      "social_misc_thread": {
+        "action": "read",
+        "kind": "article",
+        "score": 2,
+        "topic": "misc"
+      },
+      "travel_airbnb_listing": {
+        "action": "read",
+        "kind": "article",
+        "score": 3,
+        "topic": "travel"
+      },
+      "travel_blog_itinerary": {
+        "action": "read",
+        "kind": "article",
+        "score": 3,
+        "topic": "travel"
+      }
+    }
+  },
+  "version": "v1"
+}
