@@ -205,6 +205,13 @@ def _classify_with_llm(
     )
 
 
+def _renderer_cfg_override() -> Dict:
+    mode = str(os.environ.get("TABDUMP_DOCS_MORE_LINKS_GROUPING_MODE", "kind")).strip().lower()
+    if mode not in {"kind", "energy"}:
+        mode = "kind"
+    return {"docsOneOffGroupingMode": mode}
+
+
 def build_clean_note(src_path: Path, items: List[Item], dump_id: Optional[str] = None) -> Tuple[str, dict]:
     return _build_clean_note_impl(
         src_path=src_path,
@@ -222,6 +229,7 @@ def build_clean_note(src_path: Path, items: List[Item], dump_id: Optional[str] =
         safe_score_fn=_safe_score,
         extract_created_ts_fn=_extract_created_ts,
         render_markdown_fn=render_markdown,
+        render_cfg_override=_renderer_cfg_override(),
         stderr=sys.stderr,
     )
 

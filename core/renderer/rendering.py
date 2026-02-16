@@ -9,7 +9,7 @@ from urllib.parse import quote
 
 from .buckets import _quick_mini_classify
 from .config import SECTION_ORDER
-from .stats import _badge_cfg, _build_badges, _focus_line, _ordering_cfg, _top_domains, _top_kinds
+from .stats import _badge_cfg, _build_badges, _focus_line, _ordering_cfg, _status_pill, _top_domains, _top_kinds, _top_topics
 from .validate import _validate_rendered
 
 
@@ -34,7 +34,7 @@ def _render_md(state: Dict) -> str:
         lines.append(f"> **Focus:** {_focus_line(items)}")
     lines.append("")
 
-    lines.extend(_render_sections(buckets, cfg, badge_cfg, ordering_cfg))
+    lines.extend(_render_sections(buckets, cfg, badge_cfg, ordering_cfg, items))
 
     md = "\n".join(lines).rstrip() + "\n"
     _validate_rendered(md, buckets, cfg)
@@ -92,6 +92,7 @@ def _render_sections(
     cfg: Dict,
     badge_cfg: Dict,
     ordering_cfg: Dict,
+    all_items: List[dict],
 ) -> List[str]:
     lines: List[str] = []
     include_empty = bool(cfg.get("includeEmptySections", False))
@@ -101,7 +102,7 @@ def _render_sections(
         should_render = bool(items) or include_empty
         if name == "HIGH":
             if should_render:
-                lines.extend(_render_high(items, cfg, badge_cfg))
+                lines.extend(_render_high(items, all_items, cfg, badge_cfg))
         elif name == "MEDIA":
             if should_render:
                 lines.extend(
@@ -112,6 +113,7 @@ def _render_sections(
                         cfg,
                         badge_cfg,
                         ordering_cfg,
+                        bullet_context="media",
                     )
                 )
         elif name == "REPOS":
@@ -124,6 +126,7 @@ def _render_sections(
                         cfg,
                         badge_cfg,
                         ordering_cfg,
+                        bullet_context="repos",
                     )
                 )
         elif name == "PROJECTS":
@@ -136,6 +139,7 @@ def _render_sections(
                         cfg,
                         badge_cfg,
                         ordering_cfg,
+                        bullet_context="projects",
                     )
                 )
         elif name == "TOOLS":
@@ -148,6 +152,7 @@ def _render_sections(
                         cfg,
                         badge_cfg,
                         ordering_cfg,
+                        bullet_context="tools",
                     )
                 )
         elif name == "DOCS":
@@ -186,6 +191,7 @@ def _render_sections(
                         cfg,
                         badge_cfg,
                         ordering_cfg,
+                        bullet_context="backlog",
                     )
                 )
         elif name == "ADMIN":
@@ -199,6 +205,7 @@ def _render_sections(
                         badge_cfg,
                         ordering_cfg,
                         admin=True,
+                        bullet_context="admin",
                     )
                 )
         if len(lines) > start_len:
@@ -208,14 +215,26 @@ def _render_sections(
     return lines
 
 
-def _render_high(items: List[dict], cfg: Dict, badge_cfg: Dict) -> List[str]:
+def _render_high(items: List[dict], all_items: List[dict], cfg: Dict, badge_cfg: Dict) -> List[str]:
     lines = ["## 🔥 Start Here", "*Auto-selected “do next” items.*"]
+    lines.append(_today_context_line(all_items))
     if not items:
         lines.append(cfg.get("emptyBucketMessage", "_(empty)_"))
         return lines
     for it in items:
-        lines.append(_format_bullet(it, prefix="", cfg=cfg, badges_cfg=badge_cfg, context="high"))
+        lines.extend(_format_bullet_two_line(it, prefix="", cfg=cfg, badges_cfg=badge_cfg, context="high"))
     return lines
+
+
+def _today_context_line(items: List[dict]) -> str:
+    top_topics = _top_topics(items, 3)
+    if top_topics:
+        values = [f"#{_escape_md(topic)}" for topic in top_topics]
+    else:
+        values = [_escape_md(domain) for domain in _top_domains(items, 3)]
+    if not values:
+        values = ["varied"]
+    return f"> [!abstract] Today's Context: {' | '.join(values)}"
 
 
 def _render_callout(
@@ -226,6 +245,7 @@ def _render_callout(
     badge_cfg: Dict,
     ordering_cfg: Dict,
     admin: bool = False,
+    bullet_context: str = "group",
 ) -> List[str]:
     count = len(items)
     lines = [f"## {title}", f"> {callout} ({count})"]
@@ -237,7 +257,18 @@ def _render_callout(
     for heading, group_items in grouped:
         lines.append(f"> ### {heading}")
         for it in _sort_items_alpha(group_items):
-            lines.append(_format_bullet(it, prefix="> ", cfg=cfg, badges_cfg=badge_cfg, context="admin" if admin else "group"))
+            if admin:
+                lines.append(_format_bullet(it, prefix="> ", cfg=cfg, badges_cfg=badge_cfg, context="admin"))
+            else:
+                lines.extend(
+                    _format_bullet_two_line(
+                        it,
+                        prefix="> ",
+                        cfg=cfg,
+                        badges_cfg=badge_cfg,
+                        context=bullet_context,
+                    )
+                )
     return lines
 
 
@@ -268,7 +299,7 @@ def _render_docs_callout(
         for heading, group_items in grouped:
             lines.append(f"> ### {heading}")
             for it in _sort_items_alpha(group_items):
-                lines.append(_format_bullet(it, prefix="> ", cfg=cfg, badges_cfg=badge_cfg, context="docs"))
+                lines.extend(_format_bullet_two_line(it, prefix="> ", cfg=cfg, badges_cfg=badge_cfg, context="docs"))
         return lines
 
     # For large docs sections, make the primary callout represent the focused subset.
@@ -288,7 +319,7 @@ def _render_docs_callout(
         for heading, group_items in multi_groups:
             lines.append(f"> ### {heading} ({len(group_items)})")
             for it in _sort_items_alpha(group_items):
-                lines.append(_format_bullet(it, prefix="> ", cfg=cfg, badges_cfg=badge_cfg, context="docs"))
+                lines.extend(_format_bullet_two_line(it, prefix="> ", cfg=cfg, badges_cfg=badge_cfg, context="docs"))
     else:
         lines.append("> _(no main sources)_")
 
@@ -300,13 +331,29 @@ def _render_docs_callout(
             for it in _sort_items_alpha(group_items):
                 flat_singletons.append((heading, it))
 
-        if one_off_domain_count > int(cfg.get("docsOneOffGroupByKindWhenDomainsGt", 8)):
+        oneoff_mode = str(cfg.get("docsOneOffGroupingMode", "kind")).strip().lower()
+        if oneoff_mode == "energy":
+            grouped_oneoffs = _group_oneoffs_by_energy(flat_singletons)
+            for label, arr in grouped_oneoffs:
+                lines.append(f"> #### {label} ({len(arr)})")
+                for source_domain, it in arr:
+                    lines.extend(
+                        _format_bullet_two_line(
+                            it,
+                            prefix="> ",
+                            cfg=cfg,
+                            badges_cfg=badge_cfg,
+                            context="docs",
+                            source_domain=source_domain,
+                        )
+                    )
+        elif one_off_domain_count > int(cfg.get("docsOneOffGroupByKindWhenDomainsGt", 8)):
             grouped_oneoffs = _group_oneoffs_by_kind(flat_singletons)
             for label, arr in grouped_oneoffs:
                 lines.append(f"> #### {label} ({len(arr)})")
                 for source_domain, it in arr:
-                    lines.append(
-                        _format_bullet(
+                    lines.extend(
+                        _format_bullet_two_line(
                             it,
                             prefix="> ",
                             cfg=cfg,
@@ -317,8 +364,8 @@ def _render_docs_callout(
                     )
         else:
             for source_domain, it in flat_singletons:
-                lines.append(
-                    _format_bullet(
+                lines.extend(
+                    _format_bullet_two_line(
                         it,
                         prefix="> ",
                         cfg=cfg,
@@ -366,7 +413,7 @@ def _render_quick_callout(
             continue
         lines.append(f"> ### {cat.capitalize()}")
         for it in _sort_items_alpha(arr):
-            lines.append(_format_bullet(it, prefix="> ", cfg=cfg, badges_cfg=badge_cfg, context="quick"))
+            lines.extend(_format_bullet_two_line(it, prefix="> ", cfg=cfg, badges_cfg=badge_cfg, context="quick"))
     return lines
 
 
@@ -413,12 +460,40 @@ def _format_bullet(
     context: str,
     source_domain: str | None = None,
 ) -> str:
-    display_title = it.get("canonical_title") or it.get("title_render") or it.get("title") or ""
-    display_title = _escape_md(display_title)
+    display_title = _display_title(it)
     url = _escape_md_url(str(it.get("url") or ""))
+    meta = " · ".join(_meta_parts(it, badges_cfg, context, source_domain))
+    return f"{prefix}- [ ] [{display_title}]({url}) · {meta}"
+
+
+def _format_bullet_two_line(
+    it: dict,
+    prefix: str,
+    cfg: Dict,
+    badges_cfg: Dict,
+    context: str,
+    source_domain: str | None = None,
+) -> List[str]:
+    display_title = _display_title(it)
+    url = _escape_md_url(str(it.get("url") or ""))
+    meta = " · ".join(_meta_parts(it, badges_cfg, context, source_domain))
+    return [f"{prefix}- [ ] [{display_title}]({url})", f"{prefix}  {meta}"]
+
+
+def _display_title(it: dict) -> str:
+    display_title = it.get("canonical_title") or it.get("title_render") or it.get("title") or ""
+    return _escape_md(display_title)
+
+
+def _meta_parts(it: dict, badges_cfg: Dict, context: str, source_domain: str | None = None) -> List[str]:
     badges = _build_badges(it, badges_cfg, context)
-    suffix = f" · {_escape_md(source_domain)}" if source_domain else ""
-    return f"{prefix}- [ ] [{display_title}]({url}) · {badges}{suffix}"
+    if context == "admin":
+        parts = [badges]
+    else:
+        parts = [_status_pill(it), badges]
+    if source_domain:
+        parts.append(_escape_md(source_domain))
+    return [p for p in parts if p]
 
 
 def _escape_md_url(url: str) -> str:
@@ -479,3 +554,42 @@ def _group_oneoffs_by_kind(flat_singletons: List[Tuple[str, dict]]) -> List[Tupl
         )
         result.append((label, arr_sorted))
     return result
+
+
+def _group_oneoffs_by_energy(flat_singletons: List[Tuple[str, dict]]) -> List[Tuple[str, List[Tuple[str, dict]]]]:
+    grouped: Dict[str, List[Tuple[str, dict]]] = {"Deep Reads": [], "Quick References": []}
+    for source_domain, it in flat_singletons:
+        label = "Deep Reads" if _is_deep_read(it) else "Quick References"
+        grouped[label].append((source_domain, it))
+
+    result: List[Tuple[str, List[Tuple[str, dict]]]] = []
+    for label in ("Deep Reads", "Quick References"):
+        arr = grouped[label]
+        if not arr:
+            continue
+        arr_sorted = sorted(
+            arr,
+            key=lambda pair: (
+                (
+                    pair[1].get("canonical_title")
+                    or pair[1].get("title_render")
+                    or pair[1].get("title")
+                    or ""
+                ).lower(),
+                pair[0].lower(),
+                pair[1].get("url") or "",
+            ),
+        )
+        result.append((label, arr_sorted))
+    return result
+
+
+def _is_deep_read(item: dict) -> bool:
+    effort = str(item.get("effort") or "").strip().lower()
+    if effort == "deep":
+        return True
+    kind = str(item.get("kind") or "").strip().lower()
+    if kind in {"paper", "spec"}:
+        return True
+    action = str((item.get("intent") or {}).get("action") or "").strip().lower()
+    return action == "deep_work"

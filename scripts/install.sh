@@ -833,7 +833,8 @@ data = {
   "llmRedact": True,
   "llmRedactQuery": True,
   "llmTitleMax": 200,
-  "maxItems": 0
+  "maxItems": 0,
+  "docsMoreLinksGroupingMode": "kind"
 }
 
 with open(config_path, "w", encoding="utf-8") as f:
@@ -1277,6 +1278,7 @@ print(f"llmRedact={bool_txt(data.get('llmRedact', True), True)}")
 print(f"llmRedactQuery={bool_txt(data.get('llmRedactQuery', True), True)}")
 print(f"llmTitleMax={int(data.get('llmTitleMax', 200))}")
 print(f"maxItems={int(data.get('maxItems', 0))}")
+print(f"docsMoreLinksGroupingMode={str(data.get('docsMoreLinksGroupingMode', 'kind')).strip().lower() or 'kind'}")
 PY
 }
 
@@ -1308,6 +1310,7 @@ supported = {
   "llmRedactQuery",
   "llmTitleMax",
   "maxItems",
+  "docsMoreLinksGroupingMode",
 }
 if key not in supported:
   print(f"Unsupported config key: {key}", file=sys.stderr)
@@ -1419,6 +1422,11 @@ try:
       if value < 1:
         raise ValueError("llmTitleMax must be >= 1")
       data[key] = value
+    elif key == "docsMoreLinksGroupingMode":
+      mode = raw.strip().lower()
+      if mode not in {"kind", "energy"}:
+        raise ValueError("docsMoreLinksGroupingMode must be kind or energy")
+      data[key] = mode
     elif key in {"tagModel", "outputFilenameTemplate"}:
       value = raw.strip()
       if not value:

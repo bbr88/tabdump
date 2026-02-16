@@ -255,6 +255,7 @@ def test_admin_compact_bullets_default():
     for line in admin_section.splitlines():
         if line.strip().startswith("> - [ ]"):
             assert " · admin" in line
+            assert "effort" not in line
             assert "dom::" not in line
 
 
@@ -262,11 +263,20 @@ def test_docs_denoise_omit_dom_and_kind():
     payload = json.loads(FIXTURE_DOCS_DENOISE_JSON.read_text())
     md = render_markdown(payload)
     docs_section = _section(md, "## 📚 Read Later")
-    bullet_lines = [l for l in docs_section.splitlines() if l.strip().startswith("> - [ ]")]
+    lines = docs_section.splitlines()
+    bullet_lines = [l for l in lines if l.strip().startswith("> - [ ]")]
     assert bullet_lines
-    for line in bullet_lines:
+    for idx, line in enumerate(lines):
+        if not line.strip().startswith("> - [ ]"):
+            continue
         assert "dom::" not in line
-        assert " · " in line
+        if " · " in line:
+            assert re.search(r"\[(low|medium|high) effort\] · (docs|article|paper|spec|misc)", line)
+            continue
+        assert idx + 1 < len(lines)
+        assert lines[idx + 1].startswith(">   ")
+        assert " · " in lines[idx + 1]
+        assert re.search(r"\[(low|medium|high) effort\] · (docs|article|paper|spec|misc)", lines[idx + 1])
 
 
 def test_quickwins_suffix_matching_disneyplus():
@@ -395,34 +405,142 @@ def test_docs_dom_chip_suppression_and_paper_kind():
     payload = _load_payload()
     md = render_markdown(payload)
     docs_section = _section(md, "## 📚 Read Later")
-    # paper retains kind, but no dom chip
-    paper_line = [l for l in docs_section.splitlines() if "hstore.pdf" in l][0]
-    assert " · paper" in paper_line
-    assert "dom::" not in paper_line
+    # paper retains kind in metadata line, but no dom chip
+    lines = docs_section.splitlines()
+    idx = next(i for i, line in enumerate(lines) if "hstore.pdf" in line)
+    assert idx + 1 < len(lines)
+    meta = lines[idx + 1]
+    assert " · paper" in meta
+    assert "dom::" not in meta
 
 
 def test_media_queue_omits_dom_chip():
     payload = _load_payload()
     md = render_markdown(payload)
     media_section = _section(md, "## 📺 Watch / Listen Later")
-    media_lines = [l for l in media_section.splitlines() if l.strip().startswith("> - [ ]")]
-    assert media_lines
-    assert all("dom::" not in l for l in media_lines)
-    assert all(" · video" in l for l in media_lines)
+    lines = media_section.splitlines()
+    bullet_idxs = [i for i, line in enumerate(lines) if line.strip().startswith("> - [ ]")]
+    assert bullet_idxs
+    for idx in bullet_idxs:
+        assert "dom::" not in lines[idx]
+        assert " · " not in lines[idx]
+        assert idx + 1 < len(lines)
+        meta = lines[idx + 1]
+        assert meta.startswith(">   ")
+        assert "dom::" not in meta
+        assert " · video" in meta
 
 
 def test_bullets_have_badges_and_no_dom():
     payload = _load_payload()
     md = render_markdown(payload)
-    bullet_lines = [l for l in md.splitlines() if l.strip().startswith("- [ ]") or l.strip().startswith("> - [ ]")]
+    lines = md.splitlines()
+    bullet_lines = [l for l in lines if l.strip().startswith("- [ ]") or l.strip().startswith("> - [ ]")]
     assert bullet_lines
-    for line in bullet_lines:
-        assert " · " in line
+    for idx, line in enumerate(lines):
+        if not (line.strip().startswith("- [ ]") or line.strip().startswith("> - [ ]")):
+            continue
         assert "dom::" not in line
-        m = re.search(r"\)\s·\s(.+)$", line)
-        assert m
-        badges = m.group(1)
-        assert badges == badges.lower()
+        if " · " in line:
+            m = re.search(r"\)\s·\s(.+)$", line)
+            assert m
+            badges = m.group(1)
+            assert badges == badges.lower()
+            continue
+
+        assert idx + 1 < len(lines)
+        next_line = lines[idx + 1]
+        assert next_line.startswith(">   ") or next_line.startswith("  ")
+        assert " · " in next_line
+        assert next_line.strip() == next_line.strip().lower()
+
+
+def test_start_here_includes_context_line():
+    payload = _load_payload()
+    md = render_markdown(payload)
+    start = _section(md, "## 🔥 Start Here")
+    assert "> [!abstract] Today's Context:" in start
+    assert "#" in start
+
+
+def test_non_admin_sections_use_two_line_bullets():
+    payload = _load_payload()
+    md = render_markdown(payload)
+    sections = [
+        "## 🔥 Start Here",
+        "## 📺 Watch / Listen Later",
+        "## 📚 Read Later",
+    ]
+    for header in sections:
+        section = _section(md, header)
+        lines = section.splitlines()
+        bullet_idxs = [i for i, line in enumerate(lines) if line.strip().startswith("- [ ]") or line.strip().startswith("> - [ ]")]
+        assert bullet_idxs
+        for idx in bullet_idxs:
+            assert " · " not in lines[idx]
+            assert idx + 1 < len(lines)
+            next_line = lines[idx + 1]
+            assert next_line.startswith("  ") or next_line.startswith(">   ")
+            assert " · " in next_line
+
+
+def test_docs_more_links_supports_energy_grouping_mode():
+    payload = {
+        "meta": {"created": "2026-02-07T06:00:00Z", "source": "docs_oneoff_energy.raw.json"},
+        "counts": {"total": 12, "dumped": 12, "closed": 12, "kept": 0},
+        "cfg": {
+            "highPriorityLimit": 0,
+            "docsLargeSectionDomainsGte": 10,
+            "docsOneOffGroupingMode": "energy",
+            "docsOneOffGroupByKindWhenDomainsGt": 8,
+        },
+        "items": [
+            {"url": "https://a.com/docs/1", "title": "A1", "kind": "docs"},
+            {"url": "https://a.com/docs/2", "title": "A2", "kind": "docs"},
+            {"url": "https://b.com/article/1", "title": "B1", "kind": "article", "effort": "quick"},
+            {"url": "https://c.com/article/1", "title": "C1", "kind": "article", "effort": "quick"},
+            {"url": "https://d.com/docs/1", "title": "D1", "kind": "docs", "effort": "quick"},
+            {"url": "https://e.com/docs/1", "title": "E1", "kind": "docs", "effort": "quick"},
+            {"url": "https://f.com/paper/1.pdf", "title": "F1", "kind": "paper", "effort": "deep"},
+            {"url": "https://g.com/spec/1", "title": "G1", "kind": "spec", "effort": "deep"},
+            {"url": "https://h.com/misc/1", "title": "H1", "kind": "misc", "effort": "quick"},
+            {"url": "https://i.com/docs/1", "title": "I1", "kind": "docs", "effort": "quick"},
+            {"url": "https://j.com/docs/1", "title": "J1", "kind": "docs", "effort": "quick"},
+            {"url": "https://k.com/docs/1", "title": "K1", "kind": "docs", "effort": "quick"},
+        ],
+    }
+    md = render_markdown(payload)
+    docs = _section(md, "## 📚 Read Later")
+    assert "> #### Deep Reads (" in docs
+    assert "> #### Quick References (" in docs
+    assert "> #### Docs (" not in docs
+
+
+def test_misc_kind_is_relabelled_by_section_for_projects_and_tools():
+    payload = {
+        "meta": {"created": "2026-02-16T09:31:52Z", "source": "section_kind_relabel.raw.json"},
+        "counts": {"total": 2, "dumped": 2, "closed": 2, "kept": 0},
+        "cfg": {"highPriorityLimit": 0},
+        "items": [
+            {
+                "url": "https://drive.google.com/drive/folders/1jIJMyBOeWiVxLCUUtLvEFEFCnWxbh6cs",
+                "title": "ML Books \u2013 Google Drive",
+                "kind": "misc",
+            },
+            {
+                "url": "https://console.cloud.google.com/apis/dashboard",
+                "title": "Google Cloud Console",
+                "kind": "misc",
+            },
+        ],
+    }
+    md = render_markdown(payload)
+    projects = _section(md, "## 🗂 Projects")
+    tools = _section(md, "## 🧰 Apps & Utilities")
+    assert " · project" in projects
+    assert " · misc" not in projects
+    assert " · tool" in tools
+    assert " · misc" not in tools
 
 
 def test_domain_ordering_and_item_alpha():

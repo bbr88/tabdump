@@ -13,23 +13,31 @@ Deduped: 1
 
 ## 🔥 Start Here
 *Auto-selected “do next” items.*
-- [ ] [OpenAI API Reference — Responses](https://platform.openai.com/docs/api-reference/responses) · docs · #llm
-- [ ] [neondatabase/neon](https://github.com/neondatabase/neon) · repo · #postgres
-- [ ] [5mins of Postgres E18: Partition pruning, prepared statements and generic vs custom que…](https://pganalyze.com/blog/5mins-postgres-partition-pruning-prepared-statements-generic-vs-custom-query-plans) · article · #postgres
+> [!abstract] Today's Context: #postgres | #llm | #distributed-systems
+- [ ] [OpenAI API Reference — Responses](https://platform.openai.com/docs/api-reference/responses)
+  [low effort] · docs · #llm
+- [ ] [neondatabase/neon](https://github.com/neondatabase/neon)
+  [medium effort] · repo · #postgres
+- [ ] [5mins of Postgres E18: Partition pruning, prepared statements and generic vs custom que…](https://pganalyze.com/blog/5mins-postgres-partition-pruning-prepared-statements-generic-vs-custom-query-plans)
+  [medium effort] · article · #postgres
 
 ## 📺 Watch / Listen Later
 > [!video]- Expand Watch / Listen Later (1)
 > ### youtube.com
-> - [ ] [Design a Distributed Rate Limiter...](https://www.youtube.com/watch?v=MIJFyUPG4Z4) · video
+> - [ ] [Design a Distributed Rate Limiter...](https://www.youtube.com/watch?v=MIJFyUPG4Z4)
+>   [medium effort] · video
 
 ## 📚 Read Later
 > [!info]- Read Later (3)
 > ### example.org
-> - [ ] [Short blog post to skim quickly](https://example.org/skim) · article
+> - [ ] [Short blog post to skim quickly](https://example.org/skim)
+>   [medium effort] · article
 > ### nms.csail.mit.edu
-> - [ ] [Microsoft Word - vldb-07-final.doc](http://nms.csail.mit.edu/~stavros/pubs/hstore.pdf) · paper
+> - [ ] [Microsoft Word - vldb-07-final.doc](http://nms.csail.mit.edu/~stavros/pubs/hstore.pdf)
+>   [high effort] · paper
 > ### pgbouncer.org
-> - [ ] [PgBouncer config](https://www.pgbouncer.org/config.html) · docs
+> - [ ] [PgBouncer config](https://www.pgbouncer.org/config.html)
+>   [low effort] · docs
 
 ## 🔐 Accounts & Settings
 > [!warning]- Account/Settings Access (2)

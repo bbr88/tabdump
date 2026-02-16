@@ -180,6 +180,17 @@ TabDump produces:
 6. `cleanNote`
 7. `autoSwitched`
 
+## Clean Note UX Cues
+
+The clean renderer adds quick orientation cues:
+
+1. `Start Here` includes a `Today's Context` line (top topics, with domain fallback).
+2. Bullets include effort pills such as `[quick read]`, `[medium read]`, `[deep watch]`.
+3. Large `Read Later` sections split singleton domains into `More Links` with two-line bullets for better title readability.
+4. `docsMoreLinksGroupingMode` controls singleton grouping:
+   - `kind` (default): `Docs` / `Articles` / `Papers`...
+   - `energy`: `Deep Reads` / `Quick References`
+
 ## Understanding `tabdump status`
 
 `tabdump status` shows:

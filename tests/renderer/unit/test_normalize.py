@@ -24,6 +24,16 @@ def test_github_repo_slug_title_prefers_slug_for_long_titles():
     assert short == ""
 
 
+def test_canonical_title_uses_blob_filename_for_placeholder_titles():
+    cfg = dict(DEFAULT_CFG)
+    path = "/tpn/pdfs/blob/master/SEDA%20-%20An%20Architecture%20for%20Services.pdf"
+    title = _canonical_title("GitHub - this is a long enough title for slug mode", "github.com", path, cfg)
+    assert title == "tpn/pdfs \u2014 SEDA - An Architecture for Services.pdf"
+
+    preserved = _canonical_title("Custom reading list note", "github.com", path, cfg)
+    assert preserved == "Custom reading list note"
+
+
 def test_normalize_intent_and_flags():
     assert _normalize_intent({"action": "implement", "confidence": "2"}) == {
         "action": "build",

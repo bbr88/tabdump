@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections import Counter
 from typing import Dict, List
 
+from core.tab_policy.actions import canonical_action
 from core.tab_policy.text import slugify_kebab
 
 from .config import DEFAULT_CFG
@@ -22,6 +23,27 @@ def _top_kinds(items: List[dict], limit: int) -> List[str]:
     counts = Counter(it.get("kind") or "" for it in non_admin)
     ranked = sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))
     return [k for k, _ in ranked[:limit] if k]
+
+
+def _top_topics(items: List[dict], limit: int) -> List[str]:
+    non_admin = [it for it in items if not (it.get("domain_category") or "").startswith("admin_")]
+    counts = Counter()
+    for item in non_admin:
+        topics = item.get("topics")
+        if not isinstance(topics, list):
+            continue
+        for topic in topics:
+            slug = ""
+            if isinstance(topic, dict):
+                slug = _tagify(str(topic.get("slug") or ""))
+            elif isinstance(topic, str):
+                slug = _tagify(topic)
+            if slug in {"", "misc", "other"}:
+                continue
+            counts[slug] += 1
+            break
+    ranked = sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))
+    return [slug for slug, _ in ranked[:limit]]
 
 
 def _focus_line(items: List[dict]) -> str:
@@ -76,12 +98,39 @@ def _primary_badge(item: dict) -> str:
     return kind
 
 
+def _effort_band(item: dict) -> str:
+    raw_effort = str(item.get("effort") or "").strip().lower()
+    if raw_effort in {"quick", "medium", "deep"}:
+        return raw_effort
+
+    action = canonical_action((item.get("intent") or {}).get("action") or "")
+    kind = str(item.get("kind") or "").strip().lower()
+    if kind in {"paper", "spec"} or action == "deep_work":
+        return "deep"
+    if action in {"reference", "watch", "ignore"}:
+        return "quick"
+    return "medium"
+
+
+def _status_pill(item: dict) -> str:
+    band = _effort_band(item)
+    display = {"quick": "low", "medium": "medium", "deep": "high"}.get(band, "medium")
+    return f"[{display} effort]"
+
+
 def _build_badges(item: dict, badges_cfg: Dict, context: str) -> str:
     max_badges = int(badges_cfg.get("maxPerBullet", 3))
     include_topic = bool(badges_cfg.get("includeTopicInHighPriority", True))
     include_why = bool(badges_cfg.get("includeQuickWinsWhy", False))
 
-    badges: List[str] = [_primary_badge(item)]
+    primary_badge = _primary_badge(item)
+    if primary_badge == "misc":
+        if context == "projects":
+            primary_badge = "project"
+        elif context == "tools":
+            primary_badge = "tool"
+
+    badges: List[str] = [primary_badge]
 
     if context == "quick" and include_why:
         reason = (item.get("quick_why") or "fallback_misc").lower()

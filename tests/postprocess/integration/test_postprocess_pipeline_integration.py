@@ -72,7 +72,9 @@ def test_llm_id_mapping_uses_ids_not_urls(monkeypatch):
     payload_items = captured["payload"]["items"]
     assert payload_items[1]["kind"] == "repo"
     assert payload_items[1]["topics"][0]["slug"] == "alpha"
+    assert payload_items[1]["effort"] == "medium"
     assert payload_items[0]["kind"] == "misc"
+    assert payload_items[0]["effort"] == "medium"
 
 
 def test_llm_mapping_fallback_to_url(monkeypatch):
@@ -101,6 +103,36 @@ def test_llm_mapping_fallback_to_url(monkeypatch):
     payload_items = captured["payload"]["items"]
     assert payload_items[0]["kind"] == "docs"
     assert payload_items[0]["topics"][0]["slug"] == "beta"
+    assert payload_items[0]["effort"] == "medium"
+
+
+def test_llm_effort_passthrough_and_missing_fallback(monkeypatch):
+    items = _make_items(2)
+
+    def fake_call(system, user, **kwargs):
+        return {
+            "items": [
+                {"id": 0, "topic": "alpha", "kind": "docs", "action": "read", "score": 4, "effort": "deep"},
+                {"id": 1, "topic": "beta", "kind": "video", "action": "watch", "score": 3},
+            ]
+        }
+
+    captured = {}
+
+    def fake_render(payload, *args, **kwargs):
+        captured["payload"] = payload
+        return "md"
+
+    monkeypatch.setattr(ppt, "LLM_ENABLED", True)
+    monkeypatch.setattr(ppt, "resolve_openai_api_key", lambda: "key")
+    monkeypatch.setattr(ppt, "_call_with_retries", fake_call)
+    monkeypatch.setattr(ppt, "render_markdown", fake_render)
+
+    ppt.build_clean_note(Path("/tmp/ignore.md"), items, dump_id="id")
+
+    payload_items = captured["payload"]["items"]
+    assert payload_items[0]["effort"] == "deep"
+    assert payload_items[1]["effort"] == "quick"
 
 
 def test_max_items_cap_limits_classification_only(monkeypatch):
@@ -143,6 +175,23 @@ def test_max_items_cap_limits_classification_only(monkeypatch):
     assert payload_items[3]["kind"] == "misc"
 
 
+def test_cli_reads_docs_more_links_grouping_mode_from_env(monkeypatch):
+    items = _make_items(1)
+    captured = {}
+
+    def fake_render(payload, *args, **kwargs):
+        captured["cfg"] = kwargs.get("cfg")
+        return "md"
+
+    monkeypatch.setattr(ppt, "LLM_ENABLED", False)
+    monkeypatch.setattr(ppt, "render_markdown", fake_render)
+    monkeypatch.setenv("TABDUMP_DOCS_MORE_LINKS_GROUPING_MODE", "energy")
+
+    ppt.build_clean_note(Path("/tmp/ignore.md"), items, dump_id="id")
+
+    assert captured["cfg"] == {"docsOneOffGroupingMode": "energy"}
+
+
 def test_monitor_passes_llm_env_from_config(tmp_path, monkeypatch):
     vault_inbox = tmp_path / "inbox"
     vault_inbox.mkdir()
@@ -160,6 +209,7 @@ def test_monitor_passes_llm_env_from_config(tmp_path, monkeypatch):
                     "llmRedactQuery": False,
                     "llmTitleMax": 123,
                     "maxItems": 7,
+                    "docsMoreLinksGroupingMode": "energy",
                 },
                 indent=2,
             )
@@ -197,6 +247,7 @@ def test_monitor_passes_llm_env_from_config(tmp_path, monkeypatch):
     assert captured_env["TABDUMP_LLM_REDACT_QUERY"] == "0"
     assert captured_env["TABDUMP_LLM_TITLE_MAX"] == "123"
     assert captured_env["TABDUMP_MAX_ITEMS"] == "7"
+    assert captured_env["TABDUMP_DOCS_MORE_LINKS_GROUPING_MODE"] == "energy"
 
     state = json.loads(state_path.read_text(encoding="utf-8"))
     assert state["lastStatus"] == "noop"

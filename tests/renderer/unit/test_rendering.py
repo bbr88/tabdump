@@ -4,11 +4,13 @@ from core.renderer.rendering import (
     _escape_md_url,
     _format_bullet,
     _frontmatter,
+    _group_oneoffs_by_energy,
     _group_items,
     _group_oneoffs_by_kind,
     _kind_display_label,
     _render_docs_callout,
     _render_quick_callout,
+    _today_context_line,
 )
 
 
@@ -21,6 +23,8 @@ def _item(**overrides):
         "domain": "example.com",
         "domain_category": "docs_site",
         "kind": "docs",
+        "intent": {"action": "read"},
+        "effort": "",
         "topics": [{"slug": "distributed-systems"}],
     }
     base.update(overrides)
@@ -69,6 +73,7 @@ def test_escape_and_format_bullet_encodes_markdown_sensitive_text():
     assert bullet.startswith("> - [ ] ")
     assert "[A \\[Title\\]](https://example.com/a%20b%28c%29)" in bullet
     assert "source.example" in bullet
+    assert "[medium effort]" in bullet
 
 
 def test_group_items_respects_pins_and_admin_heading_format():
@@ -98,6 +103,14 @@ def test_kind_labels_and_group_oneoffs_sorting():
         ]
     )
     assert [label for label, _ in grouped] == ["Docs", "Articles", "Papers"]
+
+    grouped_energy = _group_oneoffs_by_energy(
+        [
+            ("a.com", _item(kind="article", canonical_title="z", effort="quick")),
+            ("b.com", _item(kind="paper", canonical_title="a", effort="deep")),
+        ]
+    )
+    assert [label for label, _ in grouped_energy] == ["Deep Reads", "Quick References"]
 
 
 def test_render_quick_callout_and_docs_large_mode_grouping():
@@ -144,6 +157,21 @@ def test_render_quick_callout_and_docs_large_mode_grouping():
     assert "> #### Docs" in docs_text
     assert "> #### Articles" in docs_text
     assert "> #### Papers" in docs_text
+    assert " · d1.com" in docs_text
+
+
+def test_today_context_line_prefers_topics_with_domain_fallback():
+    line_topics = _today_context_line([_item(topics=[{"slug": "postgres"}]), _item(topics=[{"slug": "llm"}])])
+    assert line_topics == "> [!abstract] Today's Context: #llm | #postgres"
+
+    line_domains = _today_context_line(
+        [
+            _item(topics=[{"slug": "misc"}], domain="docs.example.com"),
+            _item(topics=[{"slug": "misc"}], domain="blog.example.com"),
+        ]
+    )
+    assert line_domains.startswith("> [!abstract] Today's Context:")
+    assert "docs.example.com" in line_domains
 
 
 def test_render_quick_callout_falls_back_to_generic_mode_when_disabled():

@@ -43,6 +43,15 @@ def safe_score(value: object) -> Optional[int]:
     return score
 
 
+def safe_effort(value: object) -> Optional[str]:
+    if not isinstance(value, str):
+        return None
+    candidate = value.strip().lower()
+    if candidate in {"quick", "medium", "deep"}:
+        return candidate
+    return None
+
+
 def safe_prio(value: object) -> Optional[str]:
     if isinstance(value, str):
         candidate = value.strip().lower()
