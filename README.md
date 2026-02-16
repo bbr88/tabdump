@@ -62,6 +62,34 @@ Build a versioned OpenClaw skill artifact:
 bash scripts/build-openclaw-skill-package.sh --version v0.1.0-local --output-dir dist
 ```
 
+## How To Run Live Matrix
+
+Run the live classifier comparison matrix (`local` vs `LLM`, and `LLM` vs `LLM`) against `gpt-4.1-mini`, `gpt-4.1`, and `gpt-5-nano`:
+
+```bash
+TABDUMP_LIVE_LLM_EVAL=1 \
+TABDUMP_LLM_COMPARE_MODELS="gpt-4.1-mini,gpt-4.1-nano,gpt-4o-mini,gpt-4o,gpt-5-mini,gpt-5.2" \
+python3 -m pytest -q -s tests/postprocess/integration/test_classifier_comparison_live.py
+```
+
+Enable threshold enforcement during the live run:
+
+```bash
+TABDUMP_LIVE_LLM_EVAL=1 \
+TABDUMP_LIVE_LLM_ENFORCE_THRESHOLDS=1 \
+TABDUMP_LLM_COMPARE_MODELS="gpt-4.1-mini,gpt-4.1,gpt-5-nano" \
+python3 -m pytest -q -s tests/postprocess/integration/test_classifier_comparison_live.py
+```
+
+Refresh frozen fixtures from live model outputs:
+
+```bash
+TABDUMP_LIVE_LLM_EVAL=1 \
+TABDUMP_REFRESH_LLM_FIXTURES=1 \
+TABDUMP_LLM_COMPARE_MODELS="gpt-4.1-mini,gpt-4.1,gpt-5-nano" \
+python3 -m pytest -q -s tests/postprocess/integration/test_classifier_comparison_live.py
+```
+
 ## Docs
 
 - Detailed usage: `docs/user-manual.md`

@@ -12,6 +12,10 @@ def pytest_configure(config):
         "markers",
         "policy(policy_id): map a test to a security policy ID from tests/security_policy.py",
     )
+    config.addinivalue_line(
+        "markers",
+        "live_llm: runs live OpenAI-backed classifier comparison tests (opt-in only).",
+    )
 
 
 def _requires_policy_marker(item) -> bool:
