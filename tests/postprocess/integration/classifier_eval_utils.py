@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import io
 import json
 from pathlib import Path
 from typing import Dict, Iterable, List, Tuple
 from urllib.parse import urlsplit
 
-from core.postprocess.classify_local import classify_local
+from core.postprocess.classify_local import classify_local, infer_local_action
 from core.postprocess.coerce import safe_action, safe_kind, safe_score, safe_topic
 from core.postprocess.models import Item
 from core.postprocess.urls import normalize_url
@@ -128,21 +129,23 @@ def evaluate_against_gold(cases: Iterable[dict], predictions: Dict[str, dict]) -
 
     topic_hits = 0
     kind_hits = 0
-    action_hits = 0
+    action_raw_hits = 0
+    action_kind_derived_hits = 0
     score_hits = 0
 
     mismatches = {
         "topic": [],
         "kind": [],
-        "action": [],
+        "action_raw": [],
+        "action_kind_derived": [],
         "score_within_1": [],
     }
     for case in case_list:
         case_id = str(case["id"])
+        item = build_item(case)
         exp = expected[case_id]
         got = predictions.get(case_id)
         if got is None:
-            item = build_item(case)
             got = _canonicalize({}, domain=item.domain)
 
         if got["topic"] == exp["topic"]:
@@ -156,21 +159,31 @@ def evaluate_against_gold(cases: Iterable[dict], predictions: Dict[str, dict]) -
             mismatches["kind"].append(case_id)
 
         if got["action"] == exp["action"]:
-            action_hits += 1
+            action_raw_hits += 1
         else:
-            mismatches["action"].append(case_id)
+            mismatches["action_raw"].append(case_id)
+
+        kind_derived_action = infer_local_action(got["kind"], item)
+        if kind_derived_action == exp["action"]:
+            action_kind_derived_hits += 1
+        else:
+            mismatches["action_kind_derived"].append(case_id)
 
         if abs(int(got["score"]) - int(exp["score"])) <= 1:
             score_hits += 1
         else:
             mismatches["score_within_1"].append(case_id)
 
+    mismatches["action"] = list(mismatches["action_raw"])
+
     return {
         "total": total,
         "accuracy": {
             "topic": topic_hits / total,
             "kind": kind_hits / total,
-            "action": action_hits / total,
+            "action": action_raw_hits / total,
+            "action_raw": action_raw_hits / total,
+            "action_kind_derived": action_kind_derived_hits / total,
             "score_within_1": score_hits / total,
         },
         "mismatches": mismatches,
@@ -220,6 +233,7 @@ def run_live_llm_predictions(cases: Iterable[dict], *, model: str, api_key: str)
     items = [build_item(case) for case in case_list]
     indexed = list(enumerate(items))
     url_to_idx = {item.norm_url: idx for idx, item in indexed}
+    stderr_capture = io.StringIO()
 
     def _call(_system: str, _user: str, _api_key: str):
         return llm.openai_chat_json(
@@ -237,7 +251,12 @@ def run_live_llm_predictions(cases: Iterable[dict], *, model: str, api_key: str)
         chunk_size=30,
         redact_llm=False,
         call_with_retries_fn=lambda system, user, api_key: _call(system, user, api_key),
+        stderr=stderr_capture,
     )
+
+    if not cls_map:
+        detail = stderr_capture.getvalue().strip() or "No classifications were mapped to input ids."
+        raise RuntimeError(f"Model '{model}' produced 0 mapped classifications. {detail}")
 
     out: Dict[str, dict] = {}
     for idx, case in enumerate(case_list):

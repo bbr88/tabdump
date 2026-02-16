@@ -3,6 +3,7 @@ import re
 
 import pytest
 
+from core.postprocess import llm as llm_module
 from core.tab_policy.taxonomy import POSTPROCESS_ACTIONS, POSTPROCESS_KINDS
 from tests.postprocess.integration.classifier_eval_utils import (
     ACCURACY_THRESHOLDS,
@@ -14,6 +15,7 @@ from tests.postprocess.integration.classifier_eval_utils import (
     predict_local,
     evaluate_against_gold,
     evaluate_pairwise,
+    run_live_llm_predictions,
 )
 
 
@@ -85,3 +87,14 @@ def test_pairwise_kind_action_agreement_between_local_and_frozen_models():
     for left, right in itertools.combinations(sorted(all_predictions), 2):
         pair_metrics = evaluate_pairwise(cases, all_predictions[left], all_predictions[right])
         _assert_pairwise(f"{left} vs {right}", pair_metrics)
+
+
+def test_run_live_predictions_fails_when_no_items_are_mapped(monkeypatch):
+    cases = load_gold_cases()[:1]
+
+    monkeypatch.setattr(llm_module, "classify_with_llm", lambda *args, **kwargs: {})
+
+    with pytest.raises(RuntimeError) as exc:
+        run_live_llm_predictions(cases, model="gpt-5-mini", api_key="k")
+
+    assert "0 mapped classifications" in str(exc.value)

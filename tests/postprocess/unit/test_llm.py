@@ -1,4 +1,6 @@
 import json
+import urllib.error
+from io import BytesIO
 from io import StringIO
 from types import SimpleNamespace
 
@@ -103,6 +105,89 @@ def test_openai_chat_json_happy_path(monkeypatch):
     assert captured["timeout"] == 120
     assert captured["auth"] == "Bearer key"
     assert captured["payload"]["model"] == "gpt-4.1-mini"
+
+
+def test_openai_chat_json_retries_without_temperature_when_unsupported(monkeypatch):
+    seen_payloads = []
+
+    class DummyResp:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def read(self):
+            body = {
+                "choices": [
+                    {
+                        "message": {
+                            "content": json.dumps({"ok": True}),
+                        }
+                    }
+                ]
+            }
+            return json.dumps(body).encode("utf-8")
+
+    def fake_urlopen(req, timeout):
+        payload = json.loads(req.data.decode("utf-8"))
+        seen_payloads.append(payload)
+        if len(seen_payloads) == 1:
+            body = json.dumps(
+                {
+                    "error": {
+                        "message": "Unsupported value: 'temperature'",
+                        "param": "temperature",
+                        "code": "unsupported_value",
+                    }
+                }
+            ).encode("utf-8")
+            raise urllib.error.HTTPError(
+                req.full_url,
+                400,
+                "Bad Request",
+                hdrs=None,
+                fp=BytesIO(body),
+            )
+        return DummyResp()
+
+    monkeypatch.setattr(llm.urllib.request, "urlopen", fake_urlopen)
+
+    out = llm.openai_chat_json("system", "user", model="gpt-5-mini", api_key="key")
+
+    assert out == {"ok": True}
+    assert len(seen_payloads) == 2
+    assert "temperature" in seen_payloads[0]
+    assert "temperature" not in seen_payloads[1]
+
+
+def test_openai_chat_json_surfaces_http_error_details(monkeypatch):
+    def fake_urlopen(req, timeout):
+        body = json.dumps(
+            {
+                "error": {
+                    "message": "Invalid request field",
+                    "param": "messages",
+                    "code": "invalid_request_error",
+                }
+            }
+        ).encode("utf-8")
+        raise urllib.error.HTTPError(
+            req.full_url,
+            400,
+            "Bad Request",
+            hdrs=None,
+            fp=BytesIO(body),
+        )
+
+    monkeypatch.setattr(llm.urllib.request, "urlopen", fake_urlopen)
+
+    with pytest.raises(RuntimeError) as exc:
+        llm.openai_chat_json("system", "user", model="gpt-4.1-mini", api_key="key")
+
+    msg = str(exc.value)
+    assert "Invalid request field" in msg
+    assert "param=messages" in msg
 
 
 def test_chunked_respects_size():
