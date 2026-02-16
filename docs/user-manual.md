@@ -127,6 +127,8 @@ tabdump count
 tabdump count --json
 ```
 
+`tabdump count` is fail-hard: it returns an error if a fresh post-launch count cannot be confirmed.
+
 One-shot dump+close run (forced, bypasses gates):
 
 ```bash
@@ -216,7 +218,7 @@ TabDump produces:
 `tabdump count --json` fields include:
 
 1. `status` (`ok|error`)
-2. `reason`
+2. `reason` (`count_only` on success, `count_unavailable` when freshness cannot be confirmed)
 3. `mode` (`count`)
 4. `forced`
 5. `tabCount`

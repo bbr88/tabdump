@@ -50,6 +50,8 @@ tabdump now --close
 tabdump permissions
 ```
 
+`tabdump count` fails with `count_unavailable` when a fresh post-launch tab count cannot be confirmed.
+
 ## OpenClaw Skill
 
 Canonical in-repo skill bundle:
