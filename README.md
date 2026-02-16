@@ -44,9 +44,22 @@ bash scripts/install.sh --yes --vault-inbox "~/obsidian/Inbox/" --app-archive ".
 tabdump status
 tabdump config show
 tabdump mode show
+tabdump count
 tabdump now
 tabdump now --close
 tabdump permissions
+```
+
+## OpenClaw Skill
+
+Canonical in-repo skill bundle:
+
+- `skills/tabdump-macos`
+
+Build a versioned OpenClaw skill artifact:
+
+```bash
+bash scripts/build-openclaw-skill-package.sh --version v0.1.0-local --output-dir dist
 ```
 
 ## Docs

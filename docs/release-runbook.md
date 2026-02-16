@@ -27,6 +27,9 @@ Set in `Settings -> Secrets and variables -> Actions`:
    - `tabdump-homebrew-vX.Y.Z.tar.gz`
    - `tabdump-homebrew-vX.Y.Z.tar.gz.sha256`
    - `tabdump-homebrew-vX.Y.Z.tar.gz.sig`
+   - `tabdump-openclaw-skill-vX.Y.Z.tar.gz`
+   - `tabdump-openclaw-skill-vX.Y.Z.tar.gz.sha256`
+   - `tabdump-openclaw-skill-vX.Y.Z.tar.gz.sig`
 5. If `scripts/runtime-manifest.sha256` changes, it must be release-scoped and rationale must be documented in the PR.
 
 ## Release Flow
@@ -55,17 +58,19 @@ Use this public key for artifact signature verification:
    - `git fetch --tags`
    - `git tag -v vX.Y.Z`
 2. Download assets:
-   - `gh release download vX.Y.Z -p "tabdump-app-vX.Y.Z.tar.gz" -p "tabdump-app-vX.Y.Z.tar.gz.sha256" -p "tabdump-app-vX.Y.Z.tar.gz.sig" -p "tabdump-homebrew-vX.Y.Z.tar.gz" -p "tabdump-homebrew-vX.Y.Z.tar.gz.sha256" -p "tabdump-homebrew-vX.Y.Z.tar.gz.sig" -D /tmp/tabdump-verify`
+   - `gh release download vX.Y.Z -p "tabdump-app-vX.Y.Z.tar.gz" -p "tabdump-app-vX.Y.Z.tar.gz.sha256" -p "tabdump-app-vX.Y.Z.tar.gz.sig" -p "tabdump-homebrew-vX.Y.Z.tar.gz" -p "tabdump-homebrew-vX.Y.Z.tar.gz.sha256" -p "tabdump-homebrew-vX.Y.Z.tar.gz.sig" -p "tabdump-openclaw-skill-vX.Y.Z.tar.gz" -p "tabdump-openclaw-skill-vX.Y.Z.tar.gz.sha256" -p "tabdump-openclaw-skill-vX.Y.Z.tar.gz.sig" -D /tmp/tabdump-verify`
 3. Verify checksums:
    - `cd /tmp/tabdump-verify`
    - `shasum -a 256 -c tabdump-app-vX.Y.Z.tar.gz.sha256`
    - `shasum -a 256 -c tabdump-homebrew-vX.Y.Z.tar.gz.sha256`
+   - `shasum -a 256 -c tabdump-openclaw-skill-vX.Y.Z.tar.gz.sha256`
 4. Verify signatures:
    - `cat > allowed_signers <<'EOF'`
    - `tabdump-release-signing ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDPdAPr5A+78p73lIXJ0csNUlcmSZVGFmTpox7SCqBBI`
    - `EOF`
    - `ssh-keygen -Y verify -f allowed_signers -I tabdump-release-signing -n file -s tabdump-app-vX.Y.Z.tar.gz.sig < tabdump-app-vX.Y.Z.tar.gz`
    - `ssh-keygen -Y verify -f allowed_signers -I tabdump-release-signing -n file -s tabdump-homebrew-vX.Y.Z.tar.gz.sig < tabdump-homebrew-vX.Y.Z.tar.gz`
+   - `ssh-keygen -Y verify -f allowed_signers -I tabdump-release-signing -n file -s tabdump-openclaw-skill-vX.Y.Z.tar.gz.sig < tabdump-openclaw-skill-vX.Y.Z.tar.gz`
 
 ### D) Update Homebrew Tap
 Source of truth: `bbr88/homebrew-tap`, `Formula/tabdump.rb`.

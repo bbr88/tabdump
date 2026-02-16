@@ -80,6 +80,32 @@ Skip codesign for rapid local iteration:
 bash scripts/build-local.sh --no-codesign
 ```
 
+## OpenClaw Skill Delivery
+
+Canonical skill source in this repo:
+
+- `skills/tabdump-macos`
+
+Build versioned skill artifact:
+
+```bash
+bash scripts/build-openclaw-skill-package.sh --version v0.1.0-local --output-dir dist
+```
+
+Result:
+
+- `dist/tabdump-openclaw-skill-v0.1.0-local.tar.gz`
+- `dist/tabdump-openclaw-skill-v0.1.0-local.tar.gz.sha256`
+
+The skill bundle includes helper wrappers:
+
+1. `scripts/tabdump_run_once.sh [--close]`
+2. `scripts/tabdump_status.sh`
+3. `scripts/tabdump_reload_launchagent.sh`
+4. `scripts/tabdump_permissions_reset.sh`
+5. `scripts/tabdump_install_from_repo.sh`
+6. `scripts/test_skill_smoke.sh [--active]`
+
 ## Core Commands
 
 Open app:
@@ -92,6 +118,13 @@ One-shot dump-only run (forced, bypasses gates):
 
 ```bash
 tabdump now
+```
+
+Count current tabs (same monitor/TCC path, no dump decision made):
+
+```bash
+tabdump count
+tabdump count --json
 ```
 
 One-shot dump+close run (forced, bypasses gates):
@@ -180,13 +213,21 @@ TabDump produces:
 6. `cleanNote`
 7. `autoSwitched`
 
+`tabdump count --json` fields include:
+
+1. `status` (`ok|error`)
+2. `reason`
+3. `mode` (`count`)
+4. `forced`
+5. `tabCount`
+
 ## Clean Note UX Cues
 
 The clean renderer adds quick orientation cues:
 
 1. `Start Here` includes a `Today's Context` line (top topics, with domain fallback).
-2. Bullets include effort pills such as `[quick read]`, `[medium read]`, `[deep watch]`.
-3. Large `Read Later` sections split singleton domains into `More Links` with two-line bullets for better title readability.
+2. Bullets include effort pills such as `[low effort]`, `[medium effort]`, `[high effort]`.
+3. Non-admin sections use two-line bullets for better title readability, while `Accounts & Settings` stays compact one-line.
 4. `docsMoreLinksGroupingMode` controls singleton grouping:
    - `kind` (default): `Docs` / `Articles` / `Papers`...
    - `energy`: `Deep Reads` / `Quick References`
