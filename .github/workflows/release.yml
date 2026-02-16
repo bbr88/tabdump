@@ -84,6 +84,7 @@ jobs:
             scripts/build-release.sh --version "${TAG}" --output-dir dist
           fi
           scripts/build-homebrew-package.sh --version "${TAG}" --output-dir dist
+          scripts/build-openclaw-skill-package.sh --version "${TAG}" --output-dir dist
 
           cat > "dist/RELEASE_NOTES.md" <<NOTES
           Release ${TAG}
@@ -95,6 +96,9 @@ jobs:
           - tabdump-homebrew-${TAG}.tar.gz
           - tabdump-homebrew-${TAG}.tar.gz.sha256
           - tabdump-homebrew-${TAG}.tar.gz.sig
+          - tabdump-openclaw-skill-${TAG}.tar.gz
+          - tabdump-openclaw-skill-${TAG}.tar.gz.sha256
+          - tabdump-openclaw-skill-${TAG}.tar.gz.sig
           NOTES
 
       - name: Sign release artifact
@@ -115,7 +119,7 @@ jobs:
           printf '%s\n' "${RELEASE_ARTIFACT_SIGNING_KEY}" > "${HOME}/.ssh/release_signing_key"
           chmod 600 "${HOME}/.ssh/release_signing_key"
 
-          for artifact in "dist/tabdump-app-${TAG}.tar.gz" "dist/tabdump-homebrew-${TAG}.tar.gz"; do
+          for artifact in "dist/tabdump-app-${TAG}.tar.gz" "dist/tabdump-homebrew-${TAG}.tar.gz" "dist/tabdump-openclaw-skill-${TAG}.tar.gz"; do
             ssh-keygen -Y sign -f "${HOME}/.ssh/release_signing_key" -n file "${artifact}"
           done
 

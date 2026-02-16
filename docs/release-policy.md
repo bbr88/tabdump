@@ -44,6 +44,8 @@ A single person should not perform all three roles for production releases.
    - packaged artifact (`tabdump-app-vX.Y.Z.tar.gz`)
    - checksum file (`.sha256`)
    - signature file (`.sig`)
+   - Homebrew package (`tabdump-homebrew-vX.Y.Z.tar.gz` + `.sha256` + `.sig`)
+   - OpenClaw skill package (`tabdump-openclaw-skill-vX.Y.Z.tar.gz` + `.sha256` + `.sig`)
 4. Artifact filenames must include exact version.
 
 ## Homebrew Requirements
