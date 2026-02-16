@@ -764,6 +764,124 @@ print(json.dumps(payload, sort_keys=True))
     assert "monitor --force --mode dump-close --json" in log
 
 
+def test_generated_cli_count_prints_tab_total(tmp_path):
+    install_run = _run_install(tmp_path, user_input="~/vault/inbox\n\nn\nn\n")
+    assert install_run.returncode == 0, install_run.stdout + install_run.stderr
+
+    monitor_path = install_run.home / "Library" / "Application Support" / "TabDump" / "monitor_tabs.py"
+    monitor_path.write_text(
+        """#!/usr/bin/env python3
+import json
+import os
+import sys
+log = os.environ.get("TABDUMP_TEST_LOG")
+if log:
+  with open(log, "a", encoding="utf-8") as fh:
+    fh.write("monitor " + " ".join(sys.argv[1:]) + "\\n")
+payload = {
+  "status": "ok",
+  "reason": "count_only",
+  "forced": True,
+  "mode": "count",
+  "rawDump": "",
+  "cleanNote": "",
+  "autoSwitched": False,
+  "tabCount": 42,
+}
+print(json.dumps(payload, sort_keys=True))
+""",
+        encoding="utf-8",
+    )
+
+    cli_run = _run_generated_cli(install_run, args=["count"])
+    output = cli_run.stdout + cli_run.stderr
+    assert cli_run.returncode == 0, output
+    assert cli_run.stdout.strip() == "42"
+
+    log = install_run.log_path.read_text(encoding="utf-8")
+    assert "monitor --force --mode count --json" in log
+
+
+def test_generated_cli_count_json_passthrough(tmp_path):
+    install_run = _run_install(tmp_path, user_input="~/vault/inbox\n\nn\nn\n")
+    assert install_run.returncode == 0, install_run.stdout + install_run.stderr
+
+    monitor_path = install_run.home / "Library" / "Application Support" / "TabDump" / "monitor_tabs.py"
+    monitor_path.write_text(
+        """#!/usr/bin/env python3
+import json
+import os
+import sys
+log = os.environ.get("TABDUMP_TEST_LOG")
+if log:
+  with open(log, "a", encoding="utf-8") as fh:
+    fh.write("monitor " + " ".join(sys.argv[1:]) + "\\n")
+payload = {
+  "status": "ok",
+  "reason": "count_only",
+  "forced": True,
+  "mode": "count",
+  "rawDump": "",
+  "cleanNote": "",
+  "autoSwitched": False,
+  "tabCount": 7,
+}
+print(json.dumps(payload, sort_keys=True))
+""",
+        encoding="utf-8",
+    )
+
+    cli_run = _run_generated_cli(install_run, args=["count", "--json"])
+    output = cli_run.stdout + cli_run.stderr
+    assert cli_run.returncode == 0, output
+
+    payload = json.loads(cli_run.stdout.strip())
+    assert payload["status"] == "ok"
+    assert payload["mode"] == "count"
+    assert payload["tabCount"] == 7
+
+    log = install_run.log_path.read_text(encoding="utf-8")
+    assert "monitor --force --mode count --json" in log
+
+
+def test_generated_cli_count_errors_on_count_unavailable(tmp_path):
+    install_run = _run_install(tmp_path, user_input="~/vault/inbox\n\nn\nn\n")
+    assert install_run.returncode == 0, install_run.stdout + install_run.stderr
+
+    monitor_path = install_run.home / "Library" / "Application Support" / "TabDump" / "monitor_tabs.py"
+    monitor_path.write_text(
+        """#!/usr/bin/env python3
+import json
+import os
+import sys
+log = os.environ.get("TABDUMP_TEST_LOG")
+if log:
+  with open(log, "a", encoding="utf-8") as fh:
+    fh.write("monitor " + " ".join(sys.argv[1:]) + "\\n")
+payload = {
+  "status": "error",
+  "reason": "count_unavailable",
+  "forced": True,
+  "mode": "count",
+  "rawDump": "",
+  "cleanNote": "",
+  "autoSwitched": False,
+  "tabCount": None,
+}
+print(json.dumps(payload, sort_keys=True))
+""",
+        encoding="utf-8",
+    )
+
+    cli_run = _run_generated_cli(install_run, args=["count"])
+    output = cli_run.stdout + cli_run.stderr
+    assert cli_run.returncode == 1
+    assert "[error] Failed to count tabs (count_unavailable)." in output
+
+    log = install_run.log_path.read_text(encoding="utf-8")
+    assert "monitor --force --mode count --json" in log
+
+
 def test_generated_cli_status_prints_expected_sections(tmp_path):
     install_run = _run_install(tmp_path, user_input="~/vault/inbox\n\nn\nn\n")
     assert install_run.returncode == 0, install_run.stdout + install_run.stderr

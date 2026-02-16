@@ -471,6 +471,179 @@ def test_monitor_force_mode_override_is_temporary(tmp_path, monkeypatch, capsys)
     assert restored_cfg == base_cfg
 
 
+def test_monitor_count_mode_returns_tab_count(tmp_path, monkeypatch, capsys):
+    vault_inbox = tmp_path / "inbox"
+    vault_inbox.mkdir()
+
+    base_cfg = {
+        "vaultInbox": str(vault_inbox),
+        "checkEveryMinutes": 99,
+        "cooldownMinutes": 45,
+        "maxTabs": 30,
+        "dryRun": False,
+        "dryRunPolicy": "manual",
+        "llmEnabled": False,
+    }
+    config_path = tmp_path / "config.json"
+    config_path.write_text(json.dumps(base_cfg, indent=2) + "\n", encoding="utf-8")
+
+    monitor_state_path = tmp_path / "monitor_state.json"
+    legacy_state_path = tmp_path / "state.json"
+    called = {"run": 0}
+    monitor_state_path.write_text(json.dumps({"lastCheck": 123.0}), encoding="utf-8")
+    legacy_state_path.write_text(
+        json.dumps({"lastCheck": 10, "lastDump": 0, "lastTabs": 5}),
+        encoding="utf-8",
+    )
+    os.utime(legacy_state_path, (time.time() - 2, time.time() - 2))
+
+    monkeypatch.setattr(monitor, "DEFAULT_CFG", config_path)
+    monkeypatch.setattr(monitor, "STATE_PATH", monitor_state_path)
+    monkeypatch.setattr(monitor, "LOCK_PATH", monitor_state_path.with_suffix(".lock"))
+    monkeypatch.setattr(monitor, "LEGACY_STATE_PATH", legacy_state_path)
+    monkeypatch.setattr(monitor.sys, "argv", ["monitor_tabs.py", "--mode", "count", "--json"])
+
+    def fake_run_tabdump_app():
+        called["run"] += 1
+        legacy_state_path.write_text(
+            json.dumps({"lastCheck": 11, "lastDump": 0, "lastTabs": 57}),
+            encoding="utf-8",
+        )
+
+    monkeypatch.setattr(monitor, "run_tabdump_app", fake_run_tabdump_app)
+    monkeypatch.setattr(
+        monitor.subprocess,
+        "run",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("postprocess should not run in count mode")),
+    )
+
+    rc = monitor.main()
+    assert rc == 0
+    assert called["run"] == 1
+
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert payload["status"] == "ok"
+    assert payload["reason"] == "count_only"
+    assert payload["mode"] == "count"
+    assert payload["tabCount"] == 57
+    assert payload["rawDump"] == ""
+    assert payload["cleanNote"] == ""
+
+    state = json.loads(monitor_state_path.read_text(encoding="utf-8"))
+    assert state["lastStatus"] == "ok"
+    assert state["lastReason"] == "count_only"
+    assert state["lastCount"] == 57
+    assert state["lastCheck"] == 123.0
+
+    restored_cfg = json.loads(config_path.read_text(encoding="utf-8"))
+    assert restored_cfg == base_cfg
+
+
+def test_monitor_count_mode_reports_unavailable_stale_state(tmp_path, monkeypatch, capsys):
+    vault_inbox = tmp_path / "inbox"
+    vault_inbox.mkdir()
+
+    config_path = tmp_path / "config.json"
+    config_path.write_text(
+        (
+            json.dumps(
+                {
+                    "vaultInbox": str(vault_inbox),
+                    "checkEveryMinutes": 0,
+                    "cooldownMinutes": 0,
+                    "maxTabs": 30,
+                    "dryRun": True,
+                    "dryRunPolicy": "manual",
+                    "llmEnabled": False,
+                },
+                indent=2,
+            )
+            + "\n"
+        ),
+        encoding="utf-8",
+    )
+
+    monitor_state_path = tmp_path / "monitor_state.json"
+    legacy_state_path = tmp_path / "state.json"
+    legacy_state_path.write_text(
+        json.dumps({"lastCheck": 100, "lastDump": 90, "lastTabs": 17}),
+        encoding="utf-8",
+    )
+    os.utime(legacy_state_path, (time.time() - 2, time.time() - 2))
+
+    monkeypatch.setattr(monitor, "DEFAULT_CFG", config_path)
+    monkeypatch.setattr(monitor, "STATE_PATH", monitor_state_path)
+    monkeypatch.setattr(monitor, "LOCK_PATH", monitor_state_path.with_suffix(".lock"))
+    monkeypatch.setattr(monitor, "LEGACY_STATE_PATH", legacy_state_path)
+    monkeypatch.setattr(monitor, "NEW_DUMP_WAIT_SECONDS", 0.2)
+    monkeypatch.setattr(monitor, "NEW_DUMP_POLL_SECONDS", 0.01)
+    monkeypatch.setattr(monitor, "run_tabdump_app", lambda: None)
+    monkeypatch.setattr(monitor.sys, "argv", ["monitor_tabs.py", "--mode", "count", "--json"])
+
+    rc = monitor.main()
+    assert rc == 1
+
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert payload["status"] == "error"
+    assert payload["reason"] == "count_unavailable"
+    assert payload["mode"] == "count"
+    assert payload["tabCount"] is None
+
+    state = json.loads(monitor_state_path.read_text(encoding="utf-8"))
+    assert state["lastStatus"] == "error"
+    assert state["lastReason"] == "count_unavailable"
+
+
+def test_monitor_count_mode_reports_unavailable_missing_state(tmp_path, monkeypatch, capsys):
+    vault_inbox = tmp_path / "inbox"
+    vault_inbox.mkdir()
+
+    config_path = tmp_path / "config.json"
+    config_path.write_text(
+        (
+            json.dumps(
+                {
+                    "vaultInbox": str(vault_inbox),
+                    "checkEveryMinutes": 0,
+                    "cooldownMinutes": 0,
+                    "maxTabs": 30,
+                    "dryRun": True,
+                    "dryRunPolicy": "manual",
+                    "llmEnabled": False,
+                },
+                indent=2,
+            )
+            + "\n"
+        ),
+        encoding="utf-8",
+    )
+
+    monitor_state_path = tmp_path / "monitor_state.json"
+    legacy_state_path = tmp_path / "missing-state.json"
+
+    monkeypatch.setattr(monitor, "DEFAULT_CFG", config_path)
+    monkeypatch.setattr(monitor, "STATE_PATH", monitor_state_path)
+    monkeypatch.setattr(monitor, "LOCK_PATH", monitor_state_path.with_suffix(".lock"))
+    monkeypatch.setattr(monitor, "LEGACY_STATE_PATH", legacy_state_path)
+    monkeypatch.setattr(monitor, "NEW_DUMP_WAIT_SECONDS", 0.2)
+    monkeypatch.setattr(monitor, "NEW_DUMP_POLL_SECONDS", 0.01)
+    monkeypatch.setattr(monitor, "run_tabdump_app", lambda: None)
+    monkeypatch.setattr(monitor.sys, "argv", ["monitor_tabs.py", "--mode", "count", "--json"])
+
+    rc = monitor.main()
+    assert rc == 1
+
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert payload["status"] == "error"
+    assert payload["reason"] == "count_unavailable"
+    assert payload["mode"] == "count"
+    assert payload["tabCount"] is None
+
+    state = json.loads(monitor_state_path.read_text(encoding="utf-8"))
+    assert state["lastStatus"] == "error"
+    assert state["lastReason"] == "count_unavailable"
+
+
 def test_monitor_force_override_preserves_auto_switch(tmp_path, monkeypatch):
     vault_inbox = tmp_path / "inbox"
     vault_inbox.mkdir()

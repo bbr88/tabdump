@@ -967,6 +967,7 @@ Usage:
   tabdump init [install-options]
   tabdump uninstall [uninstall-options]
   tabdump [run|open]
+  tabdump count [--json]
   tabdump now [--close] [--json]
   tabdump mode [show|dump-only|dump-close|auto]
   tabdump config [show|get <key>|set <key> <value> ...]
@@ -1516,6 +1517,60 @@ run_monitor_json() {
   echo "${output}"
 }
 
+count_cmd() {
+  local want_json=0
+  local arg
+  local monitor_json
+  local status
+  local tab_count
+  local reason
+
+  while [[ "$#" -gt 0 ]]; do
+    arg="$1"
+    case "${arg}" in
+      --json)
+        want_json=1
+        ;;
+      -h|--help)
+        echo "Usage: tabdump count [--json]"
+        return 0
+        ;;
+      *)
+        echo "[error] Unknown option for tabdump count: ${arg}" >&2
+        echo "Usage: tabdump count [--json]" >&2
+        return 1
+        ;;
+    esac
+    shift
+  done
+
+  ensure_config
+  ensure_monitor
+
+  if ! monitor_json="$(run_monitor_json "count")"; then
+    return 1
+  fi
+  if [[ "${want_json}" -eq 1 ]]; then
+    echo "${monitor_json}"
+    return 0
+  fi
+
+  status="$(read_json_field "${monitor_json}" "status")"
+  tab_count="$(read_json_field "${monitor_json}" "tabCount")"
+  reason="$(read_json_field "${monitor_json}" "reason")"
+
+  if [[ "${status}" == "ok" && "${tab_count}" =~ ^[0-9]+$ ]]; then
+    echo "${tab_count}"
+    return 0
+  fi
+
+  if [[ -z "${reason}" ]]; then
+    reason="unknown"
+  fi
+  echo "[error] Failed to count tabs (${reason})." >&2
+  return 1
+}
+
 now_cmd() {
   local mode_arg="dump-only"
   local want_json=0
@@ -1786,6 +1841,10 @@ case "${cmd}" in
     shift || true
     now_cmd "$@"
     ;;
+  count)
+    shift || true
+    count_cmd "$@"
+    ;;
   mode)
     mode_cmd "${2:-show}"
     ;;
@@ -1914,6 +1973,7 @@ print_summary() {
   echo "  tabdump status"
   echo "  tabdump config show"
   echo "  tabdump mode show"
+  echo "  tabdump count"
   echo "  tabdump now"
   echo "  tabdump now --close"
   echo "  tabdump permissions   # safe: forced dump-only, no tab closing"

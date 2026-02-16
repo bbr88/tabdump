@@ -48,12 +48,14 @@ DEFAULT_CFG = Path(os.environ.get("TABDUMP_CONFIG_PATH", str(APP_SUPPORT / "conf
 APP_PATH = Path(os.environ.get("TABDUMP_APP_PATH", "~/Applications/TabDump.app")).expanduser()
 APP_EXEC = Path(os.environ.get("TABDUMP_APP_EXEC", str(APP_PATH / "Contents/MacOS/applet"))).expanduser()
 STATE_PATH = Path(os.environ.get("TABDUMP_MONITOR_STATE", str(APP_SUPPORT / "monitor_state.json"))).expanduser()
+LEGACY_STATE_PATH = Path(os.environ.get("TABDUMP_LEGACY_STATE", str(APP_SUPPORT / "state.json"))).expanduser()
 LOCK_PATH = STATE_PATH.with_suffix(".lock")
 VERBOSE = False
 FORCE = False
 JSON_OUTPUT = False
 PRINT_CLEAN = False
 MODE_OVERRIDE = "config"
+COUNT_ONLY_MAX_TABS = 2_147_483_647
 TRUST_RAMP_DAYS = 3
 NEW_DUMP_WAIT_SECONDS = float(os.environ.get("TABDUMP_NEW_DUMP_WAIT_SECONDS", "8"))
 NEW_DUMP_POLL_SECONDS = float(os.environ.get("TABDUMP_NEW_DUMP_POLL_SECONDS", "0.25"))
@@ -167,18 +169,18 @@ def parse_args(argv: List[str]) -> None:
             PRINT_CLEAN = True
         elif arg == "--mode":
             if idx + 1 >= len(args):
-                raise SystemExit("--mode requires one of: config, dump-only, dump-close")
+                raise SystemExit("--mode requires one of: config, dump-only, dump-close, count")
             idx += 1
             MODE_OVERRIDE = args[idx].strip().lower()
-            if MODE_OVERRIDE not in {"config", "dump-only", "dump-close"}:
+            if MODE_OVERRIDE not in {"config", "dump-only", "dump-close", "count"}:
                 raise SystemExit(f"invalid --mode value: {MODE_OVERRIDE}")
         elif arg.startswith("--mode="):
             MODE_OVERRIDE = arg.split("=", 1)[1].strip().lower()
-            if MODE_OVERRIDE not in {"config", "dump-only", "dump-close"}:
+            if MODE_OVERRIDE not in {"config", "dump-only", "dump-close", "count"}:
                 raise SystemExit(f"invalid --mode value: {MODE_OVERRIDE}")
         elif arg in ("-h", "--help"):
             print(
-                "usage: monitor_tabs.py [--verbose] [--force] [--mode config|dump-only|dump-close] "
+                "usage: monitor_tabs.py [--verbose] [--force] [--mode config|dump-only|dump-close|count] "
                 "[--json|--print-clean]",
                 file=sys.stderr,
             )
@@ -281,6 +283,18 @@ def build_runtime_cfg(cfg: dict) -> tuple[dict, bool]:
         if _cfg_bool(runtime_cfg.get("dryRun", True), default=True):
             runtime_cfg["dryRun"] = False
             changed = True
+    elif MODE_OVERRIDE == "count":
+        for key, value in (
+            ("checkEveryMinutes", 0),
+            ("cooldownMinutes", 0),
+            ("maxTabs", COUNT_ONLY_MAX_TABS),
+        ):
+            if runtime_cfg.get(key) != value:
+                runtime_cfg[key] = value
+                changed = True
+        if not _cfg_bool(runtime_cfg.get("dryRun", True), default=True):
+            runtime_cfg["dryRun"] = True
+            changed = True
 
     return runtime_cfg, changed
 
@@ -292,6 +306,7 @@ def emit_result(
     raw_dump: Optional[Path] = None,
     clean_note: Optional[Path] = None,
     auto_switched: bool = False,
+    tab_count: Optional[int] = None,
 ) -> None:
     payload = {
         "status": status,
@@ -301,6 +316,7 @@ def emit_result(
         "rawDump": str(raw_dump) if raw_dump else "",
         "cleanNote": str(clean_note) if clean_note else "",
         "autoSwitched": auto_switched,
+        "tabCount": tab_count,
     }
     if JSON_OUTPUT:
         print(json.dumps(payload, sort_keys=True))
@@ -401,6 +417,63 @@ def maybe_auto_switch_dry_run(cfg: dict, cfg_path: Path, state: dict) -> bool:
     return True
 
 
+def _legacy_int(value: object) -> Optional[int]:
+    try:
+        if value is None:
+            return None
+        return int(value)
+    except Exception:
+        return None
+
+
+def snapshot_legacy_state(state_path: Path) -> dict:
+    out = {"exists": False, "mtime": 0.0, "lastCheck": None, "lastTabs": None}
+    if not state_path.exists():
+        return out
+    out["exists"] = True
+    try:
+        out["mtime"] = float(state_path.stat().st_mtime)
+    except Exception:
+        out["mtime"] = 0.0
+    try:
+        data = json.loads(state_path.read_text(encoding="utf-8")) or {}
+    except Exception:
+        return out
+    out["lastCheck"] = _legacy_int(data.get("lastCheck"))
+    out["lastTabs"] = _legacy_int(data.get("lastTabs"))
+    return out
+
+
+def wait_for_fresh_legacy_tab_count(state_path: Path, baseline: dict) -> Optional[int]:
+    deadline = time.time() + max(0.0, NEW_DUMP_WAIT_SECONDS)
+    poll = max(0.05, NEW_DUMP_POLL_SECONDS)
+    while True:
+        current = snapshot_legacy_state(state_path)
+        tab_count = current.get("lastTabs")
+        if tab_count is not None:
+            fresh = False
+            if baseline.get("exists"):
+                if float(current.get("mtime") or 0.0) > float(baseline.get("mtime") or 0.0):
+                    fresh = True
+                else:
+                    baseline_last_check = baseline.get("lastCheck")
+                    current_last_check = current.get("lastCheck")
+                    if (
+                        baseline_last_check is not None
+                        and current_last_check is not None
+                        and int(current_last_check) > int(baseline_last_check)
+                    ):
+                        fresh = True
+            elif current.get("exists"):
+                fresh = True
+            if fresh:
+                return int(tab_count)
+
+        if time.time() >= deadline:
+            return None
+        time.sleep(poll)
+
+
 def main() -> int:
     parse_args(sys.argv)
     _lock_fh = acquire_lock()
@@ -417,6 +490,23 @@ def main() -> int:
     auto_switched = False
     cfg_after_run_persistent = dict(persistent_cfg)
     try:
+        if MODE_OVERRIDE == "count":
+            baseline_legacy_state = snapshot_legacy_state(LEGACY_STATE_PATH)
+            run_tabdump_app()
+            tab_count = wait_for_fresh_legacy_tab_count(LEGACY_STATE_PATH, baseline_legacy_state)
+            if tab_count is None:
+                log("error: count mode could not confirm fresh lastTabs from legacy state")
+                record_last_result(state, status="error", reason="count_unavailable")
+                save_state(state)
+                emit_result(status="error", reason="count_unavailable")
+                return 1
+            state["lastCount"] = tab_count
+            state["lastCountAt"] = time.time()
+            record_last_result(state, status="ok", reason="count_only")
+            save_state(state)
+            emit_result(status="ok", reason="count_only", tab_count=tab_count)
+            return 0
+
         now = time.time()
         check_every = int(cfg_for_run.get("checkEveryMinutes", 60))
         last_check = float(state.get("lastCheck", 0))
