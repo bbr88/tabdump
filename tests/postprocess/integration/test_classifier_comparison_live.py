@@ -55,7 +55,9 @@ def test_live_classifier_matrix_reports_accuracy_and_pairwise_agreement():
         accuracy = metrics["accuracy"]
         print(
             f"{label}: topic={accuracy['topic']:.2%} kind={accuracy['kind']:.2%} "
-            f"action={accuracy['action']:.2%} score±1={accuracy['score_within_1']:.2%}"
+            f"action(raw)={accuracy['action_raw']:.2%} "
+            f"action(kind-derived)={accuracy['action_kind_derived']:.2%} "
+            f"score±1={accuracy['score_within_1']:.2%}"
         )
 
     print("\npairwise-kind-action-agreement")

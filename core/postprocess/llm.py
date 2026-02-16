@@ -4,6 +4,7 @@ import json
 import os
 import subprocess
 import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 from typing import Dict, List, Optional, TextIO, Tuple
@@ -50,6 +51,60 @@ def resolve_openai_api_key(keychain_service: str, keychain_account: str) -> Opti
     return value or None
 
 
+def _temperature_value() -> Optional[float]:
+    raw = os.environ.get("TABDUMP_TAG_TEMPERATURE", "0.2")
+    if raw is None:
+        return 0.2
+    value = str(raw).strip()
+    if not value:
+        return None
+    return float(value)
+
+
+def _post_chat_completion(payload: dict, api_key: str) -> dict:
+    req = urllib.request.Request(
+        "https://api.openai.com/v1/chat/completions",
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        body = ""
+        try:
+            body = exc.read().decode("utf-8", errors="replace")
+        except Exception:
+            body = ""
+
+        detail = f"HTTP {exc.code}"
+        if body:
+            parsed = None
+            try:
+                parsed = json.loads(body)
+            except Exception:
+                parsed = None
+
+            if isinstance(parsed, dict):
+                err = parsed.get("error")
+                if isinstance(err, dict):
+                    msg = err.get("message")
+                    param = err.get("param")
+                    code = err.get("code")
+                    parts = [piece for piece in [msg, f"param={param}" if param else None, f"code={code}" if code else None] if piece]
+                    detail = " | ".join(parts) if parts else body[:500]
+                else:
+                    detail = body[:500]
+            else:
+                detail = body[:500]
+
+        raise RuntimeError(f"OpenAI chat completion failed: {detail}") from exc
+
+
 def openai_chat_json(
     system: str,
     user: str,
@@ -76,24 +131,26 @@ def openai_chat_json(
             {"role": "user", "content": user},
         ],
         "response_format": {"type": "json_object"},
-        "temperature": 0.2,
     }
+    temperature = _temperature_value()
+    if temperature is not None:
+        payload["temperature"] = temperature
 
-    req = urllib.request.Request(
-        "https://api.openai.com/v1/chat/completions",
-        data=json.dumps(payload).encode("utf-8"),
-        headers={
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-        },
-        method="POST",
-    )
-
-    with urllib.request.urlopen(req, timeout=120) as resp:
-        data = json.loads(resp.read().decode("utf-8"))
+    try:
+        data = _post_chat_completion(payload=payload, api_key=api_key)
+    except RuntimeError as exc:
+        text = str(exc).lower()
+        if "temperature" in payload and "temperature" in text and "unsupported" in text:
+            payload.pop("temperature", None)
+            data = _post_chat_completion(payload=payload, api_key=api_key)
+        else:
+            raise
 
     content = data["choices"][0]["message"]["content"]
-    return json.loads(content)
+    try:
+        return json.loads(content)
+    except Exception as exc:
+        raise RuntimeError(f"OpenAI response is not valid JSON content: {str(content)[:500]}") from exc
 
 
 def chunked(items: List, size: int) -> List[List]:
