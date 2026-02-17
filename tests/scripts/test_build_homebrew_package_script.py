@@ -66,6 +66,7 @@ def test_build_homebrew_package_contains_runtime_and_app_archive(tmp_path):
     assert "skills/tabdump-macos/SKILL.md" in names
     assert "skills/tabdump-macos/references/config.md" in names
     assert "skills/tabdump-macos/scripts/tabdump_run_once.sh" in names
+    assert "skills/tabdump-macos/scripts/tabdump_count.sh" in names
     assert "skills/tabdump-macos/scripts/tabdump_status.sh" in names
 
 
