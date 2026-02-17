@@ -50,6 +50,40 @@ def _make_items(n: int) -> list[Item]:
     return items
 
 
+def test_run_tabdump_app_uses_background_hidden_open(monkeypatch, tmp_path):
+    app_path = tmp_path / "TabDump.app"
+    app_path.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setattr(monitor, "APP_PATH", app_path)
+
+    captured = {}
+
+    def fake_run(args, check, timeout):
+        captured["args"] = args
+        captured["check"] = check
+        captured["timeout"] = timeout
+        return SimpleNamespace(returncode=0)
+
+    monkeypatch.setattr(monitor.subprocess, "run", fake_run)
+
+    monitor.run_tabdump_app()
+
+    assert captured["args"] == ["/usr/bin/open", "-g", "-j", "-a", str(app_path)]
+    assert captured["check"] is True
+    assert captured["timeout"] == 30
+
+
+def test_run_tabdump_app_raises_when_app_missing(monkeypatch, tmp_path):
+    app_path = tmp_path / "MissingTabDump.app"
+    monkeypatch.setattr(monitor, "APP_PATH", app_path)
+
+    try:
+        monitor.run_tabdump_app()
+    except FileNotFoundError as exc:
+        assert "TabDump app not found:" in str(exc)
+    else:
+        raise AssertionError("expected FileNotFoundError when app bundle is missing")
+
+
 def test_llm_id_mapping_uses_ids_not_urls(monkeypatch):
     items = _make_items(2)
 

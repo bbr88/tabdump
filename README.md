@@ -51,6 +51,7 @@ tabdump permissions
 ```
 
 `tabdump count` fails with `count_unavailable` when a fresh post-launch tab count cannot be confirmed.
+`tabdump count`, `tabdump now`, and `tabdump now --close` run TabDump in background/hidden mode to avoid stealing focus (except first-time permission prompts).
 
 ## OpenClaw Skill
 

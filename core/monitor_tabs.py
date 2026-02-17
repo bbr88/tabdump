@@ -224,13 +224,13 @@ def run_tabdump_app() -> None:
     Running the applet binary directly (Contents/MacOS/applet) can sometimes bypass
     the normal GUI launch path and lead to AppleEvents authorization issues.
     Using `open -a` ensures macOS attributes Automation prompts/approvals to the
-    TabDump.app bundle.
+    TabDump.app bundle, while `-g -j` reduces focus stealing for regular runs.
     """
     if not APP_PATH.exists():
         raise FileNotFoundError(f"TabDump app not found: {APP_PATH}")
 
     # `open` returns quickly; TabDump itself should run and quit.
-    subprocess.run(["/usr/bin/open", "-a", str(APP_PATH)], check=True, timeout=30)
+    subprocess.run(["/usr/bin/open", "-g", "-j", "-a", str(APP_PATH)], check=True, timeout=30)
 
     # Give the app a moment to run and write files.
     time.sleep(1.5)
