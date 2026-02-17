@@ -107,7 +107,7 @@ def test_llm_id_mapping_uses_ids_not_urls(monkeypatch):
     assert payload_items[1]["kind"] == "repo"
     assert payload_items[1]["topics"][0]["slug"] == "alpha"
     assert payload_items[1]["effort"] == "medium"
-    assert payload_items[0]["kind"] == "misc"
+    assert payload_items[0]["kind"] == "article"
     assert payload_items[0]["effort"] == "medium"
 
 
@@ -205,8 +205,8 @@ def test_max_items_cap_limits_classification_only(monkeypatch):
     assert len(payload_items) == 4
     assert payload_items[0]["kind"] == "repo"
     assert payload_items[1]["kind"] == "repo"
-    assert payload_items[2]["kind"] == "misc"
-    assert payload_items[3]["kind"] == "misc"
+    assert payload_items[2]["kind"] == "article"
+    assert payload_items[3]["kind"] == "article"
 
 
 def test_cli_reads_docs_more_links_grouping_mode_from_env(monkeypatch):
@@ -239,6 +239,8 @@ def test_monitor_passes_llm_env_from_config(tmp_path, monkeypatch):
                     "checkEveryMinutes": 0,
                     "llmEnabled": True,
                     "tagModel": "gpt-4.1-mini",
+                    "llmActionPolicy": "derived",
+                    "minLlmCoverage": 0.85,
                     "llmRedact": True,
                     "llmRedactQuery": False,
                     "llmTitleMax": 123,
@@ -280,6 +282,8 @@ def test_monitor_passes_llm_env_from_config(tmp_path, monkeypatch):
     assert captured_env["TABDUMP_LLM_REDACT"] == "1"
     assert captured_env["TABDUMP_LLM_REDACT_QUERY"] == "0"
     assert captured_env["TABDUMP_LLM_TITLE_MAX"] == "123"
+    assert captured_env["TABDUMP_LLM_ACTION_POLICY"] == "derived"
+    assert captured_env["TABDUMP_MIN_LLM_COVERAGE"] == "0.85"
     assert captured_env["TABDUMP_MAX_ITEMS"] == "7"
     assert captured_env["TABDUMP_DOCS_MORE_LINKS_GROUPING_MODE"] == "energy"
 

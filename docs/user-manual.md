@@ -290,12 +290,88 @@ Common keys:
 6. `checkEveryMinutes`
 7. `cooldownMinutes`
 8. `llmEnabled`
+9. `tagModel`
+10. `llmActionPolicy` (`raw|derived|hybrid`)
+11. `minLlmCoverage` (`0.0` to `1.0`)
 
 CLI helpers:
 
 1. `tabdump config show`
 2. `tabdump config get <key>`
 3. `tabdump config set <key> <value> [<key> <value> ...]`
+
+## LLM Action Policy and Coverage Guardrail
+
+TabDump has two controls that affect how LLM classification behaves when responses are noisy or incomplete:
+
+1. `TABDUMP_LLM_ACTION_POLICY` (config key: `llmActionPolicy`)
+2. `TABDUMP_MIN_LLM_COVERAGE` (config key: `minLlmCoverage`)
+
+In normal `tabdump now` / launch-agent runs, set these via config keys (`llmActionPolicy`, `minLlmCoverage`). The monitor exports them as env vars for postprocess.
+
+### `TABDUMP_LLM_ACTION_POLICY`
+
+Supported values:
+
+1. `raw`: use model action directly after normalization/coercion.
+2. `derived`: ignore model action; derive action from `kind + URL/title` rules.
+3. `hybrid` (default): use model action only when it is valid and compatible with the predicted kind; otherwise derive action from rules.
+
+Compatibility rules used by `hybrid`:
+
+1. `video`, `music` -> `watch`
+2. `tool`, `repo` -> `triage` or `build`
+3. `article`, `docs` -> `read` or `reference`
+4. `paper` -> `read`, `reference`, or `deep_work`
+5. `misc`, `local`, `internal`, `auth` -> `triage` or `ignore`
+
+Recommendation:
+
+1. Use `hybrid` for production reliability.
+2. Use `raw` only when auditing model verb behavior.
+3. Use `derived` when you want strictly deterministic action behavior from local policy.
+
+### `TABDUMP_MIN_LLM_COVERAGE`
+
+This controls fallback behavior for unmapped non-sensitive tabs.
+
+Coverage is computed as:
+
+1. `mapped_non_sensitive / non_sensitive_total`
+
+Behavior:
+
+1. If coverage is below `minLlmCoverage`, unmapped tabs fall back to local classifier.
+2. If coverage meets/exceeds `minLlmCoverage`, unmapped tabs keep generic defaults (`kind=misc`, `action=triage`).
+
+Tuning guidance:
+
+1. Start at `0.7` (default).
+2. Raise to `0.8-0.9` to be stricter and force more local fallback when LLM mapping quality drops.
+3. Lower to `0.5-0.6` if you prefer to trust partial LLM output more aggressively.
+
+### Configure via `tabdump config`
+
+Set recommended defaults:
+
+```bash
+tabdump config set llmActionPolicy hybrid minLlmCoverage 0.7
+```
+
+Inspect current values:
+
+```bash
+tabdump config get llmActionPolicy
+tabdump config get minLlmCoverage
+```
+
+Advanced direct postprocess override:
+
+```bash
+TABDUMP_LLM_ACTION_POLICY=derived \
+TABDUMP_MIN_LLM_COVERAGE=0.85 \
+python3 core/postprocess/cli.py "/path/to/TabDump YYYY-MM-DD HH-MM-SS.md"
+```
 
 ## Troubleshooting
 

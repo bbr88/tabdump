@@ -67,31 +67,54 @@ bash scripts/build-openclaw-skill-package.sh --version v0.1.0-local --output-dir
 
 ## How To Run Live Matrix
 
-Run the live classifier comparison matrix (`local` vs `LLM`, and `LLM` vs `LLM`) against `gpt-4.1-mini`, `gpt-4.1`, and `gpt-5-nano`:
+Run the live classifier comparison matrix (`local` vs `LLM`, and `LLM` vs `LLM`) against any model set.
+
+Force **v2** gold fixture explicitly (recommended):
 
 ```bash
 TABDUMP_LIVE_LLM_EVAL=1 \
+TABDUMP_CLASSIFIER_GOLD_FIXTURE="/Users/i.bisarnov/develop/orc-visioner/tabDump/tests/fixtures/classifier_eval/gold_generic_v2.json" \
 TABDUMP_LLM_COMPARE_MODELS="gpt-4.1-mini,gpt-4.1-nano,gpt-4o-mini,gpt-4o,gpt-5-mini,gpt-5.2" \
-python3 -m pytest -q -s tests/postprocess/integration/test_classifier_comparison_live.py
+python3 -m pytest -q -s /Users/i.bisarnov/develop/orc-visioner/tabDump/tests/postprocess/integration/test_classifier_comparison_live.py
 ```
+
+Force **v1** gold fixture explicitly (backward comparability):
+
+```bash
+TABDUMP_LIVE_LLM_EVAL=1 \
+TABDUMP_CLASSIFIER_GOLD_FIXTURE="/Users/i.bisarnov/develop/orc-visioner/tabDump/tests/fixtures/classifier_eval/gold_generic_v1.json" \
+TABDUMP_LLM_COMPARE_MODELS="gpt-4.1-mini,gpt-4.1,gpt-5-nano" \
+python3 -m pytest -q -s /Users/i.bisarnov/develop/orc-visioner/tabDump/tests/postprocess/integration/test_classifier_comparison_live.py
+```
+
+Use any comma-separated matrix via `TABDUMP_LLM_COMPARE_MODELS`.
 
 Enable threshold enforcement during the live run:
 
 ```bash
 TABDUMP_LIVE_LLM_EVAL=1 \
+TABDUMP_CLASSIFIER_GOLD_FIXTURE="/Users/i.bisarnov/develop/orc-visioner/tabDump/tests/fixtures/classifier_eval/gold_generic_v2.json" \
 TABDUMP_LIVE_LLM_ENFORCE_THRESHOLDS=1 \
-TABDUMP_LLM_COMPARE_MODELS="gpt-4.1-mini,gpt-4.1,gpt-5-nano" \
-python3 -m pytest -q -s tests/postprocess/integration/test_classifier_comparison_live.py
+TABDUMP_LLM_COMPARE_MODELS="gpt-4.1-mini,gpt-4.1-nano,gpt-4o-mini,gpt-4o,gpt-5-mini,gpt-5.2" \
+python3 -m pytest -q -s /Users/i.bisarnov/develop/orc-visioner/tabDump/tests/postprocess/integration/test_classifier_comparison_live.py
 ```
 
 Refresh frozen fixtures from live model outputs:
 
 ```bash
 TABDUMP_LIVE_LLM_EVAL=1 \
+TABDUMP_CLASSIFIER_GOLD_FIXTURE="/Users/i.bisarnov/develop/orc-visioner/tabDump/tests/fixtures/classifier_eval/gold_generic_v2.json" \
 TABDUMP_REFRESH_LLM_FIXTURES=1 \
 TABDUMP_LLM_COMPARE_MODELS="gpt-4.1-mini,gpt-4.1,gpt-5-nano" \
-python3 -m pytest -q -s tests/postprocess/integration/test_classifier_comparison_live.py
+python3 -m pytest -q -s /Users/i.bisarnov/develop/orc-visioner/tabDump/tests/postprocess/integration/test_classifier_comparison_live.py
 ```
+
+Key runtime controls for classifier behavior:
+
+- `TABDUMP_LLM_ACTION_POLICY`: `raw`, `derived`, or `hybrid` (default `hybrid`)
+- `TABDUMP_MIN_LLM_COVERAGE`: minimum mapped non-sensitive ratio before local fallback for unmapped items (default `0.7`)
+- `TABDUMP_TAG_MODEL`: primary model selector for production tagging/classification
+- `TABDUMP_TAG_TEMPERATURE`: optional temperature override for LLM classification requests (`0.2` default, unset/empty to omit)
 
 ## Docs
 

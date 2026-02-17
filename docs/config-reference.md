@@ -48,8 +48,14 @@ Renderer tuning defaults in `core/renderer/config.py` are internal defaults and 
 |---|---|---|---|---|
 | `llmEnabled` | boolean | `false` | monitor -> postprocess | Enable LLM enrichment for classification/tagging. |
 | `tagModel` | string | `gpt-4.1-mini` | monitor + app property map | Model name passed to postprocess. |
+| `llmActionPolicy` | `raw` or `derived` or `hybrid` | `hybrid` | monitor -> postprocess | Action resolution strategy for LLM classifications. `hybrid` keeps model action only when kind-compatible, else derives from kind/item rules. |
+| `minLlmCoverage` | number (`0.0`-`1.0`) | `0.7` | monitor -> postprocess | Minimum mapped non-sensitive coverage required before allowing unmapped items to default. Below threshold, unmapped items fall back to local classifier. |
 | `llmRedact` | boolean | `true` | monitor -> postprocess | Redact sensitive text before LLM calls. |
 | `llmRedactQuery` | boolean | `true` | monitor -> postprocess | Redact URL query params before LLM calls. |
 | `llmTitleMax` | integer | `200` | monitor -> postprocess | Title length cap for LLM prompt payloads. |
 | `maxItems` | integer | `0` | monitor -> postprocess | Max items per LLM classification batch (`0` = no explicit cap). |
 | `docsMoreLinksGroupingMode` | `kind` or `energy` | `kind` | monitor -> postprocess -> renderer | Controls “More Links” grouping in clean notes. `kind` keeps Docs/Articles/Papers; `energy` switches to Deep Reads/Quick References. |
+
+Environment-only postprocess knobs (not stored in `config.json`):
+
+- `TABDUMP_TAG_TEMPERATURE` (default `0.2`; set empty to omit temperature for models that do not support it)

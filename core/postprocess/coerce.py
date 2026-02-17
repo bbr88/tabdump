@@ -4,6 +4,12 @@ from typing import Optional
 
 from core.tab_policy.taxonomy import POSTPROCESS_ACTIONS, POSTPROCESS_KINDS
 
+ACTION_ALIASES = {
+    "listen": "watch",
+    "browse": "read",
+    "view": "read",
+}
+
 
 def safe_topic(value: object, domain: str) -> str:
     if isinstance(value, str) and value.strip():
@@ -21,12 +27,20 @@ def safe_kind(value: object) -> str:
     return "misc"
 
 
+def normalize_action(value: object) -> Optional[str]:
+    if not isinstance(value, str):
+        return None
+    candidate = value.strip().lower()
+    if not candidate:
+        return None
+    candidate = ACTION_ALIASES.get(candidate, candidate)
+    if candidate in POSTPROCESS_ACTIONS:
+        return candidate
+    return None
+
+
 def safe_action(value: object) -> str:
-    if isinstance(value, str):
-        candidate = value.strip().lower()
-        if candidate in POSTPROCESS_ACTIONS:
-            return candidate
-    return "triage"
+    return normalize_action(value) or "triage"
 
 
 def safe_score(value: object) -> Optional[int]:

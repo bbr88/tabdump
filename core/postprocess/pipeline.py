@@ -7,11 +7,17 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 from core.renderer.renderer import render_markdown
 
-from .classify_local import classify_local
-from .coerce import safe_action, safe_effort, safe_kind, safe_score, safe_topic
+from .classify_local import (
+    classify_local,
+    infer_local_action,
+    is_action_compatible,
+)
+from .coerce import normalize_action, safe_action, safe_effort, safe_kind, safe_score, safe_topic
 from .models import Item
 from .parsing import extract_created_ts
 from .urls import default_kind_action, is_sensitive_url
+
+ACTION_POLICIES = {"raw", "derived", "hybrid"}
 
 
 def _infer_effort(kind: str, action: str) -> str:
@@ -22,6 +28,50 @@ def _infer_effort(kind: str, action: str) -> str:
     if action_norm in {"reference", "watch", "ignore"}:
         return "quick"
     return "medium"
+
+
+def _normalize_action_policy(value: str) -> str:
+    candidate = str(value or "").strip().lower()
+    if candidate in ACTION_POLICIES:
+        return candidate
+    return "hybrid"
+
+
+def _normalized_coverage_threshold(value: float) -> float:
+    try:
+        threshold = float(value)
+    except Exception:
+        return 0.7
+    if threshold < 0.0:
+        return 0.0
+    if threshold > 1.0:
+        return 1.0
+    return threshold
+
+
+def _resolve_llm_action(
+    *,
+    policy: str,
+    raw_action: object,
+    kind: str,
+    item: Item,
+    safe_action_fn: Callable[[object], str],
+    normalize_action_fn: Callable[[object], Optional[str]],
+    infer_local_action_fn: Callable[[str, Item], str],
+    is_action_compatible_fn: Callable[[str, str], bool],
+) -> str:
+    policy_norm = _normalize_action_policy(policy)
+    if policy_norm == "raw":
+        return safe_action_fn(raw_action)
+
+    derived = infer_local_action_fn(kind, item)
+    if policy_norm == "derived":
+        return safe_action_fn(derived)
+
+    model_action = normalize_action_fn(raw_action)
+    if model_action and is_action_compatible_fn(kind, model_action):
+        return safe_action_fn(model_action)
+    return safe_action_fn(derived)
 
 
 def build_clean_note(
@@ -38,9 +88,14 @@ def build_clean_note(
     safe_topic_fn: Callable[[object, str], str] = safe_topic,
     safe_kind_fn: Callable[[object], str] = safe_kind,
     safe_action_fn: Callable[[object], str] = safe_action,
+    normalize_action_fn: Callable[[object], Optional[str]] = normalize_action,
     safe_score_fn: Callable[[object], Optional[int]] = safe_score,
     safe_effort_fn: Callable[[object], Optional[str]] = safe_effort,
+    infer_local_action_fn: Callable[[str, Item], str] = infer_local_action,
+    is_action_compatible_fn: Callable[[str, str], bool] = is_action_compatible,
     extract_created_ts_fn: Callable[[Path, str], str] = extract_created_ts,
+    llm_action_policy: str = "hybrid",
+    min_llm_coverage: float = 0.7,
     render_markdown_fn=render_markdown,
     render_cfg_override: Optional[dict] = None,
     stderr=sys.stderr,
@@ -65,7 +120,27 @@ def build_clean_note(
         else:
             cls_map = classify_with_llm_fn(indexed_for_cls, url_to_idx, api_key)
 
+    non_sensitive_total = len(indexed_for_cls)
+    mapped_non_sensitive = 0
+    if use_llm:
+        mapped_non_sensitive = sum(1 for idx, _ in indexed_for_cls if idx in cls_map)
+    llm_coverage = (
+        (mapped_non_sensitive / non_sensitive_total)
+        if use_llm and non_sensitive_total > 0
+        else 0.0
+    )
+    coverage_threshold = _normalized_coverage_threshold(min_llm_coverage)
+    fallback_unmapped_to_local = use_llm and llm_coverage < coverage_threshold
     use_local_classifier = not use_llm
+
+    diagnostics = {
+        "llm_mapped": mapped_non_sensitive if use_llm else 0,
+        "llm_unmapped": (non_sensitive_total - mapped_non_sensitive) if use_llm else 0,
+        "llm_fallback_local": 0,
+        "llm_defaulted": 0,
+    }
+    action_policy = _normalize_action_policy(llm_action_policy)
+
     enriched: List[dict] = []
 
     for idx, item in indexed_items:
@@ -78,10 +153,21 @@ def build_clean_note(
         elif cls:
             topic = safe_topic_fn(cls.get("topic"), item.domain)
             kind = safe_kind_fn(cls.get("kind"))
-            action = safe_action_fn(cls.get("action"))
+            action = _resolve_llm_action(
+                policy=action_policy,
+                raw_action=cls.get("action"),
+                kind=kind,
+                item=item,
+                safe_action_fn=safe_action_fn,
+                normalize_action_fn=normalize_action_fn,
+                infer_local_action_fn=infer_local_action_fn,
+                is_action_compatible_fn=is_action_compatible_fn,
+            )
             score = safe_score_fn(cls.get("score"))
             effort = safe_effort_fn(cls.get("effort")) or _infer_effort(kind, action)
-        elif use_local_classifier:
+        elif use_local_classifier or fallback_unmapped_to_local:
+            if use_llm:
+                diagnostics["llm_fallback_local"] += 1
             local = classify_local_fn(item)
             topic = safe_topic_fn(local.get("topic"), item.domain)
             kind = safe_kind_fn(local.get("kind"))
@@ -89,6 +175,8 @@ def build_clean_note(
             score = safe_score_fn(local.get("score"))
             effort = safe_effort_fn(local.get("effort")) or _infer_effort(kind, action)
         else:
+            if use_llm:
+                diagnostics["llm_defaulted"] += 1
             topic = safe_topic_fn(None, item.domain)
             kind = safe_kind_fn(None)
             action = safe_action_fn(None)
@@ -117,6 +205,21 @@ def build_clean_note(
                 "flags": {},
             }
         )
+
+    print(
+        "LLM classify diagnostics: "
+        f"requested={1 if llm_enabled else 0} "
+        f"active={1 if use_llm else 0} "
+        f"non_sensitive={non_sensitive_total} "
+        f"mapped={diagnostics['llm_mapped']} "
+        f"unmapped={diagnostics['llm_unmapped']} "
+        f"coverage={llm_coverage:.2f} "
+        f"min_coverage={coverage_threshold:.2f} "
+        f"fallback_local={diagnostics['llm_fallback_local']} "
+        f"defaulted={diagnostics['llm_defaulted']} "
+        f"action_policy={action_policy}",
+        file=stderr,
+    )
 
     ts = extract_created_ts_fn(src_path, fallback=time.strftime("%Y-%m-%d %H-%M-%S"))
     meta = {
