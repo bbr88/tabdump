@@ -1,0 +1,1440 @@
+{
+  "version": "v2",
+  "description": "72-case balanced classifier benchmark with accepted action sets and rationale metadata.",
+  "cases": [
+    {
+      "id": "calendar_planner_a",
+      "title": "Weekly planner calendar board (urban)",
+      "url": "https://calendar.google.com/calendar/u/0/r?variant=a",
+      "topic": "productivity",
+      "kind": "tool",
+      "action": "triage",
+      "score": 3,
+      "rationale": "Calendar tabs are operational tooling and usually require quick triage.",
+      "accepted_actions": [
+        "triage",
+        "build"
+      ],
+      "expected": {
+        "topic": "productivity",
+        "kind": "tool",
+        "action": "triage",
+        "score": 3
+      }
+    },
+    {
+      "id": "maps_trip_route_a",
+      "title": "Trip route planner map (urban)",
+      "url": "https://maps.google.com/maps?hl=en&q=route&variant=a",
+      "topic": "travel",
+      "kind": "tool",
+      "action": "triage",
+      "score": 3,
+      "rationale": "Route planning is a utility workflow that is typically triage-first.",
+      "accepted_actions": [
+        "triage",
+        "build"
+      ],
+      "expected": {
+        "topic": "travel",
+        "kind": "tool",
+        "action": "triage",
+        "score": 3
+      }
+    },
+    {
+      "id": "repo_issue_triage_a",
+      "title": "Critical issue report for release (urban)",
+      "url": "https://github.com/acme/api/issues/123?variant=a",
+      "topic": "github",
+      "kind": "repo",
+      "action": "triage",
+      "score": 4,
+      "rationale": "Repository issue pages represent queue triage work.",
+      "accepted_actions": [
+        "triage",
+        "build"
+      ],
+      "expected": {
+        "topic": "github",
+        "kind": "repo",
+        "action": "triage",
+        "score": 4
+      }
+    },
+    {
+      "id": "slack_inbox_thread_a",
+      "title": "Team inbox discussion thread (urban)",
+      "url": "https://slack.com/client/T1/C1?variant=a",
+      "topic": "slack",
+      "kind": "tool",
+      "action": "triage",
+      "score": 3,
+      "rationale": "Workspace communication tabs are tools and usually need triage.",
+      "accepted_actions": [
+        "triage",
+        "build"
+      ],
+      "expected": {
+        "topic": "slack",
+        "kind": "tool",
+        "action": "triage",
+        "score": 3
+      }
+    },
+    {
+      "id": "fitness_workout_video_a",
+      "title": "20 minute workout routine video (urban)",
+      "url": "https://www.youtube.com/watch?v=fit123&variant=a",
+      "topic": "fitness",
+      "kind": "video",
+      "action": "watch",
+      "score": 2,
+      "rationale": "Video content should map to watch intent.",
+      "accepted_actions": [
+        "watch"
+      ],
+      "expected": {
+        "topic": "fitness",
+        "kind": "video",
+        "action": "watch",
+        "score": 2
+      }
+    },
+    {
+      "id": "movie_trailer_page_a",
+      "title": "New movie trailer and cast (urban)",
+      "url": "https://www.netflix.com/title/12345678?variant=a",
+      "topic": "finance",
+      "kind": "video",
+      "action": "watch",
+      "score": 2,
+      "rationale": "Streaming pages are video consumption tasks.",
+      "accepted_actions": [
+        "watch"
+      ],
+      "expected": {
+        "topic": "finance",
+        "kind": "video",
+        "action": "watch",
+        "score": 2
+      }
+    },
+    {
+      "id": "music_focus_playlist_a",
+      "title": "Focus playlist for deep concentration (urban)",
+      "url": "https://open.spotify.com/playlist/37i9dQZF1DX0XUsuxWHRQd?variant=a",
+      "topic": "spotify",
+      "kind": "music",
+      "action": "watch",
+      "score": 2,
+      "rationale": "Music tabs map to watch/listen consumption intent.",
+      "accepted_actions": [
+        "watch"
+      ],
+      "expected": {
+        "topic": "spotify",
+        "kind": "music",
+        "action": "watch",
+        "score": 2
+      }
+    },
+    {
+      "id": "docs_python_reference_a",
+      "title": "Python asyncio API reference (urban)",
+      "url": "https://docs.python.org/3/library/asyncio.html?variant=a",
+      "topic": "python",
+      "kind": "docs",
+      "action": "reference",
+      "score": 4,
+      "rationale": "Reference documentation is lookup-oriented and should use reference.",
+      "accepted_actions": [
+        "reference",
+        "read"
+      ],
+      "expected": {
+        "topic": "python",
+        "kind": "docs",
+        "action": "reference",
+        "score": 4
+      }
+    },
+    {
+      "id": "health_reference_nutrition_a",
+      "title": "Nutrition reference for healthy diet basics (urban)",
+      "url": "https://example-health.org/reference/nutrition-basics?variant=a",
+      "topic": "health",
+      "kind": "docs",
+      "action": "reference",
+      "score": 4,
+      "rationale": "Reference pages are consulted repeatedly and map to reference.",
+      "accepted_actions": [
+        "reference",
+        "read"
+      ],
+      "expected": {
+        "topic": "health",
+        "kind": "docs",
+        "action": "reference",
+        "score": 4
+      }
+    },
+    {
+      "id": "education_docs_howto_a",
+      "title": "How-to study plan docs (urban)",
+      "url": "https://www.duolingo.com/docs/how-to-study?variant=a",
+      "topic": "education",
+      "kind": "docs",
+      "action": "reference",
+      "score": 5,
+      "rationale": "How-to documentation often serves as reusable reference material.",
+      "accepted_actions": [
+        "reference",
+        "read"
+      ],
+      "expected": {
+        "topic": "education",
+        "kind": "docs",
+        "action": "reference",
+        "score": 5
+      }
+    },
+    {
+      "id": "repo_project_board_a",
+      "title": "Repository implementation task board (urban)",
+      "url": "https://github.com/acme/platform?variant=a",
+      "topic": "github",
+      "kind": "repo",
+      "action": "build",
+      "score": 4,
+      "rationale": "Repository project roots generally indicate build-oriented execution.",
+      "accepted_actions": [
+        "build",
+        "triage"
+      ],
+      "expected": {
+        "topic": "github",
+        "kind": "repo",
+        "action": "build",
+        "score": 4
+      }
+    },
+    {
+      "id": "notion_project_plan_a",
+      "title": "Project roadmap and implementation checklist (urban)",
+      "url": "https://www.notion.so/workspace/project-roadmap-checklist?variant=a",
+      "topic": "notion",
+      "kind": "tool",
+      "action": "build",
+      "score": 4,
+      "rationale": "Project planning tools can imply build intent when execution-focused.",
+      "accepted_actions": [
+        "build",
+        "triage"
+      ],
+      "expected": {
+        "topic": "notion",
+        "kind": "tool",
+        "action": "build",
+        "score": 4
+      }
+    },
+    {
+      "id": "repo_feature_branch_a",
+      "title": "Feature implementation tracker (urban)",
+      "url": "https://gitlab.com/acme/mobile-app?variant=a",
+      "topic": "gitlab",
+      "kind": "repo",
+      "action": "build",
+      "score": 4,
+      "rationale": "Repository code roots are generally build intent rather than read.",
+      "accepted_actions": [
+        "build",
+        "triage"
+      ],
+      "expected": {
+        "topic": "gitlab",
+        "kind": "repo",
+        "action": "build",
+        "score": 4
+      }
+    },
+    {
+      "id": "paper_whitepaper_systems_a",
+      "title": "Distributed systems whitepaper deep dive (urban)",
+      "url": "https://arxiv.org/pdf/2401.12345.pdf?variant=a",
+      "topic": "architecture",
+      "kind": "paper",
+      "action": "deep_work",
+      "score": 5,
+      "rationale": "Dense papers and whitepapers imply deep-work effort.",
+      "accepted_actions": [
+        "deep_work",
+        "read"
+      ],
+      "expected": {
+        "topic": "architecture",
+        "kind": "paper",
+        "action": "deep_work",
+        "score": 5
+      }
+    },
+    {
+      "id": "paper_research_method_a",
+      "title": "Research paper on evaluation methodology (urban)",
+      "url": "https://arxiv.org/abs/2402.98765?variant=a",
+      "topic": "research",
+      "kind": "paper",
+      "action": "deep_work",
+      "score": 5,
+      "rationale": "Research papers often need concentrated reading and analysis.",
+      "accepted_actions": [
+        "deep_work",
+        "read"
+      ],
+      "expected": {
+        "topic": "research",
+        "kind": "paper",
+        "action": "deep_work",
+        "score": 5
+      }
+    },
+    {
+      "id": "auth_login_portal_a",
+      "title": "Account login and security check (urban)",
+      "url": "https://accounts.google.com/login?variant=a",
+      "topic": "security",
+      "kind": "auth",
+      "action": "ignore",
+      "score": 2,
+      "rationale": "Authentication pages are administrative and should usually be ignored.",
+      "accepted_actions": [
+        "ignore",
+        "triage",
+        "read"
+      ],
+      "expected": {
+        "topic": "security",
+        "kind": "auth",
+        "action": "ignore",
+        "score": 2
+      }
+    },
+    {
+      "id": "shopping_amazon_deal_a",
+      "title": "Air fryer deal under $100 (urban)",
+      "url": "https://www.amazon.com/dp/B0ABC12345?variant=a",
+      "topic": "shopping",
+      "kind": "article",
+      "action": "read",
+      "score": 3,
+      "rationale": "Product pages are informational reads before a decision.",
+      "accepted_actions": [
+        "read",
+        "reference"
+      ],
+      "expected": {
+        "topic": "shopping",
+        "kind": "article",
+        "action": "read",
+        "score": 3
+      }
+    },
+    {
+      "id": "travel_blog_itinerary_a",
+      "title": "Summer trip itinerary ideas (urban)",
+      "url": "https://example.com/blog/summer-trip-itinerary?variant=a",
+      "topic": "travel",
+      "kind": "article",
+      "action": "read",
+      "score": 3,
+      "rationale": "Blog content is long-form reading material.",
+      "accepted_actions": [
+        "read",
+        "reference"
+      ],
+      "expected": {
+        "topic": "travel",
+        "kind": "article",
+        "action": "read",
+        "score": 3
+      }
+    },
+    {
+      "id": "finance_budget_retirement_a",
+      "title": "Budget planning for retirement and ETFs (urban)",
+      "url": "https://money.example.com/retirement-planning?variant=a",
+      "topic": "finance",
+      "kind": "article",
+      "action": "read",
+      "score": 3,
+      "rationale": "General finance explainers are read-oriented.",
+      "accepted_actions": [
+        "read",
+        "reference"
+      ],
+      "expected": {
+        "topic": "finance",
+        "kind": "article",
+        "action": "read",
+        "score": 3
+      }
+    },
+    {
+      "id": "health_mindfulness_article_a",
+      "title": "Mental health mindfulness routine (urban)",
+      "url": "https://health.example.org/mindfulness-routine?variant=a",
+      "topic": "health",
+      "kind": "article",
+      "action": "read",
+      "score": 3,
+      "rationale": "Wellness articles are informational reads.",
+      "accepted_actions": [
+        "read",
+        "reference"
+      ],
+      "expected": {
+        "topic": "health",
+        "kind": "article",
+        "action": "read",
+        "score": 3
+      }
+    },
+    {
+      "id": "food_recipe_page_a",
+      "title": "Quick pasta recipe for dinner (urban)",
+      "url": "https://www.bbcgoodfood.com/recipes/quick-pasta?variant=a",
+      "topic": "food",
+      "kind": "article",
+      "action": "read",
+      "score": 3,
+      "rationale": "Recipe pages are practical read tasks.",
+      "accepted_actions": [
+        "read",
+        "reference"
+      ],
+      "expected": {
+        "topic": "food",
+        "kind": "article",
+        "action": "read",
+        "score": 3
+      }
+    },
+    {
+      "id": "career_interview_guide_a",
+      "title": "Interview questions and salary negotiation guide (urban)",
+      "url": "https://careers.example.com/interview-negotiation?variant=a",
+      "topic": "education",
+      "kind": "article",
+      "action": "read",
+      "score": 4,
+      "rationale": "Career guidance pages are read-first resources.",
+      "accepted_actions": [
+        "read",
+        "reference"
+      ],
+      "expected": {
+        "topic": "education",
+        "kind": "article",
+        "action": "read",
+        "score": 4
+      }
+    },
+    {
+      "id": "parenting_toddler_checklist_a",
+      "title": "Toddler bedtime checklist for parents (urban)",
+      "url": "https://family.example.com/toddler-bedtime-checklist?variant=a",
+      "topic": "education",
+      "kind": "article",
+      "action": "read",
+      "score": 4,
+      "rationale": "Parenting guides are informational reading content.",
+      "accepted_actions": [
+        "read",
+        "reference"
+      ],
+      "expected": {
+        "topic": "education",
+        "kind": "article",
+        "action": "read",
+        "score": 4
+      }
+    },
+    {
+      "id": "home_diy_garden_a",
+      "title": "DIY home improvement and garden ideas (urban)",
+      "url": "https://home.example.com/diy-garden-ideas?variant=a",
+      "topic": "education",
+      "kind": "article",
+      "action": "read",
+      "score": 3,
+      "rationale": "Home improvement listicles are article-style reads.",
+      "accepted_actions": [
+        "read",
+        "reference"
+      ],
+      "expected": {
+        "topic": "education",
+        "kind": "article",
+        "action": "read",
+        "score": 3
+      }
+    },
+    {
+      "id": "calendar_planner_b",
+      "title": "Weekly planner calendar board (family)",
+      "url": "https://calendar.google.com/calendar/u/0/r?variant=b",
+      "topic": "productivity",
+      "kind": "tool",
+      "action": "triage",
+      "score": 3,
+      "rationale": "Calendar tabs are operational tooling and usually require quick triage.",
+      "accepted_actions": [
+        "triage",
+        "build"
+      ],
+      "expected": {
+        "topic": "productivity",
+        "kind": "tool",
+        "action": "triage",
+        "score": 3
+      }
+    },
+    {
+      "id": "maps_trip_route_b",
+      "title": "Trip route planner map (family)",
+      "url": "https://maps.google.com/maps?hl=en&q=route&variant=b",
+      "topic": "travel",
+      "kind": "tool",
+      "action": "triage",
+      "score": 3,
+      "rationale": "Route planning is a utility workflow that is typically triage-first.",
+      "accepted_actions": [
+        "triage",
+        "build"
+      ],
+      "expected": {
+        "topic": "travel",
+        "kind": "tool",
+        "action": "triage",
+        "score": 3
+      }
+    },
+    {
+      "id": "repo_issue_triage_b",
+      "title": "Critical issue report for release (family)",
+      "url": "https://github.com/acme/api/issues/123?variant=b",
+      "topic": "parenting",
+      "kind": "repo",
+      "action": "triage",
+      "score": 4,
+      "rationale": "Repository issue pages represent queue triage work.",
+      "accepted_actions": [
+        "triage",
+        "build"
+      ],
+      "expected": {
+        "topic": "parenting",
+        "kind": "repo",
+        "action": "triage",
+        "score": 4
+      }
+    },
+    {
+      "id": "slack_inbox_thread_b",
+      "title": "Team inbox discussion thread (family)",
+      "url": "https://slack.com/client/T1/C1?variant=b",
+      "topic": "parenting",
+      "kind": "tool",
+      "action": "triage",
+      "score": 3,
+      "rationale": "Workspace communication tabs are tools and usually need triage.",
+      "accepted_actions": [
+        "triage",
+        "build"
+      ],
+      "expected": {
+        "topic": "parenting",
+        "kind": "tool",
+        "action": "triage",
+        "score": 3
+      }
+    },
+    {
+      "id": "fitness_workout_video_b",
+      "title": "20 minute workout routine video (family)",
+      "url": "https://www.youtube.com/watch?v=fit123&variant=b",
+      "topic": "fitness",
+      "kind": "video",
+      "action": "watch",
+      "score": 2,
+      "rationale": "Video content should map to watch intent.",
+      "accepted_actions": [
+        "watch"
+      ],
+      "expected": {
+        "topic": "fitness",
+        "kind": "video",
+        "action": "watch",
+        "score": 2
+      }
+    },
+    {
+      "id": "movie_trailer_page_b",
+      "title": "New movie trailer and cast (family)",
+      "url": "https://www.netflix.com/title/12345678?variant=b",
+      "topic": "finance",
+      "kind": "video",
+      "action": "watch",
+      "score": 2,
+      "rationale": "Streaming pages are video consumption tasks.",
+      "accepted_actions": [
+        "watch"
+      ],
+      "expected": {
+        "topic": "finance",
+        "kind": "video",
+        "action": "watch",
+        "score": 2
+      }
+    },
+    {
+      "id": "music_focus_playlist_b",
+      "title": "Focus playlist for deep concentration (family)",
+      "url": "https://open.spotify.com/playlist/37i9dQZF1DX0XUsuxWHRQd?variant=b",
+      "topic": "parenting",
+      "kind": "music",
+      "action": "watch",
+      "score": 2,
+      "rationale": "Music tabs map to watch/listen consumption intent.",
+      "accepted_actions": [
+        "watch"
+      ],
+      "expected": {
+        "topic": "parenting",
+        "kind": "music",
+        "action": "watch",
+        "score": 2
+      }
+    },
+    {
+      "id": "docs_python_reference_b",
+      "title": "Python asyncio API reference (family)",
+      "url": "https://docs.python.org/3/library/asyncio.html?variant=b",
+      "topic": "python",
+      "kind": "docs",
+      "action": "reference",
+      "score": 4,
+      "rationale": "Reference documentation is lookup-oriented and should use reference.",
+      "accepted_actions": [
+        "reference",
+        "read"
+      ],
+      "expected": {
+        "topic": "python",
+        "kind": "docs",
+        "action": "reference",
+        "score": 4
+      }
+    },
+    {
+      "id": "health_reference_nutrition_b",
+      "title": "Nutrition reference for healthy diet basics (family)",
+      "url": "https://example-health.org/reference/nutrition-basics?variant=b",
+      "topic": "health",
+      "kind": "docs",
+      "action": "reference",
+      "score": 4,
+      "rationale": "Reference pages are consulted repeatedly and map to reference.",
+      "accepted_actions": [
+        "reference",
+        "read"
+      ],
+      "expected": {
+        "topic": "health",
+        "kind": "docs",
+        "action": "reference",
+        "score": 4
+      }
+    },
+    {
+      "id": "education_docs_howto_b",
+      "title": "How-to study plan docs (family)",
+      "url": "https://www.duolingo.com/docs/how-to-study?variant=b",
+      "topic": "education",
+      "kind": "docs",
+      "action": "reference",
+      "score": 5,
+      "rationale": "How-to documentation often serves as reusable reference material.",
+      "accepted_actions": [
+        "reference",
+        "read"
+      ],
+      "expected": {
+        "topic": "education",
+        "kind": "docs",
+        "action": "reference",
+        "score": 5
+      }
+    },
+    {
+      "id": "repo_project_board_b",
+      "title": "Repository implementation task board (family)",
+      "url": "https://github.com/acme/platform?variant=b",
+      "topic": "parenting",
+      "kind": "repo",
+      "action": "build",
+      "score": 4,
+      "rationale": "Repository project roots generally indicate build-oriented execution.",
+      "accepted_actions": [
+        "build",
+        "triage"
+      ],
+      "expected": {
+        "topic": "parenting",
+        "kind": "repo",
+        "action": "build",
+        "score": 4
+      }
+    },
+    {
+      "id": "notion_project_plan_b",
+      "title": "Project roadmap and implementation checklist (family)",
+      "url": "https://www.notion.so/workspace/project-roadmap-checklist?variant=b",
+      "topic": "parenting",
+      "kind": "tool",
+      "action": "build",
+      "score": 4,
+      "rationale": "Project planning tools can imply build intent when execution-focused.",
+      "accepted_actions": [
+        "build",
+        "triage"
+      ],
+      "expected": {
+        "topic": "parenting",
+        "kind": "tool",
+        "action": "build",
+        "score": 4
+      }
+    },
+    {
+      "id": "repo_feature_branch_b",
+      "title": "Feature implementation tracker (family)",
+      "url": "https://gitlab.com/acme/mobile-app?variant=b",
+      "topic": "parenting",
+      "kind": "repo",
+      "action": "build",
+      "score": 4,
+      "rationale": "Repository code roots are generally build intent rather than read.",
+      "accepted_actions": [
+        "build",
+        "triage"
+      ],
+      "expected": {
+        "topic": "parenting",
+        "kind": "repo",
+        "action": "build",
+        "score": 4
+      }
+    },
+    {
+      "id": "paper_whitepaper_systems_b",
+      "title": "Distributed systems whitepaper deep dive (family)",
+      "url": "https://arxiv.org/pdf/2401.12345.pdf?variant=b",
+      "topic": "architecture",
+      "kind": "paper",
+      "action": "deep_work",
+      "score": 5,
+      "rationale": "Dense papers and whitepapers imply deep-work effort.",
+      "accepted_actions": [
+        "deep_work",
+        "read"
+      ],
+      "expected": {
+        "topic": "architecture",
+        "kind": "paper",
+        "action": "deep_work",
+        "score": 5
+      }
+    },
+    {
+      "id": "paper_research_method_b",
+      "title": "Research paper on evaluation methodology (family)",
+      "url": "https://arxiv.org/abs/2402.98765?variant=b",
+      "topic": "parenting",
+      "kind": "paper",
+      "action": "deep_work",
+      "score": 5,
+      "rationale": "Research papers often need concentrated reading and analysis.",
+      "accepted_actions": [
+        "deep_work",
+        "read"
+      ],
+      "expected": {
+        "topic": "parenting",
+        "kind": "paper",
+        "action": "deep_work",
+        "score": 5
+      }
+    },
+    {
+      "id": "auth_login_portal_b",
+      "title": "Account login and security check (family)",
+      "url": "https://accounts.google.com/login?variant=b",
+      "topic": "security",
+      "kind": "auth",
+      "action": "ignore",
+      "score": 2,
+      "rationale": "Authentication pages are administrative and should usually be ignored.",
+      "accepted_actions": [
+        "ignore",
+        "triage",
+        "read"
+      ],
+      "expected": {
+        "topic": "security",
+        "kind": "auth",
+        "action": "ignore",
+        "score": 2
+      }
+    },
+    {
+      "id": "shopping_amazon_deal_b",
+      "title": "Air fryer deal under $100 (family)",
+      "url": "https://www.amazon.com/dp/B0ABC12345?variant=b",
+      "topic": "shopping",
+      "kind": "article",
+      "action": "read",
+      "score": 3,
+      "rationale": "Product pages are informational reads before a decision.",
+      "accepted_actions": [
+        "read",
+        "reference"
+      ],
+      "expected": {
+        "topic": "shopping",
+        "kind": "article",
+        "action": "read",
+        "score": 3
+      }
+    },
+    {
+      "id": "travel_blog_itinerary_b",
+      "title": "Summer trip itinerary ideas (family)",
+      "url": "https://example.com/blog/summer-trip-itinerary?variant=b",
+      "topic": "travel",
+      "kind": "article",
+      "action": "read",
+      "score": 3,
+      "rationale": "Blog content is long-form reading material.",
+      "accepted_actions": [
+        "read",
+        "reference"
+      ],
+      "expected": {
+        "topic": "travel",
+        "kind": "article",
+        "action": "read",
+        "score": 3
+      }
+    },
+    {
+      "id": "finance_budget_retirement_b",
+      "title": "Budget planning for retirement and ETFs (family)",
+      "url": "https://money.example.com/retirement-planning?variant=b",
+      "topic": "finance",
+      "kind": "article",
+      "action": "read",
+      "score": 3,
+      "rationale": "General finance explainers are read-oriented.",
+      "accepted_actions": [
+        "read",
+        "reference"
+      ],
+      "expected": {
+        "topic": "finance",
+        "kind": "article",
+        "action": "read",
+        "score": 3
+      }
+    },
+    {
+      "id": "health_mindfulness_article_b",
+      "title": "Mental health mindfulness routine (family)",
+      "url": "https://health.example.org/mindfulness-routine?variant=b",
+      "topic": "health",
+      "kind": "article",
+      "action": "read",
+      "score": 3,
+      "rationale": "Wellness articles are informational reads.",
+      "accepted_actions": [
+        "read",
+        "reference"
+      ],
+      "expected": {
+        "topic": "health",
+        "kind": "article",
+        "action": "read",
+        "score": 3
+      }
+    },
+    {
+      "id": "food_recipe_page_b",
+      "title": "Quick pasta recipe for dinner (family)",
+      "url": "https://www.bbcgoodfood.com/recipes/quick-pasta?variant=b",
+      "topic": "food",
+      "kind": "article",
+      "action": "read",
+      "score": 3,
+      "rationale": "Recipe pages are practical read tasks.",
+      "accepted_actions": [
+        "read",
+        "reference"
+      ],
+      "expected": {
+        "topic": "food",
+        "kind": "article",
+        "action": "read",
+        "score": 3
+      }
+    },
+    {
+      "id": "career_interview_guide_b",
+      "title": "Interview questions and salary negotiation guide (family)",
+      "url": "https://careers.example.com/interview-negotiation?variant=b",
+      "topic": "education",
+      "kind": "article",
+      "action": "read",
+      "score": 4,
+      "rationale": "Career guidance pages are read-first resources.",
+      "accepted_actions": [
+        "read",
+        "reference"
+      ],
+      "expected": {
+        "topic": "education",
+        "kind": "article",
+        "action": "read",
+        "score": 4
+      }
+    },
+    {
+      "id": "parenting_toddler_checklist_b",
+      "title": "Toddler bedtime checklist for parents (family)",
+      "url": "https://family.example.com/toddler-bedtime-checklist?variant=b",
+      "topic": "education",
+      "kind": "article",
+      "action": "read",
+      "score": 4,
+      "rationale": "Parenting guides are informational reading content.",
+      "accepted_actions": [
+        "read",
+        "reference"
+      ],
+      "expected": {
+        "topic": "education",
+        "kind": "article",
+        "action": "read",
+        "score": 4
+      }
+    },
+    {
+      "id": "home_diy_garden_b",
+      "title": "DIY home improvement and garden ideas (family)",
+      "url": "https://home.example.com/diy-garden-ideas?variant=b",
+      "topic": "education",
+      "kind": "article",
+      "action": "read",
+      "score": 3,
+      "rationale": "Home improvement listicles are article-style reads.",
+      "accepted_actions": [
+        "read",
+        "reference"
+      ],
+      "expected": {
+        "topic": "education",
+        "kind": "article",
+        "action": "read",
+        "score": 3
+      }
+    },
+    {
+      "id": "calendar_planner_c",
+      "title": "Weekly planner calendar board (remote)",
+      "url": "https://calendar.google.com/calendar/u/0/r?variant=c",
+      "topic": "productivity",
+      "kind": "tool",
+      "action": "triage",
+      "score": 3,
+      "rationale": "Calendar tabs are operational tooling and usually require quick triage.",
+      "accepted_actions": [
+        "triage",
+        "build"
+      ],
+      "expected": {
+        "topic": "productivity",
+        "kind": "tool",
+        "action": "triage",
+        "score": 3
+      }
+    },
+    {
+      "id": "maps_trip_route_c",
+      "title": "Trip route planner map (remote)",
+      "url": "https://maps.google.com/maps?hl=en&q=route&variant=c",
+      "topic": "travel",
+      "kind": "tool",
+      "action": "triage",
+      "score": 3,
+      "rationale": "Route planning is a utility workflow that is typically triage-first.",
+      "accepted_actions": [
+        "triage",
+        "build"
+      ],
+      "expected": {
+        "topic": "travel",
+        "kind": "tool",
+        "action": "triage",
+        "score": 3
+      }
+    },
+    {
+      "id": "repo_issue_triage_c",
+      "title": "Critical issue report for release (remote)",
+      "url": "https://github.com/acme/api/issues/123?variant=c",
+      "topic": "github",
+      "kind": "repo",
+      "action": "triage",
+      "score": 4,
+      "rationale": "Repository issue pages represent queue triage work.",
+      "accepted_actions": [
+        "triage",
+        "build"
+      ],
+      "expected": {
+        "topic": "github",
+        "kind": "repo",
+        "action": "triage",
+        "score": 4
+      }
+    },
+    {
+      "id": "slack_inbox_thread_c",
+      "title": "Team inbox discussion thread (remote)",
+      "url": "https://slack.com/client/T1/C1?variant=c",
+      "topic": "slack",
+      "kind": "tool",
+      "action": "triage",
+      "score": 3,
+      "rationale": "Workspace communication tabs are tools and usually need triage.",
+      "accepted_actions": [
+        "triage",
+        "build"
+      ],
+      "expected": {
+        "topic": "slack",
+        "kind": "tool",
+        "action": "triage",
+        "score": 3
+      }
+    },
+    {
+      "id": "fitness_workout_video_c",
+      "title": "20 minute workout routine video (remote)",
+      "url": "https://www.youtube.com/watch?v=fit123&variant=c",
+      "topic": "fitness",
+      "kind": "video",
+      "action": "watch",
+      "score": 2,
+      "rationale": "Video content should map to watch intent.",
+      "accepted_actions": [
+        "watch"
+      ],
+      "expected": {
+        "topic": "fitness",
+        "kind": "video",
+        "action": "watch",
+        "score": 2
+      }
+    },
+    {
+      "id": "movie_trailer_page_c",
+      "title": "New movie trailer and cast (remote)",
+      "url": "https://www.netflix.com/title/12345678?variant=c",
+      "topic": "finance",
+      "kind": "video",
+      "action": "watch",
+      "score": 2,
+      "rationale": "Streaming pages are video consumption tasks.",
+      "accepted_actions": [
+        "watch"
+      ],
+      "expected": {
+        "topic": "finance",
+        "kind": "video",
+        "action": "watch",
+        "score": 2
+      }
+    },
+    {
+      "id": "music_focus_playlist_c",
+      "title": "Focus playlist for deep concentration (remote)",
+      "url": "https://open.spotify.com/playlist/37i9dQZF1DX0XUsuxWHRQd?variant=c",
+      "topic": "spotify",
+      "kind": "music",
+      "action": "watch",
+      "score": 2,
+      "rationale": "Music tabs map to watch/listen consumption intent.",
+      "accepted_actions": [
+        "watch"
+      ],
+      "expected": {
+        "topic": "spotify",
+        "kind": "music",
+        "action": "watch",
+        "score": 2
+      }
+    },
+    {
+      "id": "docs_python_reference_c",
+      "title": "Python asyncio API reference (remote)",
+      "url": "https://docs.python.org/3/library/asyncio.html?variant=c",
+      "topic": "python",
+      "kind": "docs",
+      "action": "reference",
+      "score": 4,
+      "rationale": "Reference documentation is lookup-oriented and should use reference.",
+      "accepted_actions": [
+        "reference",
+        "read"
+      ],
+      "expected": {
+        "topic": "python",
+        "kind": "docs",
+        "action": "reference",
+        "score": 4
+      }
+    },
+    {
+      "id": "health_reference_nutrition_c",
+      "title": "Nutrition reference for healthy diet basics (remote)",
+      "url": "https://example-health.org/reference/nutrition-basics?variant=c",
+      "topic": "health",
+      "kind": "docs",
+      "action": "reference",
+      "score": 4,
+      "rationale": "Reference pages are consulted repeatedly and map to reference.",
+      "accepted_actions": [
+        "reference",
+        "read"
+      ],
+      "expected": {
+        "topic": "health",
+        "kind": "docs",
+        "action": "reference",
+        "score": 4
+      }
+    },
+    {
+      "id": "education_docs_howto_c",
+      "title": "How-to study plan docs (remote)",
+      "url": "https://www.duolingo.com/docs/how-to-study?variant=c",
+      "topic": "education",
+      "kind": "docs",
+      "action": "reference",
+      "score": 5,
+      "rationale": "How-to documentation often serves as reusable reference material.",
+      "accepted_actions": [
+        "reference",
+        "read"
+      ],
+      "expected": {
+        "topic": "education",
+        "kind": "docs",
+        "action": "reference",
+        "score": 5
+      }
+    },
+    {
+      "id": "repo_project_board_c",
+      "title": "Repository implementation task board (remote)",
+      "url": "https://github.com/acme/platform?variant=c",
+      "topic": "github",
+      "kind": "repo",
+      "action": "build",
+      "score": 4,
+      "rationale": "Repository project roots generally indicate build-oriented execution.",
+      "accepted_actions": [
+        "build",
+        "triage"
+      ],
+      "expected": {
+        "topic": "github",
+        "kind": "repo",
+        "action": "build",
+        "score": 4
+      }
+    },
+    {
+      "id": "notion_project_plan_c",
+      "title": "Project roadmap and implementation checklist (remote)",
+      "url": "https://www.notion.so/workspace/project-roadmap-checklist?variant=c",
+      "topic": "notion",
+      "kind": "tool",
+      "action": "build",
+      "score": 4,
+      "rationale": "Project planning tools can imply build intent when execution-focused.",
+      "accepted_actions": [
+        "build",
+        "triage"
+      ],
+      "expected": {
+        "topic": "notion",
+        "kind": "tool",
+        "action": "build",
+        "score": 4
+      }
+    },
+    {
+      "id": "repo_feature_branch_c",
+      "title": "Feature implementation tracker (remote)",
+      "url": "https://gitlab.com/acme/mobile-app?variant=c",
+      "topic": "gitlab",
+      "kind": "repo",
+      "action": "build",
+      "score": 4,
+      "rationale": "Repository code roots are generally build intent rather than read.",
+      "accepted_actions": [
+        "build",
+        "triage"
+      ],
+      "expected": {
+        "topic": "gitlab",
+        "kind": "repo",
+        "action": "build",
+        "score": 4
+      }
+    },
+    {
+      "id": "paper_whitepaper_systems_c",
+      "title": "Distributed systems whitepaper deep dive (remote)",
+      "url": "https://arxiv.org/pdf/2401.12345.pdf?variant=c",
+      "topic": "architecture",
+      "kind": "paper",
+      "action": "deep_work",
+      "score": 5,
+      "rationale": "Dense papers and whitepapers imply deep-work effort.",
+      "accepted_actions": [
+        "deep_work",
+        "read"
+      ],
+      "expected": {
+        "topic": "architecture",
+        "kind": "paper",
+        "action": "deep_work",
+        "score": 5
+      }
+    },
+    {
+      "id": "paper_research_method_c",
+      "title": "Research paper on evaluation methodology (remote)",
+      "url": "https://arxiv.org/abs/2402.98765?variant=c",
+      "topic": "research",
+      "kind": "paper",
+      "action": "deep_work",
+      "score": 5,
+      "rationale": "Research papers often need concentrated reading and analysis.",
+      "accepted_actions": [
+        "deep_work",
+        "read"
+      ],
+      "expected": {
+        "topic": "research",
+        "kind": "paper",
+        "action": "deep_work",
+        "score": 5
+      }
+    },
+    {
+      "id": "auth_login_portal_c",
+      "title": "Account login and security check (remote)",
+      "url": "https://accounts.google.com/login?variant=c",
+      "topic": "security",
+      "kind": "auth",
+      "action": "ignore",
+      "score": 2,
+      "rationale": "Authentication pages are administrative and should usually be ignored.",
+      "accepted_actions": [
+        "ignore",
+        "triage",
+        "read"
+      ],
+      "expected": {
+        "topic": "security",
+        "kind": "auth",
+        "action": "ignore",
+        "score": 2
+      }
+    },
+    {
+      "id": "shopping_amazon_deal_c",
+      "title": "Air fryer deal under $100 (remote)",
+      "url": "https://www.amazon.com/dp/B0ABC12345?variant=c",
+      "topic": "shopping",
+      "kind": "article",
+      "action": "read",
+      "score": 3,
+      "rationale": "Product pages are informational reads before a decision.",
+      "accepted_actions": [
+        "read",
+        "reference"
+      ],
+      "expected": {
+        "topic": "shopping",
+        "kind": "article",
+        "action": "read",
+        "score": 3
+      }
+    },
+    {
+      "id": "travel_blog_itinerary_c",
+      "title": "Summer trip itinerary ideas (remote)",
+      "url": "https://example.com/blog/summer-trip-itinerary?variant=c",
+      "topic": "travel",
+      "kind": "article",
+      "action": "read",
+      "score": 3,
+      "rationale": "Blog content is long-form reading material.",
+      "accepted_actions": [
+        "read",
+        "reference"
+      ],
+      "expected": {
+        "topic": "travel",
+        "kind": "article",
+        "action": "read",
+        "score": 3
+      }
+    },
+    {
+      "id": "finance_budget_retirement_c",
+      "title": "Budget planning for retirement and ETFs (remote)",
+      "url": "https://money.example.com/retirement-planning?variant=c",
+      "topic": "finance",
+      "kind": "article",
+      "action": "read",
+      "score": 3,
+      "rationale": "General finance explainers are read-oriented.",
+      "accepted_actions": [
+        "read",
+        "reference"
+      ],
+      "expected": {
+        "topic": "finance",
+        "kind": "article",
+        "action": "read",
+        "score": 3
+      }
+    },
+    {
+      "id": "health_mindfulness_article_c",
+      "title": "Mental health mindfulness routine (remote)",
+      "url": "https://health.example.org/mindfulness-routine?variant=c",
+      "topic": "health",
+      "kind": "article",
+      "action": "read",
+      "score": 3,
+      "rationale": "Wellness articles are informational reads.",
+      "accepted_actions": [
+        "read",
+        "reference"
+      ],
+      "expected": {
+        "topic": "health",
+        "kind": "article",
+        "action": "read",
+        "score": 3
+      }
+    },
+    {
+      "id": "food_recipe_page_c",
+      "title": "Quick pasta recipe for dinner (remote)",
+      "url": "https://www.bbcgoodfood.com/recipes/quick-pasta?variant=c",
+      "topic": "food",
+      "kind": "article",
+      "action": "read",
+      "score": 3,
+      "rationale": "Recipe pages are practical read tasks.",
+      "accepted_actions": [
+        "read",
+        "reference"
+      ],
+      "expected": {
+        "topic": "food",
+        "kind": "article",
+        "action": "read",
+        "score": 3
+      }
+    },
+    {
+      "id": "career_interview_guide_c",
+      "title": "Interview questions and salary negotiation guide (remote)",
+      "url": "https://careers.example.com/interview-negotiation?variant=c",
+      "topic": "education",
+      "kind": "article",
+      "action": "read",
+      "score": 4,
+      "rationale": "Career guidance pages are read-first resources.",
+      "accepted_actions": [
+        "read",
+        "reference"
+      ],
+      "expected": {
+        "topic": "education",
+        "kind": "article",
+        "action": "read",
+        "score": 4
+      }
+    },
+    {
+      "id": "parenting_toddler_checklist_c",
+      "title": "Toddler bedtime checklist for parents (remote)",
+      "url": "https://family.example.com/toddler-bedtime-checklist?variant=c",
+      "topic": "education",
+      "kind": "article",
+      "action": "read",
+      "score": 4,
+      "rationale": "Parenting guides are informational reading content.",
+      "accepted_actions": [
+        "read",
+        "reference"
+      ],
+      "expected": {
+        "topic": "education",
+        "kind": "article",
+        "action": "read",
+        "score": 4
+      }
+    },
+    {
+      "id": "home_diy_garden_c",
+      "title": "DIY home improvement and garden ideas (remote)",
+      "url": "https://home.example.com/diy-garden-ideas?variant=c",
+      "topic": "education",
+      "kind": "article",
+      "action": "read",
+      "score": 3,
+      "rationale": "Home improvement listicles are article-style reads.",
+      "accepted_actions": [
+        "read",
+        "reference"
+      ],
+      "expected": {
+        "topic": "education",
+        "kind": "article",
+        "action": "read",
+        "score": 3
+      }
+    }
+  ]
+}

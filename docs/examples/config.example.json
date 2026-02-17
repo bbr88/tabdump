@@ -35,6 +35,8 @@
   "cooldownMinutes": 1440,
   "llmEnabled": false,
   "tagModel": "gpt-4.1-mini",
+  "llmActionPolicy": "hybrid",
+  "minLlmCoverage": 0.7,
   "llmRedact": true,
   "llmRedactQuery": true,
   "llmTitleMax": 200,

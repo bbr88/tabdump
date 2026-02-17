@@ -1,4 +1,5 @@
 import itertools
+import os
 import re
 
 import pytest
@@ -7,6 +8,7 @@ from core.postprocess import llm as llm_module
 from core.tab_policy.taxonomy import POSTPROCESS_ACTIONS, POSTPROCESS_KINDS
 from tests.postprocess.integration.classifier_eval_utils import (
     ACCURACY_THRESHOLDS,
+    ACTION_RAW_DIAGNOSTIC_THRESHOLD,
     DEFAULT_MODEL_MATRIX,
     PAIRWISE_THRESHOLDS,
     load_frozen_predictions,
@@ -19,6 +21,13 @@ from tests.postprocess.integration.classifier_eval_utils import (
 )
 
 
+def _env_flag(name: str, default: bool = False) -> bool:
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on", "y"}
+
+
 def _assert_accuracy(label: str, metrics: dict):
     accuracy = metrics["accuracy"]
     mismatches = metrics["mismatches"]
@@ -27,6 +36,13 @@ def _assert_accuracy(label: str, metrics: dict):
         assert actual >= threshold, (
             f"{label} {field} accuracy {actual:.2%} below {threshold:.0%}; "
             f"mismatches={mismatches[field]}"
+        )
+    if _env_flag("TABDUMP_EVAL_ENFORCE_ACTION_RAW"):
+        actual = accuracy["action_raw"]
+        threshold = ACTION_RAW_DIAGNOSTIC_THRESHOLD
+        assert actual >= threshold, (
+            f"{label} action_raw accuracy {actual:.2%} below {threshold:.0%}; "
+            f"mismatches={mismatches['action_raw']}"
         )
 
 
@@ -41,9 +57,12 @@ def _assert_pairwise(label: str, pair_metrics: dict):
 
 def test_classifier_eval_gold_fixture_schema():
     fixture = load_gold_fixture()
-    assert fixture["version"] == "v1"
+    assert fixture["version"] in {"v1", "v2"}
     assert isinstance(fixture["cases"], list)
-    assert len(fixture["cases"]) == 24
+    if fixture["version"] == "v2":
+        assert len(fixture["cases"]) == 72
+    else:
+        assert len(fixture["cases"]) == 24
 
     ids = [str(case["id"]) for case in fixture["cases"]]
     assert len(ids) == len(set(ids))
@@ -58,6 +77,12 @@ def test_classifier_eval_gold_fixture_schema():
         assert expected["action"] in POSTPROCESS_ACTIONS
         assert isinstance(expected["score"], int)
         assert 1 <= expected["score"] <= 5
+        if fixture["version"] == "v2":
+            accepted = case.get("accepted_actions")
+            assert isinstance(accepted, list) and accepted
+            assert expected["action"] in accepted
+            assert all(action in POSTPROCESS_ACTIONS for action in accepted)
+            assert isinstance(case.get("rationale"), str) and case["rationale"].strip()
 
 
 def test_local_classifier_accuracy_against_generic_gold():
@@ -66,6 +91,26 @@ def test_local_classifier_accuracy_against_generic_gold():
     metrics = evaluate_against_gold(cases, predictions)
 
     _assert_accuracy("local", metrics)
+
+
+def test_evaluate_against_gold_uses_accepted_actions_for_action_metrics():
+    cases = [
+        {
+            "id": "docs_ref_case",
+            "title": "JSON API reference",
+            "url": "https://docs.python.org/3/library/json.html",
+            "expected": {"topic": "python", "kind": "docs", "action": "reference", "score": 4},
+            "accepted_actions": ["reference", "read"],
+            "rationale": "Reference vs read is intentionally accepted for this docs scenario.",
+        }
+    ]
+    predictions = {
+        "docs_ref_case": {"topic": "python", "kind": "docs", "action": "read", "score": 4}
+    }
+
+    metrics = evaluate_against_gold(cases, predictions)
+    assert metrics["accuracy"]["action_raw"] == 1.0
+    assert metrics["accuracy"]["action_kind_derived"] == 1.0
 
 
 @pytest.mark.parametrize("model_name", DEFAULT_MODEL_MATRIX)

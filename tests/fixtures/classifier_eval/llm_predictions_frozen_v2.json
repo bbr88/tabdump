@@ -1,0 +1,1331 @@
+{
+  "models": {
+    "gpt-4.1": {
+      "meta": {
+        "captured_at": "2026-02-16T18:03:57Z",
+        "model_id": "gpt-4.1",
+        "source": "live",
+        "temperature": "0.2"
+      },
+      "predictions": {
+        "auth_login_portal_a": {
+          "action": "ignore",
+          "kind": "auth",
+          "score": 2,
+          "topic": "security"
+        },
+        "auth_login_portal_b": {
+          "action": "ignore",
+          "kind": "auth",
+          "score": 2,
+          "topic": "security"
+        },
+        "auth_login_portal_c": {
+          "action": "ignore",
+          "kind": "auth",
+          "score": 2,
+          "topic": "security"
+        },
+        "calendar_planner_a": {
+          "action": "triage",
+          "kind": "tool",
+          "score": 3,
+          "topic": "productivity"
+        },
+        "calendar_planner_b": {
+          "action": "triage",
+          "kind": "tool",
+          "score": 3,
+          "topic": "productivity"
+        },
+        "calendar_planner_c": {
+          "action": "triage",
+          "kind": "tool",
+          "score": 3,
+          "topic": "productivity"
+        },
+        "career_interview_guide_a": {
+          "action": "read",
+          "kind": "article",
+          "score": 4,
+          "topic": "education"
+        },
+        "career_interview_guide_b": {
+          "action": "read",
+          "kind": "article",
+          "score": 4,
+          "topic": "education"
+        },
+        "career_interview_guide_c": {
+          "action": "read",
+          "kind": "article",
+          "score": 4,
+          "topic": "education"
+        },
+        "docs_python_reference_a": {
+          "action": "reference",
+          "kind": "docs",
+          "score": 4,
+          "topic": "python"
+        },
+        "docs_python_reference_b": {
+          "action": "reference",
+          "kind": "docs",
+          "score": 4,
+          "topic": "python"
+        },
+        "docs_python_reference_c": {
+          "action": "reference",
+          "kind": "docs",
+          "score": 4,
+          "topic": "python"
+        },
+        "education_docs_howto_a": {
+          "action": "reference",
+          "kind": "docs",
+          "score": 5,
+          "topic": "education"
+        },
+        "education_docs_howto_b": {
+          "action": "reference",
+          "kind": "docs",
+          "score": 5,
+          "topic": "education"
+        },
+        "education_docs_howto_c": {
+          "action": "reference",
+          "kind": "docs",
+          "score": 5,
+          "topic": "education"
+        },
+        "finance_budget_retirement_a": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "finance"
+        },
+        "finance_budget_retirement_b": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "finance"
+        },
+        "finance_budget_retirement_c": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "finance"
+        },
+        "fitness_workout_video_a": {
+          "action": "watch",
+          "kind": "video",
+          "score": 2,
+          "topic": "fitness"
+        },
+        "fitness_workout_video_b": {
+          "action": "watch",
+          "kind": "video",
+          "score": 2,
+          "topic": "fitness"
+        },
+        "fitness_workout_video_c": {
+          "action": "watch",
+          "kind": "video",
+          "score": 2,
+          "topic": "fitness"
+        },
+        "food_recipe_page_a": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "food"
+        },
+        "food_recipe_page_b": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "food"
+        },
+        "food_recipe_page_c": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "food"
+        },
+        "health_mindfulness_article_a": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "health"
+        },
+        "health_mindfulness_article_b": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "health"
+        },
+        "health_mindfulness_article_c": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "health"
+        },
+        "health_reference_nutrition_a": {
+          "action": "reference",
+          "kind": "docs",
+          "score": 4,
+          "topic": "health"
+        },
+        "health_reference_nutrition_b": {
+          "action": "reference",
+          "kind": "docs",
+          "score": 4,
+          "topic": "health"
+        },
+        "health_reference_nutrition_c": {
+          "action": "reference",
+          "kind": "docs",
+          "score": 4,
+          "topic": "health"
+        },
+        "home_diy_garden_a": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "education"
+        },
+        "home_diy_garden_b": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "education"
+        },
+        "home_diy_garden_c": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "education"
+        },
+        "maps_trip_route_a": {
+          "action": "triage",
+          "kind": "tool",
+          "score": 3,
+          "topic": "travel"
+        },
+        "maps_trip_route_b": {
+          "action": "triage",
+          "kind": "tool",
+          "score": 3,
+          "topic": "travel"
+        },
+        "maps_trip_route_c": {
+          "action": "triage",
+          "kind": "tool",
+          "score": 3,
+          "topic": "travel"
+        },
+        "movie_trailer_page_a": {
+          "action": "watch",
+          "kind": "video",
+          "score": 2,
+          "topic": "finance"
+        },
+        "movie_trailer_page_b": {
+          "action": "watch",
+          "kind": "video",
+          "score": 2,
+          "topic": "finance"
+        },
+        "movie_trailer_page_c": {
+          "action": "watch",
+          "kind": "video",
+          "score": 2,
+          "topic": "finance"
+        },
+        "music_focus_playlist_a": {
+          "action": "watch",
+          "kind": "music",
+          "score": 2,
+          "topic": "spotify"
+        },
+        "music_focus_playlist_b": {
+          "action": "watch",
+          "kind": "music",
+          "score": 2,
+          "topic": "parenting"
+        },
+        "music_focus_playlist_c": {
+          "action": "watch",
+          "kind": "music",
+          "score": 2,
+          "topic": "spotify"
+        },
+        "notion_project_plan_a": {
+          "action": "build",
+          "kind": "tool",
+          "score": 4,
+          "topic": "notion"
+        },
+        "notion_project_plan_b": {
+          "action": "build",
+          "kind": "tool",
+          "score": 4,
+          "topic": "parenting"
+        },
+        "notion_project_plan_c": {
+          "action": "build",
+          "kind": "tool",
+          "score": 4,
+          "topic": "notion"
+        },
+        "paper_research_method_a": {
+          "action": "deep_work",
+          "kind": "paper",
+          "score": 5,
+          "topic": "research"
+        },
+        "paper_research_method_b": {
+          "action": "deep_work",
+          "kind": "paper",
+          "score": 5,
+          "topic": "parenting"
+        },
+        "paper_research_method_c": {
+          "action": "deep_work",
+          "kind": "paper",
+          "score": 5,
+          "topic": "research"
+        },
+        "paper_whitepaper_systems_a": {
+          "action": "deep_work",
+          "kind": "paper",
+          "score": 5,
+          "topic": "architecture"
+        },
+        "paper_whitepaper_systems_b": {
+          "action": "deep_work",
+          "kind": "paper",
+          "score": 5,
+          "topic": "architecture"
+        },
+        "paper_whitepaper_systems_c": {
+          "action": "deep_work",
+          "kind": "paper",
+          "score": 5,
+          "topic": "architecture"
+        },
+        "parenting_toddler_checklist_a": {
+          "action": "read",
+          "kind": "article",
+          "score": 4,
+          "topic": "education"
+        },
+        "parenting_toddler_checklist_b": {
+          "action": "read",
+          "kind": "article",
+          "score": 4,
+          "topic": "education"
+        },
+        "parenting_toddler_checklist_c": {
+          "action": "read",
+          "kind": "article",
+          "score": 4,
+          "topic": "education"
+        },
+        "repo_feature_branch_a": {
+          "action": "build",
+          "kind": "repo",
+          "score": 4,
+          "topic": "gitlab"
+        },
+        "repo_feature_branch_b": {
+          "action": "build",
+          "kind": "repo",
+          "score": 4,
+          "topic": "parenting"
+        },
+        "repo_feature_branch_c": {
+          "action": "build",
+          "kind": "repo",
+          "score": 4,
+          "topic": "gitlab"
+        },
+        "repo_issue_triage_a": {
+          "action": "triage",
+          "kind": "repo",
+          "score": 4,
+          "topic": "github"
+        },
+        "repo_issue_triage_b": {
+          "action": "triage",
+          "kind": "repo",
+          "score": 4,
+          "topic": "parenting"
+        },
+        "repo_issue_triage_c": {
+          "action": "triage",
+          "kind": "repo",
+          "score": 4,
+          "topic": "github"
+        },
+        "repo_project_board_a": {
+          "action": "build",
+          "kind": "repo",
+          "score": 4,
+          "topic": "github"
+        },
+        "repo_project_board_b": {
+          "action": "build",
+          "kind": "repo",
+          "score": 4,
+          "topic": "parenting"
+        },
+        "repo_project_board_c": {
+          "action": "build",
+          "kind": "repo",
+          "score": 4,
+          "topic": "github"
+        },
+        "shopping_amazon_deal_a": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "shopping"
+        },
+        "shopping_amazon_deal_b": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "shopping"
+        },
+        "shopping_amazon_deal_c": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "shopping"
+        },
+        "slack_inbox_thread_a": {
+          "action": "triage",
+          "kind": "tool",
+          "score": 3,
+          "topic": "slack"
+        },
+        "slack_inbox_thread_b": {
+          "action": "triage",
+          "kind": "tool",
+          "score": 3,
+          "topic": "parenting"
+        },
+        "slack_inbox_thread_c": {
+          "action": "triage",
+          "kind": "tool",
+          "score": 3,
+          "topic": "slack"
+        },
+        "travel_blog_itinerary_a": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "travel"
+        },
+        "travel_blog_itinerary_b": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "travel"
+        },
+        "travel_blog_itinerary_c": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "travel"
+        }
+      }
+    },
+    "gpt-4.1-mini": {
+      "meta": {
+        "captured_at": "2026-02-16T18:03:57Z",
+        "model_id": "gpt-4.1-mini",
+        "source": "live",
+        "temperature": "0.2"
+      },
+      "predictions": {
+        "auth_login_portal_a": {
+          "action": "ignore",
+          "kind": "auth",
+          "score": 2,
+          "topic": "security"
+        },
+        "auth_login_portal_b": {
+          "action": "ignore",
+          "kind": "auth",
+          "score": 2,
+          "topic": "security"
+        },
+        "auth_login_portal_c": {
+          "action": "ignore",
+          "kind": "auth",
+          "score": 2,
+          "topic": "security"
+        },
+        "calendar_planner_a": {
+          "action": "triage",
+          "kind": "tool",
+          "score": 3,
+          "topic": "productivity"
+        },
+        "calendar_planner_b": {
+          "action": "triage",
+          "kind": "tool",
+          "score": 3,
+          "topic": "productivity"
+        },
+        "calendar_planner_c": {
+          "action": "triage",
+          "kind": "tool",
+          "score": 3,
+          "topic": "productivity"
+        },
+        "career_interview_guide_a": {
+          "action": "read",
+          "kind": "article",
+          "score": 4,
+          "topic": "education"
+        },
+        "career_interview_guide_b": {
+          "action": "read",
+          "kind": "article",
+          "score": 4,
+          "topic": "education"
+        },
+        "career_interview_guide_c": {
+          "action": "read",
+          "kind": "article",
+          "score": 4,
+          "topic": "education"
+        },
+        "docs_python_reference_a": {
+          "action": "reference",
+          "kind": "docs",
+          "score": 4,
+          "topic": "python"
+        },
+        "docs_python_reference_b": {
+          "action": "reference",
+          "kind": "docs",
+          "score": 4,
+          "topic": "python"
+        },
+        "docs_python_reference_c": {
+          "action": "reference",
+          "kind": "docs",
+          "score": 4,
+          "topic": "python"
+        },
+        "education_docs_howto_a": {
+          "action": "reference",
+          "kind": "docs",
+          "score": 5,
+          "topic": "education"
+        },
+        "education_docs_howto_b": {
+          "action": "reference",
+          "kind": "docs",
+          "score": 5,
+          "topic": "education"
+        },
+        "education_docs_howto_c": {
+          "action": "reference",
+          "kind": "docs",
+          "score": 5,
+          "topic": "education"
+        },
+        "finance_budget_retirement_a": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "finance"
+        },
+        "finance_budget_retirement_b": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "finance"
+        },
+        "finance_budget_retirement_c": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "finance"
+        },
+        "fitness_workout_video_a": {
+          "action": "watch",
+          "kind": "video",
+          "score": 2,
+          "topic": "fitness"
+        },
+        "fitness_workout_video_b": {
+          "action": "watch",
+          "kind": "video",
+          "score": 2,
+          "topic": "fitness"
+        },
+        "fitness_workout_video_c": {
+          "action": "watch",
+          "kind": "video",
+          "score": 2,
+          "topic": "fitness"
+        },
+        "food_recipe_page_a": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "food"
+        },
+        "food_recipe_page_b": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "food"
+        },
+        "food_recipe_page_c": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "food"
+        },
+        "health_mindfulness_article_a": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "health"
+        },
+        "health_mindfulness_article_b": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "health"
+        },
+        "health_mindfulness_article_c": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "health"
+        },
+        "health_reference_nutrition_a": {
+          "action": "reference",
+          "kind": "docs",
+          "score": 4,
+          "topic": "health"
+        },
+        "health_reference_nutrition_b": {
+          "action": "reference",
+          "kind": "docs",
+          "score": 4,
+          "topic": "health"
+        },
+        "health_reference_nutrition_c": {
+          "action": "reference",
+          "kind": "docs",
+          "score": 4,
+          "topic": "health"
+        },
+        "home_diy_garden_a": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "education"
+        },
+        "home_diy_garden_b": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "education"
+        },
+        "home_diy_garden_c": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "education"
+        },
+        "maps_trip_route_a": {
+          "action": "triage",
+          "kind": "tool",
+          "score": 3,
+          "topic": "travel"
+        },
+        "maps_trip_route_b": {
+          "action": "triage",
+          "kind": "tool",
+          "score": 3,
+          "topic": "travel"
+        },
+        "maps_trip_route_c": {
+          "action": "triage",
+          "kind": "tool",
+          "score": 3,
+          "topic": "travel"
+        },
+        "movie_trailer_page_a": {
+          "action": "watch",
+          "kind": "video",
+          "score": 2,
+          "topic": "finance"
+        },
+        "movie_trailer_page_b": {
+          "action": "watch",
+          "kind": "video",
+          "score": 2,
+          "topic": "finance"
+        },
+        "movie_trailer_page_c": {
+          "action": "watch",
+          "kind": "video",
+          "score": 2,
+          "topic": "finance"
+        },
+        "music_focus_playlist_a": {
+          "action": "watch",
+          "kind": "music",
+          "score": 2,
+          "topic": "spotify"
+        },
+        "music_focus_playlist_b": {
+          "action": "watch",
+          "kind": "music",
+          "score": 2,
+          "topic": "parenting"
+        },
+        "music_focus_playlist_c": {
+          "action": "watch",
+          "kind": "music",
+          "score": 2,
+          "topic": "spotify"
+        },
+        "notion_project_plan_a": {
+          "action": "build",
+          "kind": "tool",
+          "score": 4,
+          "topic": "notion"
+        },
+        "notion_project_plan_b": {
+          "action": "build",
+          "kind": "tool",
+          "score": 4,
+          "topic": "parenting"
+        },
+        "notion_project_plan_c": {
+          "action": "build",
+          "kind": "tool",
+          "score": 4,
+          "topic": "notion"
+        },
+        "paper_research_method_a": {
+          "action": "deep_work",
+          "kind": "paper",
+          "score": 5,
+          "topic": "research"
+        },
+        "paper_research_method_b": {
+          "action": "deep_work",
+          "kind": "paper",
+          "score": 5,
+          "topic": "parenting"
+        },
+        "paper_research_method_c": {
+          "action": "deep_work",
+          "kind": "paper",
+          "score": 5,
+          "topic": "research"
+        },
+        "paper_whitepaper_systems_a": {
+          "action": "deep_work",
+          "kind": "paper",
+          "score": 5,
+          "topic": "architecture"
+        },
+        "paper_whitepaper_systems_b": {
+          "action": "deep_work",
+          "kind": "paper",
+          "score": 5,
+          "topic": "architecture"
+        },
+        "paper_whitepaper_systems_c": {
+          "action": "deep_work",
+          "kind": "paper",
+          "score": 5,
+          "topic": "architecture"
+        },
+        "parenting_toddler_checklist_a": {
+          "action": "read",
+          "kind": "article",
+          "score": 4,
+          "topic": "education"
+        },
+        "parenting_toddler_checklist_b": {
+          "action": "read",
+          "kind": "article",
+          "score": 4,
+          "topic": "education"
+        },
+        "parenting_toddler_checklist_c": {
+          "action": "read",
+          "kind": "article",
+          "score": 4,
+          "topic": "education"
+        },
+        "repo_feature_branch_a": {
+          "action": "build",
+          "kind": "repo",
+          "score": 4,
+          "topic": "gitlab"
+        },
+        "repo_feature_branch_b": {
+          "action": "build",
+          "kind": "repo",
+          "score": 4,
+          "topic": "parenting"
+        },
+        "repo_feature_branch_c": {
+          "action": "build",
+          "kind": "repo",
+          "score": 4,
+          "topic": "gitlab"
+        },
+        "repo_issue_triage_a": {
+          "action": "triage",
+          "kind": "repo",
+          "score": 4,
+          "topic": "github"
+        },
+        "repo_issue_triage_b": {
+          "action": "triage",
+          "kind": "repo",
+          "score": 4,
+          "topic": "parenting"
+        },
+        "repo_issue_triage_c": {
+          "action": "triage",
+          "kind": "repo",
+          "score": 4,
+          "topic": "github"
+        },
+        "repo_project_board_a": {
+          "action": "build",
+          "kind": "repo",
+          "score": 4,
+          "topic": "github"
+        },
+        "repo_project_board_b": {
+          "action": "build",
+          "kind": "repo",
+          "score": 4,
+          "topic": "parenting"
+        },
+        "repo_project_board_c": {
+          "action": "build",
+          "kind": "repo",
+          "score": 4,
+          "topic": "github"
+        },
+        "shopping_amazon_deal_a": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "shopping"
+        },
+        "shopping_amazon_deal_b": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "shopping"
+        },
+        "shopping_amazon_deal_c": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "shopping"
+        },
+        "slack_inbox_thread_a": {
+          "action": "triage",
+          "kind": "tool",
+          "score": 3,
+          "topic": "slack"
+        },
+        "slack_inbox_thread_b": {
+          "action": "triage",
+          "kind": "tool",
+          "score": 3,
+          "topic": "parenting"
+        },
+        "slack_inbox_thread_c": {
+          "action": "triage",
+          "kind": "tool",
+          "score": 3,
+          "topic": "slack"
+        },
+        "travel_blog_itinerary_a": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "travel"
+        },
+        "travel_blog_itinerary_b": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "travel"
+        },
+        "travel_blog_itinerary_c": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "travel"
+        }
+      }
+    },
+    "gpt-5-nano": {
+      "meta": {
+        "captured_at": "2026-02-16T18:03:57Z",
+        "model_id": "gpt-5-nano",
+        "source": "live",
+        "temperature": "0.2"
+      },
+      "predictions": {
+        "auth_login_portal_a": {
+          "action": "ignore",
+          "kind": "auth",
+          "score": 2,
+          "topic": "security"
+        },
+        "auth_login_portal_b": {
+          "action": "ignore",
+          "kind": "auth",
+          "score": 2,
+          "topic": "security"
+        },
+        "auth_login_portal_c": {
+          "action": "ignore",
+          "kind": "auth",
+          "score": 2,
+          "topic": "security"
+        },
+        "calendar_planner_a": {
+          "action": "triage",
+          "kind": "tool",
+          "score": 3,
+          "topic": "productivity"
+        },
+        "calendar_planner_b": {
+          "action": "triage",
+          "kind": "tool",
+          "score": 3,
+          "topic": "productivity"
+        },
+        "calendar_planner_c": {
+          "action": "triage",
+          "kind": "tool",
+          "score": 3,
+          "topic": "productivity"
+        },
+        "career_interview_guide_a": {
+          "action": "read",
+          "kind": "article",
+          "score": 4,
+          "topic": "education"
+        },
+        "career_interview_guide_b": {
+          "action": "read",
+          "kind": "article",
+          "score": 4,
+          "topic": "education"
+        },
+        "career_interview_guide_c": {
+          "action": "read",
+          "kind": "article",
+          "score": 4,
+          "topic": "education"
+        },
+        "docs_python_reference_a": {
+          "action": "reference",
+          "kind": "docs",
+          "score": 4,
+          "topic": "python"
+        },
+        "docs_python_reference_b": {
+          "action": "reference",
+          "kind": "docs",
+          "score": 4,
+          "topic": "python"
+        },
+        "docs_python_reference_c": {
+          "action": "reference",
+          "kind": "docs",
+          "score": 4,
+          "topic": "python"
+        },
+        "education_docs_howto_a": {
+          "action": "reference",
+          "kind": "docs",
+          "score": 5,
+          "topic": "education"
+        },
+        "education_docs_howto_b": {
+          "action": "reference",
+          "kind": "docs",
+          "score": 5,
+          "topic": "education"
+        },
+        "education_docs_howto_c": {
+          "action": "reference",
+          "kind": "docs",
+          "score": 5,
+          "topic": "education"
+        },
+        "finance_budget_retirement_a": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "finance"
+        },
+        "finance_budget_retirement_b": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "finance"
+        },
+        "finance_budget_retirement_c": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "finance"
+        },
+        "fitness_workout_video_a": {
+          "action": "watch",
+          "kind": "video",
+          "score": 2,
+          "topic": "fitness"
+        },
+        "fitness_workout_video_b": {
+          "action": "watch",
+          "kind": "video",
+          "score": 2,
+          "topic": "fitness"
+        },
+        "fitness_workout_video_c": {
+          "action": "watch",
+          "kind": "video",
+          "score": 2,
+          "topic": "fitness"
+        },
+        "food_recipe_page_a": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "food"
+        },
+        "food_recipe_page_b": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "food"
+        },
+        "food_recipe_page_c": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "food"
+        },
+        "health_mindfulness_article_a": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "health"
+        },
+        "health_mindfulness_article_b": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "health"
+        },
+        "health_mindfulness_article_c": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "health"
+        },
+        "health_reference_nutrition_a": {
+          "action": "reference",
+          "kind": "docs",
+          "score": 4,
+          "topic": "health"
+        },
+        "health_reference_nutrition_b": {
+          "action": "reference",
+          "kind": "docs",
+          "score": 4,
+          "topic": "health"
+        },
+        "health_reference_nutrition_c": {
+          "action": "reference",
+          "kind": "docs",
+          "score": 4,
+          "topic": "health"
+        },
+        "home_diy_garden_a": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "education"
+        },
+        "home_diy_garden_b": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "education"
+        },
+        "home_diy_garden_c": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "education"
+        },
+        "maps_trip_route_a": {
+          "action": "triage",
+          "kind": "tool",
+          "score": 3,
+          "topic": "travel"
+        },
+        "maps_trip_route_b": {
+          "action": "triage",
+          "kind": "tool",
+          "score": 3,
+          "topic": "travel"
+        },
+        "maps_trip_route_c": {
+          "action": "triage",
+          "kind": "tool",
+          "score": 3,
+          "topic": "travel"
+        },
+        "movie_trailer_page_a": {
+          "action": "watch",
+          "kind": "video",
+          "score": 2,
+          "topic": "finance"
+        },
+        "movie_trailer_page_b": {
+          "action": "watch",
+          "kind": "video",
+          "score": 2,
+          "topic": "finance"
+        },
+        "movie_trailer_page_c": {
+          "action": "watch",
+          "kind": "video",
+          "score": 2,
+          "topic": "finance"
+        },
+        "music_focus_playlist_a": {
+          "action": "watch",
+          "kind": "music",
+          "score": 2,
+          "topic": "spotify"
+        },
+        "music_focus_playlist_b": {
+          "action": "watch",
+          "kind": "music",
+          "score": 2,
+          "topic": "parenting"
+        },
+        "music_focus_playlist_c": {
+          "action": "watch",
+          "kind": "music",
+          "score": 2,
+          "topic": "spotify"
+        },
+        "notion_project_plan_a": {
+          "action": "build",
+          "kind": "tool",
+          "score": 4,
+          "topic": "notion"
+        },
+        "notion_project_plan_b": {
+          "action": "build",
+          "kind": "tool",
+          "score": 4,
+          "topic": "parenting"
+        },
+        "notion_project_plan_c": {
+          "action": "build",
+          "kind": "tool",
+          "score": 4,
+          "topic": "notion"
+        },
+        "paper_research_method_a": {
+          "action": "deep_work",
+          "kind": "paper",
+          "score": 5,
+          "topic": "research"
+        },
+        "paper_research_method_b": {
+          "action": "deep_work",
+          "kind": "paper",
+          "score": 5,
+          "topic": "parenting"
+        },
+        "paper_research_method_c": {
+          "action": "deep_work",
+          "kind": "paper",
+          "score": 5,
+          "topic": "research"
+        },
+        "paper_whitepaper_systems_a": {
+          "action": "deep_work",
+          "kind": "paper",
+          "score": 5,
+          "topic": "architecture"
+        },
+        "paper_whitepaper_systems_b": {
+          "action": "deep_work",
+          "kind": "paper",
+          "score": 5,
+          "topic": "architecture"
+        },
+        "paper_whitepaper_systems_c": {
+          "action": "deep_work",
+          "kind": "paper",
+          "score": 5,
+          "topic": "architecture"
+        },
+        "parenting_toddler_checklist_a": {
+          "action": "read",
+          "kind": "article",
+          "score": 4,
+          "topic": "education"
+        },
+        "parenting_toddler_checklist_b": {
+          "action": "read",
+          "kind": "article",
+          "score": 4,
+          "topic": "education"
+        },
+        "parenting_toddler_checklist_c": {
+          "action": "read",
+          "kind": "article",
+          "score": 4,
+          "topic": "education"
+        },
+        "repo_feature_branch_a": {
+          "action": "build",
+          "kind": "repo",
+          "score": 4,
+          "topic": "gitlab"
+        },
+        "repo_feature_branch_b": {
+          "action": "build",
+          "kind": "repo",
+          "score": 4,
+          "topic": "parenting"
+        },
+        "repo_feature_branch_c": {
+          "action": "build",
+          "kind": "repo",
+          "score": 4,
+          "topic": "gitlab"
+        },
+        "repo_issue_triage_a": {
+          "action": "triage",
+          "kind": "repo",
+          "score": 4,
+          "topic": "github"
+        },
+        "repo_issue_triage_b": {
+          "action": "triage",
+          "kind": "repo",
+          "score": 4,
+          "topic": "parenting"
+        },
+        "repo_issue_triage_c": {
+          "action": "triage",
+          "kind": "repo",
+          "score": 4,
+          "topic": "github"
+        },
+        "repo_project_board_a": {
+          "action": "build",
+          "kind": "repo",
+          "score": 4,
+          "topic": "github"
+        },
+        "repo_project_board_b": {
+          "action": "build",
+          "kind": "repo",
+          "score": 4,
+          "topic": "parenting"
+        },
+        "repo_project_board_c": {
+          "action": "build",
+          "kind": "repo",
+          "score": 4,
+          "topic": "github"
+        },
+        "shopping_amazon_deal_a": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "shopping"
+        },
+        "shopping_amazon_deal_b": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "shopping"
+        },
+        "shopping_amazon_deal_c": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "shopping"
+        },
+        "slack_inbox_thread_a": {
+          "action": "triage",
+          "kind": "tool",
+          "score": 3,
+          "topic": "slack"
+        },
+        "slack_inbox_thread_b": {
+          "action": "triage",
+          "kind": "tool",
+          "score": 3,
+          "topic": "parenting"
+        },
+        "slack_inbox_thread_c": {
+          "action": "triage",
+          "kind": "tool",
+          "score": 3,
+          "topic": "slack"
+        },
+        "travel_blog_itinerary_a": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "travel"
+        },
+        "travel_blog_itinerary_b": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "travel"
+        },
+        "travel_blog_itinerary_c": {
+          "action": "read",
+          "kind": "article",
+          "score": 3,
+          "topic": "travel"
+        }
+      }
+    }
+  },
+  "version": "v2"
+}

@@ -11,6 +11,7 @@ from typing import Dict, List, Optional, TextIO, Tuple
 
 from core.tab_policy.taxonomy import POSTPROCESS_ACTION_ORDER, POSTPROCESS_KIND_ORDER
 
+from .coerce import normalize_action
 from .models import Item
 from .urls import normalize_url
 
@@ -201,6 +202,7 @@ def classify_with_llm(
     cls_map: Dict[int, dict] = {}
     kind_values = ", ".join(POSTPROCESS_KIND_ORDER)
     action_values = ", ".join(POSTPROCESS_ACTION_ORDER)
+    allowed_kinds = set(POSTPROCESS_KIND_ORDER)
 
     if max_items > 0 and len(indexed_for_cls) > max_items:
         indexed_for_cls = indexed_for_cls[:max_items]
@@ -224,6 +226,13 @@ def classify_with_llm(
             f"- action: one of [{action_values}]\n"
             "- score: integer 1-5 (importance)\n\n"
             "- effort: one of [quick, medium, deep] (optional)\n\n"
+            "Action rubric (choose enum only; do not use synonyms):\n"
+            "- video/music -> watch\n"
+            "- repo -> triage or build\n"
+            "- tool -> triage or build\n"
+            "- article/docs -> read or reference\n"
+            "- paper -> read, reference, or deep_work\n"
+            "- misc/local/internal/auth -> triage or ignore\n\n"
             "Return JSON like:\n"
             "{\n"
             "  \"items\": [\n"
@@ -231,6 +240,7 @@ def classify_with_llm(
             "  ]\n"
             "}\n\n"
             "Use the provided id as-is; do not invent ids.\n\n"
+            "Do not output action synonyms like listen, browse, or view.\n\n"
             + "\n".join(lines)
         )
 
@@ -241,9 +251,26 @@ def classify_with_llm(
                 print(f"LLM classify failed (chunk size {len(chunk)}): {exc}", file=stderr)
             out = {"items": []}
 
-        for item in out.get("items", []):
+        raw_items = out.get("items", [])
+        if not isinstance(raw_items, list):
+            raw_items = []
+
+        chunk_invalid_kind = 0
+        chunk_invalid_action = 0
+        chunk_invalid_item_id = 0
+        chunk_mapped = 0
+
+        for item in raw_items:
             if not isinstance(item, dict):
+                chunk_invalid_item_id += 1
                 continue
+
+            raw_kind = item.get("kind")
+            if not (isinstance(raw_kind, str) and raw_kind.strip().lower() in allowed_kinds):
+                chunk_invalid_kind += 1
+
+            if normalize_action(item.get("action")) is None:
+                chunk_invalid_action += 1
 
             idx_raw = item.get("id")
             idx: Optional[int] = None
@@ -259,7 +286,21 @@ def classify_with_llm(
                     idx = url_to_idx.get(normalize_url_fn(str(url)))
 
             if idx is None:
+                chunk_invalid_item_id += 1
                 continue
             cls_map[idx] = item
+            chunk_mapped += 1
+
+        if stderr is not None:
+            print(
+                "LLM classify chunk diagnostics: "
+                f"input={len(chunk)} "
+                f"response_items={len(raw_items)} "
+                f"mapped={chunk_mapped} "
+                f"invalid_kind={chunk_invalid_kind} "
+                f"invalid_action={chunk_invalid_action} "
+                f"invalid_item_id={chunk_invalid_item_id}",
+                file=stderr,
+            )
 
     return cls_map

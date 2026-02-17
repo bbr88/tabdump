@@ -31,6 +31,20 @@ from .constants import (
 from .models import Item
 from .urls import host_matches_base
 
+KIND_ACTION_COMPATIBILITY = {
+    "video": {"watch"},
+    "music": {"watch"},
+    "tool": {"triage", "build"},
+    "repo": {"triage", "build"},
+    "article": {"read", "reference"},
+    "docs": {"read", "reference"},
+    "paper": {"read", "reference", "deep_work"},
+    "misc": {"triage", "ignore"},
+    "local": {"triage", "ignore"},
+    "internal": {"triage", "ignore"},
+    "auth": {"triage", "ignore"},
+}
+
 
 def slugify_topic(value: str) -> str:
     return slugify_kebab(value, fallback="misc")
@@ -144,6 +158,17 @@ def infer_local_kind(item: Item) -> str:
     if any(_blob_matches_hint(blob, hint) for hint in REFERENCE_HINTS):
         return "docs"
     return "article"
+
+
+def allowed_actions_for_kind(kind: str) -> set[str]:
+    return set(KIND_ACTION_COMPATIBILITY.get((kind or "").strip().lower(), set()))
+
+
+def is_action_compatible(kind: str, action: str) -> bool:
+    action_norm = (action or "").strip().lower()
+    if not action_norm:
+        return False
+    return action_norm in allowed_actions_for_kind(kind)
 
 
 def infer_local_action(kind: str, item: Item) -> str:

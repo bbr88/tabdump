@@ -247,6 +247,7 @@ def test_classify_with_llm_maps_by_id_and_url_with_redaction_and_max_items():
     assert "- 2 |" not in seen["user"]
     assert f"- kind: one of [{', '.join(POSTPROCESS_KIND_ORDER)}]" in seen["user"]
     assert f"- action: one of [{', '.join(POSTPROCESS_ACTION_ORDER)}]" in seen["user"]
+    assert "Action rubric (choose enum only; do not use synonyms):" in seen["user"]
     assert cls[1]["kind"] == "repo"
     assert cls[0]["kind"] == "docs"
 
@@ -265,3 +266,28 @@ def test_classify_with_llm_logs_and_continues_on_chunk_failure():
 
     assert cls == {}
     assert "LLM classify failed" in stderr.getvalue()
+
+
+def test_classify_with_llm_logs_chunk_validation_diagnostics():
+    item = _item(0)
+    stderr = StringIO()
+
+    cls = llm.classify_with_llm(
+        indexed_for_cls=[(0, item)],
+        url_to_idx={item.norm_url: 0},
+        api_key="k",
+        call_with_retries_fn=lambda *_args, **_kwargs: {
+            "items": [
+                {"id": "bad", "topic": "x", "kind": "unknown", "action": "unknown"},
+                {"id": 0, "topic": "x", "kind": "docs", "action": "browse"},
+            ]
+        },
+        stderr=stderr,
+    )
+
+    assert 0 in cls
+    output = stderr.getvalue()
+    assert "LLM classify chunk diagnostics:" in output
+    assert "invalid_kind=1" in output
+    assert "invalid_action=1" in output
+    assert "invalid_item_id=1" in output

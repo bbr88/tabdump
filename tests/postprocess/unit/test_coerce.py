@@ -1,4 +1,12 @@
-from core.postprocess.coerce import safe_action, safe_effort, safe_kind, safe_prio, safe_score, safe_topic
+from core.postprocess.coerce import (
+    normalize_action,
+    safe_action,
+    safe_effort,
+    safe_kind,
+    safe_prio,
+    safe_score,
+    safe_topic,
+)
 
 
 def test_safe_topic_prefers_non_empty_string_then_domain_then_misc():
@@ -16,8 +24,18 @@ def test_safe_kind_accepts_known_values_only():
 
 def test_safe_action_accepts_known_values_only():
     assert safe_action("Build") == "build"
+    assert safe_action("listen") == "watch"
+    assert safe_action("browse") == "read"
+    assert safe_action("view") == "read"
     assert safe_action("unknown") == "triage"
     assert safe_action(None) == "triage"
+
+
+def test_normalize_action_supports_aliases_and_unknowns():
+    assert normalize_action("listen") == "watch"
+    assert normalize_action("build") == "build"
+    assert normalize_action("unknown") is None
+    assert normalize_action(None) is None
 
 
 def test_safe_score_parses_and_clamps():

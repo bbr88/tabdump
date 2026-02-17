@@ -6,6 +6,7 @@ import pytest
 from core.postprocess import llm
 from tests.postprocess.integration.classifier_eval_utils import (
     ACCURACY_THRESHOLDS,
+    ACTION_RAW_DIAGNOSTIC_THRESHOLD,
     DEFAULT_MODEL_MATRIX,
     PAIRWISE_THRESHOLDS,
     evaluate_against_gold,
@@ -31,6 +32,18 @@ def _model_matrix() -> list[str]:
     if not raw.strip():
         return list(DEFAULT_MODEL_MATRIX)
     return [part.strip() for part in raw.split(",") if part.strip()]
+
+
+def _print_top_mismatches(label: str, metrics: dict, *, limit: int = 5) -> None:
+    mismatches = metrics["mismatches"]
+    print(f"\n{label}-top-mismatches")
+    for field in ("topic", "kind", "action_raw", "action_kind_derived", "score_within_1"):
+        ids = list(mismatches.get(field, []))
+        if not ids:
+            continue
+        shown = ids[:limit]
+        suffix = "" if len(ids) <= limit else f" (+{len(ids) - limit} more)"
+        print(f"{label} {field}: {shown}{suffix}")
 
 
 def test_live_classifier_matrix_reports_accuracy_and_pairwise_agreement():
@@ -59,6 +72,8 @@ def test_live_classifier_matrix_reports_accuracy_and_pairwise_agreement():
             f"action(kind-derived)={accuracy['action_kind_derived']:.2%} "
             f"score±1={accuracy['score_within_1']:.2%}"
         )
+        if label != "local":
+            _print_top_mismatches(label, metrics)
 
     print("\npairwise-kind-action-agreement")
     all_predictions = {"local": local_predictions, **live_predictions}
@@ -73,6 +88,12 @@ def test_live_classifier_matrix_reports_accuracy_and_pairwise_agreement():
                 assert metrics["accuracy"][field] >= threshold, (
                     f"{model} {field} accuracy {metrics['accuracy'][field]:.2%} below {threshold:.0%}; "
                     f"mismatches={metrics['mismatches'][field]}"
+                )
+            if _env_flag("TABDUMP_EVAL_ENFORCE_ACTION_RAW"):
+                assert metrics["accuracy"]["action_raw"] >= ACTION_RAW_DIAGNOSTIC_THRESHOLD, (
+                    f"{model} action_raw accuracy {metrics['accuracy']['action_raw']:.2%} below "
+                    f"{ACTION_RAW_DIAGNOSTIC_THRESHOLD:.0%}; "
+                    f"mismatches={metrics['mismatches']['action_raw']}"
                 )
 
         for left, right in itertools.combinations(sorted(all_predictions), 2):

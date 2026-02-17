@@ -558,6 +558,8 @@ def main() -> int:
         env["TABDUMP_LLM_REDACT"] = _env_bool(cfg_for_run.get("llmRedact", True), default=True)
         env["TABDUMP_LLM_REDACT_QUERY"] = _env_bool(cfg_for_run.get("llmRedactQuery", True), default=True)
         env["TABDUMP_LLM_TITLE_MAX"] = str(cfg_for_run.get("llmTitleMax", 200))
+        env["TABDUMP_LLM_ACTION_POLICY"] = str(cfg_for_run.get("llmActionPolicy", "hybrid")).strip().lower()
+        env["TABDUMP_MIN_LLM_COVERAGE"] = str(cfg_for_run.get("minLlmCoverage", 0.7))
         env["TABDUMP_MAX_ITEMS"] = str(cfg_for_run.get("maxItems", 0))
         env["TABDUMP_DOCS_MORE_LINKS_GROUPING_MODE"] = str(
             cfg_for_run.get("docsMoreLinksGroupingMode", "kind")

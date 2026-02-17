@@ -1,8 +1,10 @@
 from core.postprocess.classify_local import (
+    allowed_actions_for_kind,
     classify_local,
     infer_local_action,
     infer_local_kind,
     infer_local_score,
+    is_action_compatible,
     needle_in_blob,
     slugify_topic,
     topic_from_host,
@@ -102,6 +104,15 @@ def test_infer_local_action_cases():
     assert infer_local_action("tool", tool_project) == "build"
     assert infer_local_action("paper", paper_deep) == "deep_work"
     assert infer_local_action("docs", docs_ref) == "reference"
+
+
+def test_kind_action_compatibility_contract():
+    assert allowed_actions_for_kind("repo") == {"triage", "build"}
+    assert allowed_actions_for_kind("paper") == {"read", "reference", "deep_work"}
+    assert is_action_compatible("video", "watch") is True
+    assert is_action_compatible("video", "read") is False
+    assert is_action_compatible("misc", "ignore") is True
+    assert is_action_compatible("unknown", "triage") is False
 
 
 def test_infer_local_score_applies_adjustments_and_clamps():

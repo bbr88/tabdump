@@ -22,6 +22,32 @@ def _env_flag(name: str, default: bool = False) -> bool:
     return value.strip().lower() in {"1", "true", "yes", "on", "y"}
 
 
+def _env_choice(name: str, allowed: set[str], default: str) -> str:
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    candidate = value.strip().lower()
+    if candidate in allowed:
+        return candidate
+    return default
+
+
+def _env_float(name: str, default: float, *, minimum: Optional[float] = None, maximum: Optional[float] = None) -> float:
+    raw = os.environ.get(name)
+    if raw is None:
+        value = default
+    else:
+        try:
+            value = float(str(raw).strip())
+        except Exception:
+            value = default
+    if minimum is not None and value < minimum:
+        value = minimum
+    if maximum is not None and value > maximum:
+        value = maximum
+    return value
+
+
 def _find_root(path: Path) -> Path:
     candidates = [
         path.parent,
@@ -81,6 +107,12 @@ MAX_ITEMS = int(os.environ.get("TABDUMP_MAX_ITEMS", "0") or 0)
 LLM_ENABLED = _env_flag("TABDUMP_LLM_ENABLED", default=False)
 KEYCHAIN_SERVICE = os.environ.get("TABDUMP_KEYCHAIN_SERVICE", "TabDump")
 KEYCHAIN_ACCOUNT = os.environ.get("TABDUMP_KEYCHAIN_ACCOUNT", "openai")
+LLM_ACTION_POLICY = _env_choice(
+    "TABDUMP_LLM_ACTION_POLICY",
+    {"raw", "derived", "hybrid"},
+    default="hybrid",
+)
+MIN_LLM_COVERAGE = _env_float("TABDUMP_MIN_LLM_COVERAGE", 0.7, minimum=0.0, maximum=1.0)
 
 
 def redact_text_for_llm(text: str) -> str:
@@ -228,6 +260,8 @@ def build_clean_note(src_path: Path, items: List[Item], dump_id: Optional[str] =
         safe_action_fn=_safe_action,
         safe_score_fn=_safe_score,
         extract_created_ts_fn=_extract_created_ts,
+        llm_action_policy=LLM_ACTION_POLICY,
+        min_llm_coverage=MIN_LLM_COVERAGE,
         render_markdown_fn=render_markdown,
         render_cfg_override=_renderer_cfg_override(),
         stderr=sys.stderr,
