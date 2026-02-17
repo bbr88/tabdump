@@ -129,6 +129,8 @@ tabdump count --json
 
 `tabdump count` is fail-hard: it returns an error if a fresh post-launch count cannot be confirmed.
 
+`tabdump count`, `tabdump now`, and `tabdump now --close` launch TabDump in background/hidden mode to reduce focus stealing. First-time Automation prompts may still appear in foreground.
+
 One-shot dump+close run (forced, bypasses gates):
 
 ```bash
