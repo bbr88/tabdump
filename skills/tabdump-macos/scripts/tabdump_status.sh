@@ -76,7 +76,7 @@ try:
 except Exception:
     d = {}
 
-for ts_key in ("lastCheck", "lastProcessedAt", "lastResultAt", "autoSwitchedAt"):
+for ts_key in ("lastCheck", "lastProcessedAt", "lastResultAt", "autoSwitchedAt", "lastCountAt"):
     val = d.get(ts_key)
     if val is None:
         continue
@@ -93,6 +93,8 @@ for key in (
     "lastClean",
     "lastResultRawDump",
     "lastResultCleanNote",
+    "lastCount",
+    "lastCountAt",
     "autoSwitchReason",
     "lastError",
 ):

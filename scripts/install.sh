@@ -1735,6 +1735,7 @@ status_cmd() {
     CONFIG_PATH="${CONFIG_PATH}" MONITOR_STATE_PATH="${MONITOR_STATE_PATH}" LEGACY_STATE_PATH="${LEGACY_STATE_PATH}" python3 - <<'PY'
 import json
 import os
+from datetime import datetime
 from pathlib import Path
 
 
@@ -1785,6 +1786,14 @@ print(f"  lastReason={monitor_state.get('lastReason', '-')}")
 print(f"  lastResultAt={monitor_state.get('lastResultAt', '-')}")
 print(f"  lastProcessed={monitor_state.get('lastProcessed', '-')}")
 print(f"  lastClean={monitor_state.get('lastClean', '-')}")
+print(f"  lastCount={monitor_state.get('lastCount', '-')}")
+last_count_at = monitor_state.get("lastCountAt", "-")
+print(f"  lastCountAt={last_count_at}")
+try:
+    if last_count_at not in {"-", "", None}:
+        print(f"  lastCountAtIso={datetime.fromtimestamp(float(last_count_at)).isoformat(sep=' ', timespec='seconds')}")
+except Exception:
+    pass
 
 print(f"- app state (legacy self-gating): {legacy_state_path}")
 print(f"  lastCheck={legacy_state.get('lastCheck', '-')}")

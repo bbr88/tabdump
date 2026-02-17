@@ -14,10 +14,16 @@ def _write_executable(path: Path, body: str) -> None:
     path.chmod(0o755)
 
 
-def _create_smoke_stub_scripts(tmp_path: Path, run_once_exit: int = 0) -> tuple[Path, Path]:
+def _create_smoke_stub_scripts(
+    tmp_path: Path,
+    run_once_exit: int = 0,
+    count_json_payload: str | None = None,
+) -> tuple[Path, Path]:
     scripts_dir = tmp_path / "scripts"
     scripts_dir.mkdir(parents=True, exist_ok=True)
     call_log = tmp_path / "calls.log"
+    if count_json_payload is None:
+        count_json_payload = '{"status":"ok","reason":"count_only","mode":"count","tabCount":7}'
 
     _write_executable(
         scripts_dir / "tabdump_run_once.sh",
@@ -30,6 +36,20 @@ if [[ "{run_once_exit}" == "3" ]]; then
   echo "[info] No clean dump produced (cooldown_active)."
 fi
 exit {run_once_exit}
+""",
+    )
+    _write_executable(
+        scripts_dir / "tabdump_count.sh",
+        f"""#!/usr/bin/env bash
+set -euo pipefail
+echo "count" >> "{call_log}"
+if [[ "${{1:-}}" == "--json" ]]; then
+  cat <<'JSON'
+{count_json_payload}
+JSON
+  exit 0
+fi
+echo "7"
 """,
     )
     _write_executable(
@@ -69,6 +89,7 @@ def test_openclaw_skill_layout_contains_required_files():
         SKILL_DIR / "SKILL.md",
         SKILL_DIR / "references" / "config.md",
         SKILL_DIR / "scripts" / "tabdump_run_once.sh",
+        SKILL_DIR / "scripts" / "tabdump_count.sh",
         SKILL_DIR / "scripts" / "tabdump_status.sh",
         SKILL_DIR / "scripts" / "tabdump_reload_launchagent.sh",
         SKILL_DIR / "scripts" / "tabdump_permissions_reset.sh",
@@ -82,6 +103,7 @@ def test_openclaw_skill_layout_contains_required_files():
 def test_openclaw_skill_scripts_are_executable():
     scripts = [
         SKILL_DIR / "scripts" / "tabdump_run_once.sh",
+        SKILL_DIR / "scripts" / "tabdump_count.sh",
         SKILL_DIR / "scripts" / "tabdump_status.sh",
         SKILL_DIR / "scripts" / "tabdump_reload_launchagent.sh",
         SKILL_DIR / "scripts" / "tabdump_permissions_reset.sh",
@@ -134,11 +156,12 @@ def test_skill_smoke_safe_mode_does_not_run_one_shot(tmp_path):
     )
     output = proc.stdout + proc.stderr
     assert proc.returncode == 0, output
-    assert "Safe mode: skipping active one-shot run" in output
+    assert "Safe mode: skipping active one-shot/count runs" in output
 
     calls = call_log.read_text(encoding="utf-8").splitlines()
     assert "status" in calls
     assert "run_once" not in calls
+    assert "count" not in calls
 
 
 def test_skill_smoke_active_mode_runs_one_shot_success(tmp_path):
@@ -158,9 +181,11 @@ def test_skill_smoke_active_mode_runs_one_shot_success(tmp_path):
     assert proc.returncode == 0, output
     assert "Active mode may open TabDump.app and trigger macOS Automation (TCC) prompts." in output
     assert "run_once success output contract is valid." in output
+    assert "count success output contract is valid." in output
 
     calls = call_log.read_text(encoding="utf-8").splitlines()
     assert "run_once" in calls
+    assert "count" in calls
 
 
 def test_skill_smoke_active_mode_accepts_noop_contract(tmp_path):
@@ -182,3 +207,29 @@ def test_skill_smoke_active_mode_accepts_noop_contract(tmp_path):
 
     calls = call_log.read_text(encoding="utf-8").splitlines()
     assert "run_once" in calls
+    assert "count" in calls
+
+
+def test_skill_smoke_active_mode_accepts_count_unavailable_contract(tmp_path):
+    scripts_dir, call_log = _create_smoke_stub_scripts(
+        tmp_path,
+        run_once_exit=0,
+        count_json_payload='{"status":"error","reason":"count_unavailable","mode":"count","tabCount":null}',
+    )
+    env = os.environ.copy()
+    env["TABDUMP_SMOKE_SCRIPTS_DIR"] = str(scripts_dir)
+
+    proc = subprocess.run(
+        ["bash", str(SMOKE_SCRIPT), "--active"],
+        cwd=ROOT_DIR,
+        env=env,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    output = proc.stdout + proc.stderr
+    assert proc.returncode == 0, output
+    assert "count fail-hard output contract is valid." in output
+
+    calls = call_log.read_text(encoding="utf-8").splitlines()
+    assert "count" in calls

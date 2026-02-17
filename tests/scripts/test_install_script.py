@@ -899,6 +899,8 @@ def test_generated_cli_status_prints_expected_sections(tmp_path):
                 "lastReason": "check_every_gate",
                 "lastProcessed": "/tmp/raw.md",
                 "lastClean": "/tmp/clean.md",
+                "lastCount": 11,
+                "lastCountAt": 1700000000,
             }
         ),
         encoding="utf-8",
@@ -923,6 +925,9 @@ def test_generated_cli_status_prints_expected_sections(tmp_path):
     assert "- mode:" in output
     assert "- monitor state:" in output
     assert "lastStatus=noop" in output
+    assert "lastCount=11" in output
+    assert "lastCountAt=1700000000" in output
+    assert "lastCountAtIso=" in output
     assert "- app state (legacy self-gating):" in output
     assert "- launch agent: loaded" in output
     assert "- log tail:" in output

@@ -27,8 +27,8 @@ Expected install paths:
 1. Check status and logs:
    - `scripts/tabdump_status.sh`
 2. Count current tabs (monitor path; same TCC surface):
-   - `tabdump count`
-   - `tabdump count --json`
+   - `scripts/tabdump_count.sh`
+   - `scripts/tabdump_count.sh --json`
 3. Run one-shot dump (default dump-only):
    - `scripts/tabdump_run_once.sh`
 4. Run one-shot dump+close:
@@ -65,13 +65,14 @@ Exit codes:
 
 ## Tab count output contract
 
-`tabdump count`:
+`scripts/tabdump_count.sh`:
 
 - Prints a single integer tab count to stdout.
 
-`tabdump count --json`:
+`scripts/tabdump_count.sh --json`:
 
 - Returns monitor JSON payload with `status`, `reason`, `mode=count`, and `tabCount`.
+- Fail-hard behavior is expected: if a fresh count cannot be confirmed, payload returns `status=error`, `reason=count_unavailable`, and `tabCount=null` (or empty).
 
 ## Verify successful operation
 

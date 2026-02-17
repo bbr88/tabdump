@@ -100,11 +100,12 @@ Result:
 The skill bundle includes helper wrappers:
 
 1. `scripts/tabdump_run_once.sh [--close]`
-2. `scripts/tabdump_status.sh`
-3. `scripts/tabdump_reload_launchagent.sh`
-4. `scripts/tabdump_permissions_reset.sh`
-5. `scripts/tabdump_install_from_repo.sh`
-6. `scripts/test_skill_smoke.sh [--active]`
+2. `scripts/tabdump_count.sh [--json]`
+3. `scripts/tabdump_status.sh`
+4. `scripts/tabdump_reload_launchagent.sh`
+5. `scripts/tabdump_permissions_reset.sh`
+6. `scripts/tabdump_install_from_repo.sh`
+7. `scripts/test_skill_smoke.sh [--active]`
 
 ## Core Commands
 

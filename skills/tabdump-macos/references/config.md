@@ -45,8 +45,13 @@ Prefer CLI updates:
 ## State files and logs
 
 - Monitor state: `~/Library/Application Support/TabDump/monitor_state.json`
-  - includes `lastStatus`, `lastReason`, `lastProcessed`, `lastClean`
+  - includes `lastStatus`, `lastReason`, `lastProcessed`, `lastClean`, `lastCount`, `lastCountAt`
 - Legacy app state: `~/Library/Application Support/TabDump/state.json`
 - Logs:
   - `~/Library/Application Support/TabDump/logs/monitor.out.log`
   - `~/Library/Application Support/TabDump/logs/monitor.err.log`
+
+## Count semantics
+
+- `tabdump count` / skill wrapper count are fail-hard.
+- If fresh count evidence is unavailable, reason is `count_unavailable` and `tabCount` is null/empty.
