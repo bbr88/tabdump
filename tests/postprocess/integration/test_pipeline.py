@@ -193,3 +193,55 @@ def test_build_clean_note_supports_raw_derived_and_hybrid_action_policy():
     assert _action_for("raw") == "read"
     assert _action_for("derived") == "triage"
     assert _action_for("hybrid") == "triage"
+
+
+def test_build_clean_note_effort_does_not_collapse_for_core_kinds():
+    items = [
+        _item("Movie trailer 2 min", "https://media.example/video/trailer", "media.example"),
+        _item("Full course personal finance 4h", "https://media.example/video/full-course", "media.example"),
+        _item("API reference cheat sheet", "https://docs.example/reference/card", "docs.example"),
+        _item("Complete guide to retirement planning", "https://docs.example/guide/retirement", "docs.example"),
+        _item("Weekly market recap 10 min", "https://news.example/article/recap", "news.example"),
+        _item("Longform guide to debt recovery", "https://news.example/article/debt-recovery", "news.example"),
+        _item("Issue triage board", "https://projects.example/repo/issues", "projects.example"),
+        _item("Architecture migration plan", "https://projects.example/repo/migration", "projects.example"),
+        _item("Calendar dashboard", "https://apps.example/tool/dashboard", "apps.example"),
+        _item("End-to-end automation workflow setup", "https://apps.example/tool/workflow", "apps.example"),
+    ]
+
+    captured = {}
+
+    def render(payload, cfg):
+        captured["payload"] = payload
+        return "md"
+
+    cls_map = {
+        0: {"topic": "entertainment", "kind": "video", "action": "watch", "score": 2},
+        1: {"topic": "finance", "kind": "video", "action": "watch", "score": 4},
+        2: {"topic": "reference", "kind": "docs", "action": "reference", "score": 3},
+        3: {"topic": "finance", "kind": "docs", "action": "read", "score": 4},
+        4: {"topic": "finance", "kind": "article", "action": "read", "score": 3},
+        5: {"topic": "finance", "kind": "article", "action": "read", "score": 4},
+        6: {"topic": "work", "kind": "repo", "action": "triage", "score": 3},
+        7: {"topic": "work", "kind": "repo", "action": "build", "score": 4},
+        8: {"topic": "productivity", "kind": "tool", "action": "triage", "score": 2},
+        9: {"topic": "productivity", "kind": "tool", "action": "build", "score": 4},
+    }
+
+    md, _ = build_clean_note(
+        src_path=Path("/tmp/in.md"),
+        items=items,
+        llm_enabled=True,
+        resolve_openai_api_key_fn=lambda: "key",
+        classify_with_llm_fn=lambda *_args, **_kwargs: cls_map,
+        extract_created_ts_fn=lambda *_args, **_kwargs: "ts",
+        render_markdown_fn=render,
+    )
+
+    assert md == "md"
+    effort_by_kind = {}
+    for item in captured["payload"]["items"]:
+        effort_by_kind.setdefault(item["kind"], set()).add(item["effort"])
+
+    for kind in ("video", "docs", "article", "repo", "tool"):
+        assert len(effort_by_kind[kind]) >= 2, f"{kind} effort collapsed: {sorted(effort_by_kind[kind])}"

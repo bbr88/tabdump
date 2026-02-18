@@ -1,6 +1,7 @@
 """Shared tab classification semantics used across pipeline stages."""
 
 from .actions import canonical_action, action_priority_weight
+from .effort import effort_distance, normalize_effort, resolve_effort, resolve_effort_decision
 from .matching import host_matches_base
 from .text import slugify_kebab
 from .taxonomy import (
@@ -23,6 +24,10 @@ from .taxonomy import (
 __all__ = [
     "canonical_action",
     "action_priority_weight",
+    "resolve_effort",
+    "resolve_effort_decision",
+    "normalize_effort",
+    "effort_distance",
     "host_matches_base",
     "slugify_kebab",
     "POSTPROCESS_ACTION_ORDER",

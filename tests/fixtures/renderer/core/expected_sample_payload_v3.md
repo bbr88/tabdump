@@ -15,11 +15,11 @@ Deduped: 1
 *Auto-selected “do next” items.*
 > [!abstract] Today's Context: #postgres | #llm | #distributed-systems
 - [ ] [OpenAI API Reference — Responses](https://platform.openai.com/docs/api-reference/responses)
-  [low effort] · docs · #llm
+  [medium effort] · docs · #llm
 - [ ] [neondatabase/neon](https://github.com/neondatabase/neon)
   [medium effort] · repo · #postgres
-- [ ] [5mins of Postgres E18: Partition pruning, prepared statements and generic vs custom que…](https://pganalyze.com/blog/5mins-postgres-partition-pruning-prepared-statements-generic-vs-custom-query-plans)
-  [medium effort] · article · #postgres
+- [ ] [5mins of Postgres E18: Partition pruning, prepared statements and gener…](https://pganalyze.com/blog/5mins-postgres-partition-pruning-prepared-statements-generic-vs-custom-query-plans)
+  [low effort] · article · #postgres
 
 ## 📺 Watch / Listen Later
 > [!video]- Expand Watch / Listen Later (1)
@@ -37,7 +37,7 @@ Deduped: 1
 >   [high effort] · paper
 > ### pgbouncer.org
 > - [ ] [PgBouncer config](https://www.pgbouncer.org/config.html)
->   [low effort] · docs
+>   [medium effort] · docs
 
 ## 🔐 Accounts & Settings
 > [!warning]- Account/Settings Access (2)

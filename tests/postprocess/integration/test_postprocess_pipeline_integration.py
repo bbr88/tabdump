@@ -166,7 +166,7 @@ def test_llm_effort_passthrough_and_missing_fallback(monkeypatch):
 
     payload_items = captured["payload"]["items"]
     assert payload_items[0]["effort"] == "deep"
-    assert payload_items[1]["effort"] == "quick"
+    assert payload_items[1]["effort"] == "medium"
 
 
 def test_max_items_cap_limits_classification_only(monkeypatch):
@@ -224,6 +224,40 @@ def test_cli_reads_docs_more_links_grouping_mode_from_env(monkeypatch):
     ppt.build_clean_note(Path("/tmp/ignore.md"), items, dump_id="id")
 
     assert captured["cfg"] == {"docsOneOffGroupingMode": "energy"}
+
+
+def test_cli_defaults_docs_more_links_grouping_mode_to_kind(monkeypatch):
+    items = _make_items(1)
+    captured = {}
+
+    def fake_render(payload, *args, **kwargs):
+        captured["cfg"] = kwargs.get("cfg")
+        return "md"
+
+    monkeypatch.setattr(ppt, "LLM_ENABLED", False)
+    monkeypatch.setattr(ppt, "render_markdown", fake_render)
+    monkeypatch.delenv("TABDUMP_DOCS_MORE_LINKS_GROUPING_MODE", raising=False)
+
+    ppt.build_clean_note(Path("/tmp/ignore.md"), items, dump_id="id")
+
+    assert captured["cfg"] == {"docsOneOffGroupingMode": "kind"}
+
+
+def test_cli_invalid_docs_more_links_grouping_mode_falls_back_to_kind(monkeypatch):
+    items = _make_items(1)
+    captured = {}
+
+    def fake_render(payload, *args, **kwargs):
+        captured["cfg"] = kwargs.get("cfg")
+        return "md"
+
+    monkeypatch.setattr(ppt, "LLM_ENABLED", False)
+    monkeypatch.setattr(ppt, "render_markdown", fake_render)
+    monkeypatch.setenv("TABDUMP_DOCS_MORE_LINKS_GROUPING_MODE", "bogus")
+
+    ppt.build_clean_note(Path("/tmp/ignore.md"), items, dump_id="id")
+
+    assert captured["cfg"] == {"docsOneOffGroupingMode": "kind"}
 
 
 def test_monitor_passes_llm_env_from_config(tmp_path, monkeypatch):
@@ -290,6 +324,116 @@ def test_monitor_passes_llm_env_from_config(tmp_path, monkeypatch):
     state = json.loads(state_path.read_text(encoding="utf-8"))
     assert state["lastStatus"] == "noop"
     assert state["lastReason"] == "postprocess_noop"
+
+
+def test_monitor_migrates_legacy_docs_more_links_domain_mode_once(tmp_path, monkeypatch):
+    vault_inbox = tmp_path / "inbox"
+    vault_inbox.mkdir()
+
+    config_path = tmp_path / "config.json"
+    config_path.write_text(
+        (
+            json.dumps(
+                {
+                    "vaultInbox": str(vault_inbox),
+                    "checkEveryMinutes": 0,
+                    "llmEnabled": False,
+                    "docsMoreLinksGroupingMode": "domain",
+                },
+                indent=2,
+            )
+            + "\n"
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(monitor, "DEFAULT_CFG", config_path)
+    state_path = tmp_path / "state.json"
+    monkeypatch.setattr(monitor, "STATE_PATH", state_path)
+    monkeypatch.setattr(monitor, "LOCK_PATH", state_path.with_suffix(".lock"))
+    dump_path = vault_inbox / "TabDump 2026-02-07 00-00-00.md"
+
+    def fake_run_tabdump_app():
+        _write_dump(dump_path, with_id=True)
+        ts = time.time()
+        os.utime(dump_path, (ts, ts))
+
+    monkeypatch.setattr(monitor, "run_tabdump_app", fake_run_tabdump_app)
+    monkeypatch.setattr(monitor.sys, "argv", ["monitor_tabs.py"])
+
+    captured_env = {}
+
+    def fake_run(args, capture_output, text, timeout, env):
+        captured_env.update(env)
+        return SimpleNamespace(returncode=3, stdout="", stderr="")
+
+    monkeypatch.setattr(monitor.subprocess, "run", fake_run)
+
+    rc = monitor.main()
+    assert rc == 0
+    assert captured_env["TABDUMP_DOCS_MORE_LINKS_GROUPING_MODE"] == "kind"
+
+    cfg_after = json.loads(config_path.read_text(encoding="utf-8"))
+    assert cfg_after["docsMoreLinksGroupingMode"] == "kind"
+
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    assert state["migrations"][monitor.DOCS_MORE_LINKS_MODE_MIGRATION_KEY] is True
+
+
+def test_monitor_keeps_explicit_domain_after_migration_marker(tmp_path, monkeypatch):
+    vault_inbox = tmp_path / "inbox"
+    vault_inbox.mkdir()
+
+    config_path = tmp_path / "config.json"
+    config_path.write_text(
+        (
+            json.dumps(
+                {
+                    "vaultInbox": str(vault_inbox),
+                    "checkEveryMinutes": 0,
+                    "llmEnabled": False,
+                    "docsMoreLinksGroupingMode": "domain",
+                },
+                indent=2,
+            )
+            + "\n"
+        ),
+        encoding="utf-8",
+    )
+
+    state_path = tmp_path / "state.json"
+    state_path.write_text(
+        json.dumps({"migrations": {monitor.DOCS_MORE_LINKS_MODE_MIGRATION_KEY: True}}, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(monitor, "DEFAULT_CFG", config_path)
+    monkeypatch.setattr(monitor, "STATE_PATH", state_path)
+    monkeypatch.setattr(monitor, "LOCK_PATH", state_path.with_suffix(".lock"))
+    dump_path = vault_inbox / "TabDump 2026-02-07 00-00-00.md"
+
+    def fake_run_tabdump_app():
+        _write_dump(dump_path, with_id=True)
+        ts = time.time()
+        os.utime(dump_path, (ts, ts))
+
+    monkeypatch.setattr(monitor, "run_tabdump_app", fake_run_tabdump_app)
+    monkeypatch.setattr(monitor.sys, "argv", ["monitor_tabs.py"])
+
+    captured_env = {}
+
+    def fake_run(args, capture_output, text, timeout, env):
+        captured_env.update(env)
+        return SimpleNamespace(returncode=3, stdout="", stderr="")
+
+    monkeypatch.setattr(monitor.subprocess, "run", fake_run)
+
+    rc = monitor.main()
+    assert rc == 0
+    assert captured_env["TABDUMP_DOCS_MORE_LINKS_GROUPING_MODE"] == "domain"
+
+    cfg_after = json.loads(config_path.read_text(encoding="utf-8"))
+    assert cfg_after["docsMoreLinksGroupingMode"] == "domain"
 
 
 def test_monitor_waits_for_new_dump_after_app_launch(tmp_path, monkeypatch):

@@ -138,6 +138,7 @@ DEFAULT_CFG: Dict = {
     "docsMultiDomainMinItems": 2,
     "docsOneOffGroupByKindWhenDomainsGt": 8,
     "docsOneOffGroupingMode": "kind",
+    "startHereTitleMaxLen": 72,
     "showDomChipInDomainGroupedSections": False,
     "showKindChipInSections": {"media": False, "repos": False, "projects": False, "tools": False, "docs": False},
     "quickWinsEnableMiniCategories": True,

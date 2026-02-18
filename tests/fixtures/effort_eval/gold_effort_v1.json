@@ -1,0 +1,1491 @@
+{
+  "version": "v1",
+  "cases": [
+    {
+      "id": "video_quick_1",
+      "title": "Movie Trailer 2 Min",
+      "url": "https://stream.example/video/movie-trailer-2-min",
+      "kind": "video",
+      "action": "watch",
+      "expected_effort": "quick",
+      "rationale": "Short trailer/clip style media should be low effort."
+    },
+    {
+      "id": "video_quick_2",
+      "title": "Travel Highlights Clip",
+      "url": "https://travel-tv.example/video/travel-highlights-clip",
+      "kind": "video",
+      "action": "watch",
+      "expected_effort": "quick",
+      "rationale": "Short trailer/clip style media should be low effort."
+    },
+    {
+      "id": "video_quick_3",
+      "title": "Fitness Recap 10 Min",
+      "url": "https://fitmedia.example/video/fitness-recap-10-min",
+      "kind": "video",
+      "action": "watch",
+      "expected_effort": "quick",
+      "rationale": "Short trailer/clip style media should be low effort."
+    },
+    {
+      "id": "video_quick_4",
+      "title": "Soccer Teaser 3 Min",
+      "url": "https://sportcast.example/video/soccer-teaser-3-min",
+      "kind": "video",
+      "action": "watch",
+      "expected_effort": "quick",
+      "rationale": "Short trailer/clip style media should be low effort."
+    },
+    {
+      "id": "video_quick_5",
+      "title": "Music Video Preview",
+      "url": "https://musicbox.example/video/music-video-preview",
+      "kind": "video",
+      "action": "watch",
+      "expected_effort": "quick",
+      "rationale": "Short trailer/clip style media should be low effort."
+    },
+    {
+      "id": "video_quick_6",
+      "title": "Camping Overview 12 Min",
+      "url": "https://outdoors.example/video/camping-overview-12-min",
+      "kind": "video",
+      "action": "watch",
+      "expected_effort": "quick",
+      "rationale": "Short trailer/clip style media should be low effort."
+    },
+    {
+      "id": "video_medium_1",
+      "title": "Budgeting Tutorial 45 Min",
+      "url": "https://learn-finance.example/video/budgeting-tutorial-45-min",
+      "kind": "video",
+      "action": "watch",
+      "expected_effort": "medium",
+      "rationale": "Tutorial and walkthrough videos are usually medium effort.",
+      "accepted_efforts": [
+        "medium",
+        "quick"
+      ]
+    },
+    {
+      "id": "video_medium_2",
+      "title": "Home Cooking Tutorial",
+      "url": "https://cookschool.example/video/home-cooking-tutorial",
+      "kind": "video",
+      "action": "watch",
+      "expected_effort": "medium",
+      "rationale": "Tutorial and walkthrough videos are usually medium effort.",
+      "accepted_efforts": [
+        "medium",
+        "quick"
+      ]
+    },
+    {
+      "id": "video_medium_3",
+      "title": "Language Lesson Deep Dive",
+      "url": "https://languagehub.example/video/language-lesson-deep-dive",
+      "kind": "video",
+      "action": "watch",
+      "expected_effort": "medium",
+      "rationale": "Tutorial and walkthrough videos are usually medium effort.",
+      "accepted_efforts": [
+        "medium",
+        "quick"
+      ]
+    },
+    {
+      "id": "video_medium_4",
+      "title": "Career Interview Breakdown",
+      "url": "https://career-tv.example/video/career-interview-breakdown",
+      "kind": "video",
+      "action": "watch",
+      "expected_effort": "medium",
+      "rationale": "Tutorial and walkthrough videos are usually medium effort.",
+      "accepted_efforts": [
+        "medium",
+        "quick"
+      ]
+    },
+    {
+      "id": "video_medium_5",
+      "title": "History Documentary Overview",
+      "url": "https://historytube.example/video/history-documentary-overview",
+      "kind": "video",
+      "action": "watch",
+      "expected_effort": "medium",
+      "rationale": "Tutorial and walkthrough videos are usually medium effort.",
+      "accepted_efforts": [
+        "medium",
+        "quick"
+      ]
+    },
+    {
+      "id": "video_medium_6",
+      "title": "Workflow Walkthrough",
+      "url": "https://productivity.example/video/workflow-walkthrough",
+      "kind": "video",
+      "action": "watch",
+      "expected_effort": "medium",
+      "rationale": "Tutorial and walkthrough videos are usually medium effort.",
+      "accepted_efforts": [
+        "medium",
+        "quick"
+      ]
+    },
+    {
+      "id": "video_deep_1",
+      "title": "Full Course: Personal Finance 4H",
+      "url": "https://academy.example/video/full-course-personal-finance-4h",
+      "kind": "video",
+      "action": "watch",
+      "expected_effort": "deep",
+      "rationale": "Full courses and multi-hour workshops should be high effort.",
+      "accepted_efforts": [
+        "deep",
+        "medium"
+      ]
+    },
+    {
+      "id": "video_deep_2",
+      "title": "Complete Guide To Marathon Training 3-Hour",
+      "url": "https://fit-academy.example/video/complete-guide-to-marathon-training-3-hour",
+      "kind": "video",
+      "action": "watch",
+      "expected_effort": "deep",
+      "rationale": "Full courses and multi-hour workshops should be high effort.",
+      "accepted_efforts": [
+        "deep",
+        "medium"
+      ]
+    },
+    {
+      "id": "video_deep_3",
+      "title": "Masterclass: Storytelling 5H",
+      "url": "https://creative.example/video/masterclass-storytelling-5h",
+      "kind": "video",
+      "action": "watch",
+      "expected_effort": "deep",
+      "rationale": "Full courses and multi-hour workshops should be high effort.",
+      "accepted_efforts": [
+        "deep",
+        "medium"
+      ]
+    },
+    {
+      "id": "video_deep_4",
+      "title": "Deep Dive Workshop 03:20:00",
+      "url": "https://skills.example/video/deep-dive-workshop-03-20-00",
+      "kind": "video",
+      "action": "watch",
+      "expected_effort": "deep",
+      "rationale": "Full courses and multi-hour workshops should be high effort.",
+      "accepted_efforts": [
+        "deep",
+        "medium"
+      ]
+    },
+    {
+      "id": "video_deep_5",
+      "title": "Step-By-Step Longform Negotiation Training",
+      "url": "https://careerclass.example/video/step-by-step-longform-negotiation-training",
+      "kind": "video",
+      "action": "watch",
+      "expected_effort": "deep",
+      "rationale": "Full courses and multi-hour workshops should be high effort.",
+      "accepted_efforts": [
+        "deep",
+        "medium"
+      ]
+    },
+    {
+      "id": "video_deep_6",
+      "title": "End-To-End Startup Planning Bootcamp",
+      "url": "https://startupschool.example/video/end-to-end-startup-planning-bootcamp",
+      "kind": "video",
+      "action": "watch",
+      "expected_effort": "deep",
+      "rationale": "Full courses and multi-hour workshops should be high effort.",
+      "accepted_efforts": [
+        "deep",
+        "medium"
+      ]
+    },
+    {
+      "id": "docs_quick_1",
+      "title": "API reference cheat sheet",
+      "url": "https://docs.example/docs/api-reference-cheat-sheet",
+      "kind": "docs",
+      "action": "reference",
+      "expected_effort": "quick",
+      "rationale": "Reference and FAQ style docs are usually low effort."
+    },
+    {
+      "id": "docs_quick_2",
+      "title": "FAQ for travel insurance",
+      "url": "https://traveldocs.example/docs/faq-for-travel-insurance",
+      "kind": "docs",
+      "action": "reference",
+      "expected_effort": "quick",
+      "rationale": "Reference and FAQ style docs are usually low effort."
+    },
+    {
+      "id": "docs_quick_3",
+      "title": "Quickstart for home budgeting",
+      "url": "https://finance-docs.example/docs/quickstart-for-home-budgeting",
+      "kind": "docs",
+      "action": "reference",
+      "expected_effort": "quick",
+      "rationale": "Reference and FAQ style docs are usually low effort."
+    },
+    {
+      "id": "docs_quick_4",
+      "title": "Product overview reference",
+      "url": "https://shopdocs.example/docs/product-overview-reference",
+      "kind": "docs",
+      "action": "reference",
+      "expected_effort": "quick",
+      "rationale": "Reference and FAQ style docs are usually low effort."
+    },
+    {
+      "id": "docs_quick_5",
+      "title": "Nutrition FAQ",
+      "url": "https://healthdocs.example/docs/nutrition-faq",
+      "kind": "docs",
+      "action": "reference",
+      "expected_effort": "quick",
+      "rationale": "Reference and FAQ style docs are usually low effort."
+    },
+    {
+      "id": "docs_quick_6",
+      "title": "Parenting checklist overview",
+      "url": "https://familydocs.example/docs/parenting-checklist-overview",
+      "kind": "docs",
+      "action": "reference",
+      "expected_effort": "quick",
+      "rationale": "Reference and FAQ style docs are usually low effort."
+    },
+    {
+      "id": "docs_medium_1",
+      "title": "How-to: choose a mortgage",
+      "url": "https://finance-guides.example/guides/how-to-choose-a-mortgage",
+      "kind": "docs",
+      "action": "read",
+      "expected_effort": "medium",
+      "rationale": "How-to and handbook material is typically medium effort.",
+      "accepted_efforts": [
+        "medium",
+        "deep"
+      ]
+    },
+    {
+      "id": "docs_medium_2",
+      "title": "Guide to planning a weekend trip",
+      "url": "https://travel-guides.example/guides/guide-to-planning-a-weekend-trip",
+      "kind": "docs",
+      "action": "read",
+      "expected_effort": "medium",
+      "rationale": "How-to and handbook material is typically medium effort.",
+      "accepted_efforts": [
+        "medium",
+        "deep"
+      ]
+    },
+    {
+      "id": "docs_medium_3",
+      "title": "Tutorial: building a study plan",
+      "url": "https://education-guides.example/guides/tutorial-building-a-study-plan",
+      "kind": "docs",
+      "action": "read",
+      "expected_effort": "medium",
+      "rationale": "How-to and handbook material is typically medium effort.",
+      "accepted_efforts": [
+        "medium",
+        "deep"
+      ]
+    },
+    {
+      "id": "docs_medium_4",
+      "title": "Workflow guide for hiring",
+      "url": "https://career-guides.example/guides/workflow-guide-for-hiring",
+      "kind": "docs",
+      "action": "read",
+      "expected_effort": "medium",
+      "rationale": "How-to and handbook material is typically medium effort.",
+      "accepted_efforts": [
+        "medium",
+        "deep"
+      ]
+    },
+    {
+      "id": "docs_medium_5",
+      "title": "Beginner handbook to strength training",
+      "url": "https://fitness-guides.example/guides/beginner-handbook-to-strength-training",
+      "kind": "docs",
+      "action": "read",
+      "expected_effort": "medium",
+      "rationale": "How-to and handbook material is typically medium effort.",
+      "accepted_efforts": [
+        "medium",
+        "deep"
+      ]
+    },
+    {
+      "id": "docs_medium_6",
+      "title": "Customer support playbook overview",
+      "url": "https://service-guides.example/guides/customer-support-playbook-overview",
+      "kind": "docs",
+      "action": "read",
+      "expected_effort": "medium",
+      "rationale": "How-to and handbook material is typically medium effort.",
+      "accepted_efforts": [
+        "medium",
+        "deep"
+      ]
+    },
+    {
+      "id": "docs_deep_1",
+      "title": "Complete guide to retirement planning",
+      "url": "https://finance-master.example/handbook/complete-guide-to-retirement-planning",
+      "kind": "docs",
+      "action": "read",
+      "expected_effort": "deep",
+      "rationale": "Comprehensive or end-to-end docs are high effort.",
+      "accepted_efforts": [
+        "deep",
+        "medium"
+      ]
+    },
+    {
+      "id": "docs_deep_2",
+      "title": "Comprehensive handbook: family relocation",
+      "url": "https://life-handbook.example/handbook/comprehensive-handbook-family-relocation",
+      "kind": "docs",
+      "action": "read",
+      "expected_effort": "deep",
+      "rationale": "Comprehensive or end-to-end docs are high effort.",
+      "accepted_efforts": [
+        "deep",
+        "medium"
+      ]
+    },
+    {
+      "id": "docs_deep_3",
+      "title": "Step-by-step curriculum for language fluency",
+      "url": "https://language-master.example/handbook/step-by-step-curriculum-for-language-fluency",
+      "kind": "docs",
+      "action": "read",
+      "expected_effort": "deep",
+      "rationale": "Comprehensive or end-to-end docs are high effort.",
+      "accepted_efforts": [
+        "deep",
+        "medium"
+      ]
+    },
+    {
+      "id": "docs_deep_4",
+      "title": "Longform handbook for starting a small business",
+      "url": "https://business-handbook.example/handbook/longform-handbook-for-starting-a-small-business",
+      "kind": "docs",
+      "action": "read",
+      "expected_effort": "deep",
+      "rationale": "Comprehensive or end-to-end docs are high effort.",
+      "accepted_efforts": [
+        "deep",
+        "medium"
+      ]
+    },
+    {
+      "id": "docs_deep_5",
+      "title": "Masterclass workbook for conflict resolution",
+      "url": "https://coachbooks.example/handbook/masterclass-workbook-for-conflict-resolution",
+      "kind": "docs",
+      "action": "read",
+      "expected_effort": "deep",
+      "rationale": "Comprehensive or end-to-end docs are high effort.",
+      "accepted_efforts": [
+        "deep",
+        "medium"
+      ]
+    },
+    {
+      "id": "docs_deep_6",
+      "title": "End-to-end migration and setup guide",
+      "url": "https://ops-handbook.example/handbook/end-to-end-migration-and-setup-guide",
+      "kind": "docs",
+      "action": "read",
+      "expected_effort": "deep",
+      "rationale": "Comprehensive or end-to-end docs are high effort.",
+      "accepted_efforts": [
+        "deep",
+        "medium"
+      ]
+    },
+    {
+      "id": "article_quick_1",
+      "title": "Weekly market recap",
+      "url": "https://newsroom.example/articles/weekly-market-recap",
+      "kind": "article",
+      "action": "read",
+      "expected_effort": "quick",
+      "rationale": "Recaps and short updates are low-effort reads.",
+      "accepted_efforts": [
+        "quick",
+        "medium"
+      ]
+    },
+    {
+      "id": "article_quick_2",
+      "title": "Sports highlights summary",
+      "url": "https://sportsdaily.example/articles/sports-highlights-summary",
+      "kind": "article",
+      "action": "read",
+      "expected_effort": "quick",
+      "rationale": "Recaps and short updates are low-effort reads.",
+      "accepted_efforts": [
+        "quick",
+        "medium"
+      ]
+    },
+    {
+      "id": "article_quick_3",
+      "title": "Travel teaser: top 5 beaches",
+      "url": "https://tripnews.example/articles/travel-teaser-top-5-beaches",
+      "kind": "article",
+      "action": "read",
+      "expected_effort": "quick",
+      "rationale": "Recaps and short updates are low-effort reads.",
+      "accepted_efforts": [
+        "quick",
+        "medium"
+      ]
+    },
+    {
+      "id": "article_quick_4",
+      "title": "Movie teaser review",
+      "url": "https://cineblog.example/articles/movie-teaser-review",
+      "kind": "article",
+      "action": "read",
+      "expected_effort": "quick",
+      "rationale": "Recaps and short updates are low-effort reads.",
+      "accepted_efforts": [
+        "quick",
+        "medium"
+      ]
+    },
+    {
+      "id": "article_quick_5",
+      "title": "Quick overview: meal prep basics",
+      "url": "https://foodblog.example/articles/quick-overview-meal-prep-basics",
+      "kind": "article",
+      "action": "read",
+      "expected_effort": "quick",
+      "rationale": "Recaps and short updates are low-effort reads.",
+      "accepted_efforts": [
+        "quick",
+        "medium"
+      ]
+    },
+    {
+      "id": "article_quick_6",
+      "title": "Short update: school calendar",
+      "url": "https://parentnews.example/articles/short-update-school-calendar",
+      "kind": "article",
+      "action": "read",
+      "expected_effort": "quick",
+      "rationale": "Recaps and short updates are low-effort reads.",
+      "accepted_efforts": [
+        "quick",
+        "medium"
+      ]
+    },
+    {
+      "id": "article_medium_1",
+      "title": "How to negotiate salary",
+      "url": "https://careerblog.example/articles/how-to-negotiate-salary",
+      "kind": "article",
+      "action": "read",
+      "expected_effort": "medium",
+      "rationale": "Practical guides and explainers are medium effort."
+    },
+    {
+      "id": "article_medium_2",
+      "title": "Beginner guide to mindful eating",
+      "url": "https://healthblog.example/articles/beginner-guide-to-mindful-eating",
+      "kind": "article",
+      "action": "read",
+      "expected_effort": "medium",
+      "rationale": "Practical guides and explainers are medium effort."
+    },
+    {
+      "id": "article_medium_3",
+      "title": "Tutorial: plan a family budget",
+      "url": "https://financeblog.example/articles/tutorial-plan-a-family-budget",
+      "kind": "article",
+      "action": "read",
+      "expected_effort": "medium",
+      "rationale": "Practical guides and explainers are medium effort."
+    },
+    {
+      "id": "article_medium_4",
+      "title": "Deep dive: travel packing strategy",
+      "url": "https://travelblog.example/articles/deep-dive-travel-packing-strategy",
+      "kind": "article",
+      "action": "read",
+      "expected_effort": "medium",
+      "rationale": "Practical guides and explainers are medium effort."
+    },
+    {
+      "id": "article_medium_5",
+      "title": "Explained: choosing child care",
+      "url": "https://familyblog.example/articles/explained-choosing-child-care",
+      "kind": "article",
+      "action": "read",
+      "expected_effort": "medium",
+      "rationale": "Practical guides and explainers are medium effort."
+    },
+    {
+      "id": "article_medium_6",
+      "title": "Case study: improving sleep habits",
+      "url": "https://wellnessblog.example/articles/case-study-improving-sleep-habits",
+      "kind": "article",
+      "action": "read",
+      "expected_effort": "medium",
+      "rationale": "Practical guides and explainers are medium effort."
+    },
+    {
+      "id": "article_deep_1",
+      "title": "Longform guide to debt recovery",
+      "url": "https://finance-longread.example/longreads/longform-guide-to-debt-recovery",
+      "kind": "article",
+      "action": "read",
+      "expected_effort": "deep",
+      "rationale": "Longform and complete handbook articles are high effort.",
+      "accepted_efforts": [
+        "deep",
+        "medium"
+      ]
+    },
+    {
+      "id": "article_deep_2",
+      "title": "Comprehensive playbook for career transition",
+      "url": "https://career-longread.example/longreads/comprehensive-playbook-for-career-transition",
+      "kind": "article",
+      "action": "read",
+      "expected_effort": "deep",
+      "rationale": "Longform and complete handbook articles are high effort.",
+      "accepted_efforts": [
+        "deep",
+        "medium"
+      ]
+    },
+    {
+      "id": "article_deep_3",
+      "title": "Step-by-step plan for marathon preparation",
+      "url": "https://fitness-longread.example/longreads/step-by-step-plan-for-marathon-preparation",
+      "kind": "article",
+      "action": "read",
+      "expected_effort": "deep",
+      "rationale": "Longform and complete handbook articles are high effort.",
+      "accepted_efforts": [
+        "deep",
+        "medium"
+      ]
+    },
+    {
+      "id": "article_deep_4",
+      "title": "Masterclass article: negotiation frameworks",
+      "url": "https://strategy-longread.example/longreads/masterclass-article-negotiation-frameworks",
+      "kind": "article",
+      "action": "read",
+      "expected_effort": "deep",
+      "rationale": "Longform and complete handbook articles are high effort.",
+      "accepted_efforts": [
+        "deep",
+        "medium"
+      ]
+    },
+    {
+      "id": "article_deep_5",
+      "title": "End-to-end guide for moving abroad",
+      "url": "https://relocation-longread.example/longreads/end-to-end-guide-for-moving-abroad",
+      "kind": "article",
+      "action": "read",
+      "expected_effort": "deep",
+      "rationale": "Longform and complete handbook articles are high effort.",
+      "accepted_efforts": [
+        "deep",
+        "medium"
+      ]
+    },
+    {
+      "id": "article_deep_6",
+      "title": "Complete handbook style article on parenting routines",
+      "url": "https://family-longread.example/longreads/complete-handbook-style-article-on-parenting-routines",
+      "kind": "article",
+      "action": "read",
+      "expected_effort": "deep",
+      "rationale": "Longform and complete handbook articles are high effort.",
+      "accepted_efforts": [
+        "deep",
+        "medium"
+      ]
+    },
+    {
+      "id": "repo_quick_1",
+      "title": "Issue triage board",
+      "url": "https://projects.example/repo/issue-triage-board",
+      "kind": "repo",
+      "action": "triage",
+      "expected_effort": "quick",
+      "rationale": "Quick triage and overview repo pages should be low effort."
+    },
+    {
+      "id": "repo_quick_2",
+      "title": "README overview",
+      "url": "https://projects.example/repo/readme-overview",
+      "kind": "repo",
+      "action": "triage",
+      "expected_effort": "quick",
+      "rationale": "Quick triage and overview repo pages should be low effort."
+    },
+    {
+      "id": "repo_quick_3",
+      "title": "Release notes quick summary",
+      "url": "https://projects.example/repo/release-notes-quick-summary",
+      "kind": "repo",
+      "action": "triage",
+      "expected_effort": "quick",
+      "rationale": "Quick triage and overview repo pages should be low effort."
+    },
+    {
+      "id": "repo_quick_4",
+      "title": "Bug report list",
+      "url": "https://projects.example/repo/bug-report-list",
+      "kind": "repo",
+      "action": "triage",
+      "expected_effort": "quick",
+      "rationale": "Quick triage and overview repo pages should be low effort."
+    },
+    {
+      "id": "repo_quick_5",
+      "title": "Project home page",
+      "url": "https://projects.example/repo/project-home-page",
+      "kind": "repo",
+      "action": "triage",
+      "expected_effort": "quick",
+      "rationale": "Quick triage and overview repo pages should be low effort."
+    },
+    {
+      "id": "repo_medium_1",
+      "title": "Feature planning board",
+      "url": "https://projects.example/repo/feature-planning-board",
+      "kind": "repo",
+      "action": "build",
+      "expected_effort": "medium",
+      "rationale": "Typical build/planning work is medium effort."
+    },
+    {
+      "id": "repo_medium_2",
+      "title": "Backlog grooming workflow",
+      "url": "https://projects.example/repo/backlog-grooming-workflow",
+      "kind": "repo",
+      "action": "build",
+      "expected_effort": "medium",
+      "rationale": "Typical build/planning work is medium effort."
+    },
+    {
+      "id": "repo_medium_3",
+      "title": "Implementation checklist",
+      "url": "https://projects.example/repo/implementation-checklist",
+      "kind": "repo",
+      "action": "build",
+      "expected_effort": "medium",
+      "rationale": "Typical build/planning work is medium effort."
+    },
+    {
+      "id": "repo_medium_4",
+      "title": "Sprint setup guide",
+      "url": "https://projects.example/repo/sprint-setup-guide",
+      "kind": "repo",
+      "action": "build",
+      "expected_effort": "medium",
+      "rationale": "Typical build/planning work is medium effort."
+    },
+    {
+      "id": "repo_medium_5",
+      "title": "Integration plan",
+      "url": "https://projects.example/repo/integration-plan",
+      "kind": "repo",
+      "action": "build",
+      "expected_effort": "medium",
+      "rationale": "Typical build/planning work is medium effort."
+    },
+    {
+      "id": "repo_deep_1",
+      "title": "Architecture migration plan",
+      "url": "https://projects.example/repo/architecture-migration-plan",
+      "kind": "repo",
+      "action": "build",
+      "expected_effort": "deep",
+      "rationale": "Migration/infrastructure/multi-step implementation is high effort.",
+      "accepted_efforts": [
+        "deep",
+        "medium"
+      ]
+    },
+    {
+      "id": "repo_deep_2",
+      "title": "End-to-end deployment workflow",
+      "url": "https://projects.example/repo/end-to-end-deployment-workflow",
+      "kind": "repo",
+      "action": "build",
+      "expected_effort": "deep",
+      "rationale": "Migration/infrastructure/multi-step implementation is high effort.",
+      "accepted_efforts": [
+        "deep",
+        "medium"
+      ]
+    },
+    {
+      "id": "repo_deep_3",
+      "title": "Infrastructure setup handbook",
+      "url": "https://projects.example/repo/infrastructure-setup-handbook",
+      "kind": "repo",
+      "action": "build",
+      "expected_effort": "deep",
+      "rationale": "Migration/infrastructure/multi-step implementation is high effort.",
+      "accepted_efforts": [
+        "deep",
+        "medium"
+      ]
+    },
+    {
+      "id": "repo_deep_4",
+      "title": "Comprehensive implementation roadmap",
+      "url": "https://projects.example/repo/comprehensive-implementation-roadmap",
+      "kind": "repo",
+      "action": "build",
+      "expected_effort": "deep",
+      "rationale": "Migration/infrastructure/multi-step implementation is high effort.",
+      "accepted_efforts": [
+        "deep",
+        "medium"
+      ]
+    },
+    {
+      "id": "repo_deep_5",
+      "title": "Multi-step integration bootcamp",
+      "url": "https://projects.example/repo/multi-step-integration-bootcamp",
+      "kind": "repo",
+      "action": "build",
+      "expected_effort": "deep",
+      "rationale": "Migration/infrastructure/multi-step implementation is high effort.",
+      "accepted_efforts": [
+        "deep",
+        "medium"
+      ]
+    },
+    {
+      "id": "tool_quick_1",
+      "title": "Calendar dashboard",
+      "url": "https://apps.example/tool/calendar-dashboard",
+      "kind": "tool",
+      "action": "triage",
+      "expected_effort": "quick",
+      "rationale": "Dashboard/profile/overview tool pages are low effort."
+    },
+    {
+      "id": "tool_quick_2",
+      "title": "Shopping cart overview",
+      "url": "https://apps.example/tool/shopping-cart-overview",
+      "kind": "tool",
+      "action": "triage",
+      "expected_effort": "quick",
+      "rationale": "Dashboard/profile/overview tool pages are low effort."
+    },
+    {
+      "id": "tool_quick_3",
+      "title": "Expense tracker home",
+      "url": "https://apps.example/tool/expense-tracker-home",
+      "kind": "tool",
+      "action": "triage",
+      "expected_effort": "quick",
+      "rationale": "Dashboard/profile/overview tool pages are low effort."
+    },
+    {
+      "id": "tool_quick_4",
+      "title": "Workout app profile settings",
+      "url": "https://apps.example/tool/workout-app-profile-settings",
+      "kind": "tool",
+      "action": "triage",
+      "expected_effort": "quick",
+      "rationale": "Dashboard/profile/overview tool pages are low effort."
+    },
+    {
+      "id": "tool_quick_5",
+      "title": "Travel planner quick overview",
+      "url": "https://apps.example/tool/travel-planner-quick-overview",
+      "kind": "tool",
+      "action": "triage",
+      "expected_effort": "quick",
+      "rationale": "Dashboard/profile/overview tool pages are low effort."
+    },
+    {
+      "id": "tool_medium_1",
+      "title": "Weekly meal planning workspace",
+      "url": "https://apps.example/tool/weekly-meal-planning-workspace",
+      "kind": "tool",
+      "action": "build",
+      "expected_effort": "medium",
+      "rationale": "Standard workspace planning tasks are medium effort."
+    },
+    {
+      "id": "tool_medium_2",
+      "title": "Interview preparation board",
+      "url": "https://apps.example/tool/interview-preparation-board",
+      "kind": "tool",
+      "action": "build",
+      "expected_effort": "medium",
+      "rationale": "Standard workspace planning tasks are medium effort."
+    },
+    {
+      "id": "tool_medium_3",
+      "title": "Budget planning workspace",
+      "url": "https://apps.example/tool/budget-planning-workspace",
+      "kind": "tool",
+      "action": "build",
+      "expected_effort": "medium",
+      "rationale": "Standard workspace planning tasks are medium effort."
+    },
+    {
+      "id": "tool_medium_4",
+      "title": "Task workflow builder",
+      "url": "https://apps.example/tool/task-workflow-builder",
+      "kind": "tool",
+      "action": "build",
+      "expected_effort": "medium",
+      "rationale": "Standard workspace planning tasks are medium effort."
+    },
+    {
+      "id": "tool_medium_5",
+      "title": "Home renovation planner",
+      "url": "https://apps.example/tool/home-renovation-planner",
+      "kind": "tool",
+      "action": "build",
+      "expected_effort": "medium",
+      "rationale": "Standard workspace planning tasks are medium effort."
+    },
+    {
+      "id": "tool_deep_1",
+      "title": "Onboarding flow configuration",
+      "url": "https://apps.example/tool/onboarding-flow-configuration",
+      "kind": "tool",
+      "action": "build",
+      "expected_effort": "deep",
+      "rationale": "Complex setup/configuration and multi-step workflow work is high effort.",
+      "accepted_efforts": [
+        "deep",
+        "medium"
+      ]
+    },
+    {
+      "id": "tool_deep_2",
+      "title": "Multi-step checkout flow redesign",
+      "url": "https://apps.example/tool/multi-step-checkout-flow-redesign",
+      "kind": "tool",
+      "action": "build",
+      "expected_effort": "deep",
+      "rationale": "Complex setup/configuration and multi-step workflow work is high effort.",
+      "accepted_efforts": [
+        "deep",
+        "medium"
+      ]
+    },
+    {
+      "id": "tool_deep_3",
+      "title": "Curriculum builder setup",
+      "url": "https://apps.example/tool/curriculum-builder-setup",
+      "kind": "tool",
+      "action": "build",
+      "expected_effort": "deep",
+      "rationale": "Complex setup/configuration and multi-step workflow work is high effort.",
+      "accepted_efforts": [
+        "deep",
+        "medium"
+      ]
+    },
+    {
+      "id": "tool_deep_4",
+      "title": "Longform project planning workspace",
+      "url": "https://apps.example/tool/longform-project-planning-workspace",
+      "kind": "tool",
+      "action": "build",
+      "expected_effort": "deep",
+      "rationale": "Complex setup/configuration and multi-step workflow work is high effort.",
+      "accepted_efforts": [
+        "deep",
+        "medium"
+      ]
+    },
+    {
+      "id": "tool_deep_5",
+      "title": "End-to-end automation workflow",
+      "url": "https://apps.example/tool/end-to-end-automation-workflow",
+      "kind": "tool",
+      "action": "build",
+      "expected_effort": "deep",
+      "rationale": "Complex setup/configuration and multi-step workflow work is high effort.",
+      "accepted_efforts": [
+        "deep",
+        "medium"
+      ]
+    },
+    {
+      "id": "music_1",
+      "title": "Summer playlist highlights",
+      "url": "https://musicstream.example/music/summer-playlist-highlights",
+      "kind": "music",
+      "action": "watch",
+      "expected_effort": "quick",
+      "rationale": "Music items vary by duration and depth from clips to full workshops.",
+      "accepted_efforts": [
+        "quick"
+      ]
+    },
+    {
+      "id": "music_2",
+      "title": "Live set recap",
+      "url": "https://musicstream.example/music/live-set-recap",
+      "kind": "music",
+      "action": "watch",
+      "expected_effort": "quick",
+      "rationale": "Music items vary by duration and depth from clips to full workshops.",
+      "accepted_efforts": [
+        "quick"
+      ]
+    },
+    {
+      "id": "music_3",
+      "title": "Album teaser clip",
+      "url": "https://musicstream.example/music/album-teaser-clip",
+      "kind": "music",
+      "action": "watch",
+      "expected_effort": "quick",
+      "rationale": "Music items vary by duration and depth from clips to full workshops.",
+      "accepted_efforts": [
+        "quick"
+      ]
+    },
+    {
+      "id": "music_4",
+      "title": "Guitar lesson tutorial",
+      "url": "https://musicstream.example/music/guitar-lesson-tutorial",
+      "kind": "music",
+      "action": "watch",
+      "expected_effort": "medium",
+      "rationale": "Music items vary by duration and depth from clips to full workshops.",
+      "accepted_efforts": [
+        "medium",
+        "quick"
+      ]
+    },
+    {
+      "id": "music_5",
+      "title": "Piano practice walkthrough",
+      "url": "https://musicstream.example/music/piano-practice-walkthrough",
+      "kind": "music",
+      "action": "watch",
+      "expected_effort": "medium",
+      "rationale": "Music items vary by duration and depth from clips to full workshops.",
+      "accepted_efforts": [
+        "medium",
+        "quick"
+      ]
+    },
+    {
+      "id": "music_6",
+      "title": "Voice training overview 40 min",
+      "url": "https://musicstream.example/music/voice-training-overview-40-min",
+      "kind": "music",
+      "action": "watch",
+      "expected_effort": "medium",
+      "rationale": "Music items vary by duration and depth from clips to full workshops.",
+      "accepted_efforts": [
+        "medium",
+        "quick"
+      ]
+    },
+    {
+      "id": "music_7",
+      "title": "Full concert 3h",
+      "url": "https://musicstream.example/music/full-concert-3h",
+      "kind": "music",
+      "action": "watch",
+      "expected_effort": "deep",
+      "rationale": "Music items vary by duration and depth from clips to full workshops.",
+      "accepted_efforts": [
+        "deep"
+      ]
+    },
+    {
+      "id": "music_8",
+      "title": "Masterclass songwriting workshop",
+      "url": "https://musicstream.example/music/masterclass-songwriting-workshop",
+      "kind": "music",
+      "action": "watch",
+      "expected_effort": "deep",
+      "rationale": "Music items vary by duration and depth from clips to full workshops.",
+      "accepted_efforts": [
+        "deep"
+      ]
+    },
+    {
+      "id": "music_9",
+      "title": "Longform music production bootcamp",
+      "url": "https://musicstream.example/music/longform-music-production-bootcamp",
+      "kind": "music",
+      "action": "watch",
+      "expected_effort": "deep",
+      "rationale": "Music items vary by duration and depth from clips to full workshops.",
+      "accepted_efforts": [
+        "deep"
+      ]
+    },
+    {
+      "id": "paper_1",
+      "title": "Research paper abstract summary",
+      "url": "https://research.example/papers/research-paper-abstract-summary.pdf",
+      "kind": "paper",
+      "action": "read",
+      "expected_effort": "medium",
+      "rationale": "Paper items are generally deep, but summary-oriented views can be medium.",
+      "accepted_efforts": [
+        "medium",
+        "deep"
+      ]
+    },
+    {
+      "id": "paper_2",
+      "title": "Whitepaper cheat sheet",
+      "url": "https://research.example/papers/whitepaper-cheat-sheet.pdf",
+      "kind": "paper",
+      "action": "read",
+      "expected_effort": "medium",
+      "rationale": "Paper items are generally deep, but summary-oriented views can be medium.",
+      "accepted_efforts": [
+        "medium",
+        "deep"
+      ]
+    },
+    {
+      "id": "paper_3",
+      "title": "Study notes overview",
+      "url": "https://research.example/papers/study-notes-overview.pdf",
+      "kind": "paper",
+      "action": "read",
+      "expected_effort": "medium",
+      "rationale": "Paper items are generally deep, but summary-oriented views can be medium.",
+      "accepted_efforts": [
+        "medium",
+        "deep"
+      ]
+    },
+    {
+      "id": "paper_4",
+      "title": "Comprehensive whitepaper",
+      "url": "https://research.example/papers/comprehensive-whitepaper.pdf",
+      "kind": "paper",
+      "action": "read",
+      "expected_effort": "deep",
+      "rationale": "Paper items are generally deep, but summary-oriented views can be medium.",
+      "accepted_efforts": [
+        "deep"
+      ]
+    },
+    {
+      "id": "paper_5",
+      "title": "Academic longform study",
+      "url": "https://research.example/papers/academic-longform-study.pdf",
+      "kind": "paper",
+      "action": "read",
+      "expected_effort": "deep",
+      "rationale": "Paper items are generally deep, but summary-oriented views can be medium.",
+      "accepted_efforts": [
+        "deep"
+      ]
+    },
+    {
+      "id": "paper_6",
+      "title": "Methodology deep dive",
+      "url": "https://research.example/papers/methodology-deep-dive.pdf",
+      "kind": "paper",
+      "action": "read",
+      "expected_effort": "deep",
+      "rationale": "Paper items are generally deep, but summary-oriented views can be medium.",
+      "accepted_efforts": [
+        "deep"
+      ]
+    },
+    {
+      "id": "paper_7",
+      "title": "Policy paper masterclass",
+      "url": "https://research.example/papers/policy-paper-masterclass.pdf",
+      "kind": "paper",
+      "action": "deep_work",
+      "expected_effort": "deep",
+      "rationale": "Paper items are generally deep, but summary-oriented views can be medium.",
+      "accepted_efforts": [
+        "deep"
+      ]
+    },
+    {
+      "id": "paper_8",
+      "title": "End-to-end thesis handbook",
+      "url": "https://research.example/papers/end-to-end-thesis-handbook.pdf",
+      "kind": "paper",
+      "action": "deep_work",
+      "expected_effort": "deep",
+      "rationale": "Paper items are generally deep, but summary-oriented views can be medium.",
+      "accepted_efforts": [
+        "deep"
+      ]
+    },
+    {
+      "id": "paper_9",
+      "title": "Curriculum research workshop",
+      "url": "https://research.example/papers/curriculum-research-workshop.pdf",
+      "kind": "paper",
+      "action": "deep_work",
+      "expected_effort": "deep",
+      "rationale": "Paper items are generally deep, but summary-oriented views can be medium.",
+      "accepted_efforts": [
+        "deep"
+      ]
+    },
+    {
+      "id": "misc_1",
+      "title": "Showcase gallery",
+      "url": "https://misc.example/misc/showcase-gallery",
+      "kind": "misc",
+      "action": "ignore",
+      "expected_effort": "quick",
+      "rationale": "Misc effort depends on whether it is a glanceable page or a structured planning task.",
+      "accepted_efforts": [
+        "quick"
+      ]
+    },
+    {
+      "id": "misc_2",
+      "title": "Community recap",
+      "url": "https://misc.example/misc/community-recap",
+      "kind": "misc",
+      "action": "ignore",
+      "expected_effort": "quick",
+      "rationale": "Misc effort depends on whether it is a glanceable page or a structured planning task.",
+      "accepted_efforts": [
+        "quick"
+      ]
+    },
+    {
+      "id": "misc_3",
+      "title": "Promo teaser",
+      "url": "https://misc.example/misc/promo-teaser",
+      "kind": "misc",
+      "action": "ignore",
+      "expected_effort": "quick",
+      "rationale": "Misc effort depends on whether it is a glanceable page or a structured planning task.",
+      "accepted_efforts": [
+        "quick"
+      ]
+    },
+    {
+      "id": "misc_4",
+      "title": "Event planning page",
+      "url": "https://misc.example/misc/event-planning-page",
+      "kind": "misc",
+      "action": "triage",
+      "expected_effort": "medium",
+      "rationale": "Misc effort depends on whether it is a glanceable page or a structured planning task.",
+      "accepted_efforts": [
+        "medium"
+      ]
+    },
+    {
+      "id": "misc_5",
+      "title": "Volunteer onboarding checklist",
+      "url": "https://misc.example/misc/volunteer-onboarding-checklist",
+      "kind": "misc",
+      "action": "triage",
+      "expected_effort": "medium",
+      "rationale": "Misc effort depends on whether it is a glanceable page or a structured planning task.",
+      "accepted_efforts": [
+        "medium"
+      ]
+    },
+    {
+      "id": "misc_6",
+      "title": "Family schedule planning",
+      "url": "https://misc.example/misc/family-schedule-planning",
+      "kind": "misc",
+      "action": "triage",
+      "expected_effort": "medium",
+      "rationale": "Misc effort depends on whether it is a glanceable page or a structured planning task.",
+      "accepted_efforts": [
+        "medium"
+      ]
+    },
+    {
+      "id": "misc_7",
+      "title": "Comparison workbook",
+      "url": "https://misc.example/misc/comparison-workbook",
+      "kind": "misc",
+      "action": "triage",
+      "expected_effort": "deep",
+      "rationale": "Misc effort depends on whether it is a glanceable page or a structured planning task.",
+      "accepted_efforts": [
+        "deep",
+        "medium"
+      ]
+    },
+    {
+      "id": "misc_8",
+      "title": "Longform planning worksheet",
+      "url": "https://misc.example/misc/longform-planning-worksheet",
+      "kind": "misc",
+      "action": "triage",
+      "expected_effort": "deep",
+      "rationale": "Misc effort depends on whether it is a glanceable page or a structured planning task.",
+      "accepted_efforts": [
+        "deep",
+        "medium"
+      ]
+    },
+    {
+      "id": "misc_9",
+      "title": "Multi-step application tracker",
+      "url": "https://misc.example/misc/multi-step-application-tracker",
+      "kind": "misc",
+      "action": "triage",
+      "expected_effort": "deep",
+      "rationale": "Misc effort depends on whether it is a glanceable page or a structured planning task.",
+      "accepted_efforts": [
+        "deep",
+        "medium"
+      ]
+    },
+    {
+      "id": "sensitive_1",
+      "title": "Account login",
+      "url": "https://auth.example/auth/account-login",
+      "kind": "auth",
+      "action": "ignore",
+      "expected_effort": "quick",
+      "rationale": "Sensitive/local/internal pages are usually quick unless they involve setup or forms.",
+      "accepted_efforts": [
+        "quick"
+      ]
+    },
+    {
+      "id": "sensitive_2",
+      "title": "Profile settings",
+      "url": "https://auth.example/auth/profile-settings",
+      "kind": "auth",
+      "action": "ignore",
+      "expected_effort": "quick",
+      "rationale": "Sensitive/local/internal pages are usually quick unless they involve setup or forms.",
+      "accepted_efforts": [
+        "quick"
+      ]
+    },
+    {
+      "id": "sensitive_3",
+      "title": "Security verification flow",
+      "url": "https://auth.example/auth/security-verification-flow",
+      "kind": "auth",
+      "action": "triage",
+      "expected_effort": "medium",
+      "rationale": "Sensitive/local/internal pages are usually quick unless they involve setup or forms.",
+      "accepted_efforts": [
+        "medium",
+        "quick"
+      ]
+    },
+    {
+      "id": "sensitive_4",
+      "title": "Billing setup workflow",
+      "url": "https://auth.example/auth/billing-setup-workflow",
+      "kind": "auth",
+      "action": "triage",
+      "expected_effort": "medium",
+      "rationale": "Sensitive/local/internal pages are usually quick unless they involve setup or forms.",
+      "accepted_efforts": [
+        "medium",
+        "quick"
+      ]
+    },
+    {
+      "id": "sensitive_5",
+      "title": "Tax onboarding form",
+      "url": "https://auth.example/auth/tax-onboarding-form",
+      "kind": "auth",
+      "action": "triage",
+      "expected_effort": "medium",
+      "rationale": "Sensitive/local/internal pages are usually quick unless they involve setup or forms.",
+      "accepted_efforts": [
+        "medium",
+        "quick"
+      ]
+    },
+    {
+      "id": "sensitive_6",
+      "title": "Local dashboard",
+      "url": "https://local.example/local/local-dashboard",
+      "kind": "local",
+      "action": "ignore",
+      "expected_effort": "quick",
+      "rationale": "Sensitive/local/internal pages are usually quick unless they involve setup or forms.",
+      "accepted_efforts": [
+        "quick"
+      ]
+    },
+    {
+      "id": "sensitive_7",
+      "title": "Local sign in",
+      "url": "https://local.example/local/local-sign-in",
+      "kind": "local",
+      "action": "ignore",
+      "expected_effort": "quick",
+      "rationale": "Sensitive/local/internal pages are usually quick unless they involve setup or forms.",
+      "accepted_efforts": [
+        "quick"
+      ]
+    },
+    {
+      "id": "sensitive_8",
+      "title": "Local setup checklist",
+      "url": "https://local.example/local/local-setup-checklist",
+      "kind": "local",
+      "action": "triage",
+      "expected_effort": "medium",
+      "rationale": "Sensitive/local/internal pages are usually quick unless they involve setup or forms.",
+      "accepted_efforts": [
+        "medium",
+        "quick"
+      ]
+    },
+    {
+      "id": "sensitive_9",
+      "title": "Local migration workflow",
+      "url": "https://local.example/local/local-migration-workflow",
+      "kind": "local",
+      "action": "triage",
+      "expected_effort": "medium",
+      "rationale": "Sensitive/local/internal pages are usually quick unless they involve setup or forms.",
+      "accepted_efforts": [
+        "medium",
+        "quick"
+      ]
+    },
+    {
+      "id": "sensitive_10",
+      "title": "Internal status page",
+      "url": "https://internal.example/internal/internal-status-page",
+      "kind": "internal",
+      "action": "ignore",
+      "expected_effort": "quick",
+      "rationale": "Sensitive/local/internal pages are usually quick unless they involve setup or forms.",
+      "accepted_efforts": [
+        "quick"
+      ]
+    },
+    {
+      "id": "sensitive_11",
+      "title": "Internal profile",
+      "url": "https://internal.example/internal/internal-profile",
+      "kind": "internal",
+      "action": "ignore",
+      "expected_effort": "quick",
+      "rationale": "Sensitive/local/internal pages are usually quick unless they involve setup or forms.",
+      "accepted_efforts": [
+        "quick"
+      ]
+    },
+    {
+      "id": "sensitive_12",
+      "title": "Internal rollout plan",
+      "url": "https://internal.example/internal/internal-rollout-plan",
+      "kind": "internal",
+      "action": "triage",
+      "expected_effort": "medium",
+      "rationale": "Sensitive/local/internal pages are usually quick unless they involve setup or forms.",
+      "accepted_efforts": [
+        "medium",
+        "quick"
+      ]
+    },
+    {
+      "id": "sensitive_13",
+      "title": "Internal onboarding flow",
+      "url": "https://internal.example/internal/internal-onboarding-flow",
+      "kind": "internal",
+      "action": "triage",
+      "expected_effort": "medium",
+      "rationale": "Sensitive/local/internal pages are usually quick unless they involve setup or forms.",
+      "accepted_efforts": [
+        "medium",
+        "quick"
+      ]
+    },
+    {
+      "id": "sensitive_14",
+      "title": "Internal application form",
+      "url": "https://internal.example/internal/internal-application-form",
+      "kind": "internal",
+      "action": "triage",
+      "expected_effort": "medium",
+      "rationale": "Sensitive/local/internal pages are usually quick unless they involve setup or forms.",
+      "accepted_efforts": [
+        "medium",
+        "quick"
+      ]
+    },
+    {
+      "id": "sensitive_15",
+      "title": "Auth account recovery workflow",
+      "url": "https://auth.example/auth/auth-account-recovery-workflow",
+      "kind": "auth",
+      "action": "triage",
+      "expected_effort": "medium",
+      "rationale": "Sensitive/local/internal pages are usually quick unless they involve setup or forms.",
+      "accepted_efforts": [
+        "medium",
+        "quick"
+      ]
+    },
+    {
+      "id": "advisory_accept_adjacent",
+      "title": "Planning dashboard overview",
+      "url": "https://apps.example/tool/planning-dashboard-overview",
+      "kind": "tool",
+      "action": "build",
+      "expected_effort": "quick",
+      "rationale": "Advisory effort within one band may be accepted.",
+      "accepted_efforts": [
+        "quick",
+        "medium"
+      ],
+      "provided_effort": "quick"
+    },
+    {
+      "id": "advisory_reject_far",
+      "title": "Full course career transition 4h",
+      "url": "https://academy.example/video/full-course-career-transition-4h",
+      "kind": "video",
+      "action": "watch",
+      "expected_effort": "deep",
+      "rationale": "Advisory effort more than one band away should be rejected.",
+      "provided_effort": "quick"
+    }
+  ]
+}

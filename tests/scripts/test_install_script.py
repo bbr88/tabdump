@@ -642,6 +642,15 @@ def test_generated_cli_config_show_get_set(tmp_path):
     assert data["llmEnabled"] is True
     assert data["docsMoreLinksGroupingMode"] == "energy"
 
+    set_domain_run = _run_generated_cli(
+        install_run,
+        args=["config", "set", "docsMoreLinksGroupingMode", "domain"],
+    )
+    set_domain_output = set_domain_run.stdout + set_domain_run.stderr
+    assert set_domain_run.returncode == 0, set_domain_output
+    data = _read_config(install_run.home)
+    assert data["docsMoreLinksGroupingMode"] == "domain"
+
 
 def test_generated_cli_config_set_rejects_invalid_key(tmp_path):
     install_run = _run_install(tmp_path, user_input="~/vault/inbox\n\nn\nn\n")

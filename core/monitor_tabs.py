@@ -59,6 +59,7 @@ COUNT_ONLY_MAX_TABS = 2_147_483_647
 TRUST_RAMP_DAYS = 3
 NEW_DUMP_WAIT_SECONDS = float(os.environ.get("TABDUMP_NEW_DUMP_WAIT_SECONDS", "8"))
 NEW_DUMP_POLL_SECONDS = float(os.environ.get("TABDUMP_NEW_DUMP_POLL_SECONDS", "0.25"))
+DOCS_MORE_LINKS_MODE_MIGRATION_KEY = "docsMoreLinksKindDefault_v1"
 
 
 def log(msg: str) -> None:
@@ -263,6 +264,37 @@ def _cfg_bool(value: object, default: bool = False) -> bool:
     if v in {"0", "false", "no", "n", "off"}:
         return False
     return default
+
+
+def _normalize_docs_more_links_grouping_mode(value: object, default: str = "kind") -> str:
+    mode = str(value or "").strip().lower()
+    if mode in {"domain", "kind", "energy"}:
+        return mode
+    return default
+
+
+def _ensure_docs_more_links_mode_migrated(cfg: dict, state: dict, cfg_path: Path) -> bool:
+    migrations = state.get("migrations")
+    if not isinstance(migrations, dict):
+        migrations = {}
+        state["migrations"] = migrations
+    if migrations.get(DOCS_MORE_LINKS_MODE_MIGRATION_KEY):
+        return False
+
+    changed = False
+    raw_mode = str(cfg.get("docsMoreLinksGroupingMode", "")).strip().lower()
+    current_mode = _normalize_docs_more_links_grouping_mode(raw_mode, default="kind")
+    if raw_mode == "domain":
+        cfg["docsMoreLinksGroupingMode"] = "kind"
+        changed = True
+    elif raw_mode and raw_mode != current_mode:
+        cfg["docsMoreLinksGroupingMode"] = current_mode
+        changed = True
+
+    migrations[DOCS_MORE_LINKS_MODE_MIGRATION_KEY] = True
+    if changed:
+        save_cfg(cfg_path, cfg)
+    return True
 
 
 def build_runtime_cfg(cfg: dict) -> tuple[dict, bool]:
@@ -480,13 +512,15 @@ def main() -> int:
     log("start")
     _verify_runtime_integrity(DEFAULT_CFG)
     cfg = load_cfg(DEFAULT_CFG)
+    state = load_state()
+    if _ensure_docs_more_links_mode_migrated(cfg, state, DEFAULT_CFG):
+        save_state(state)
     persistent_cfg = dict(cfg)
     runtime_cfg, runtime_cfg_overridden = build_runtime_cfg(cfg)
     if runtime_cfg_overridden:
         save_cfg(DEFAULT_CFG, runtime_cfg)
     cfg_for_run = runtime_cfg if runtime_cfg_overridden else cfg
     vault_inbox = Path(cfg_for_run["vaultInbox"]).expanduser().resolve()
-    state = load_state()
     auto_switched = False
     cfg_after_run_persistent = dict(persistent_cfg)
     try:
@@ -561,9 +595,10 @@ def main() -> int:
         env["TABDUMP_LLM_ACTION_POLICY"] = str(cfg_for_run.get("llmActionPolicy", "hybrid")).strip().lower()
         env["TABDUMP_MIN_LLM_COVERAGE"] = str(cfg_for_run.get("minLlmCoverage", 0.7))
         env["TABDUMP_MAX_ITEMS"] = str(cfg_for_run.get("maxItems", 0))
-        env["TABDUMP_DOCS_MORE_LINKS_GROUPING_MODE"] = str(
-            cfg_for_run.get("docsMoreLinksGroupingMode", "kind")
-        ).strip().lower()
+        env["TABDUMP_DOCS_MORE_LINKS_GROUPING_MODE"] = _normalize_docs_more_links_grouping_mode(
+            cfg_for_run.get("docsMoreLinksGroupingMode", "kind"),
+            default="kind",
+        )
         pp = subprocess.run(
             [sys.executable, str(POSTPROCESS), str(newest)],
             capture_output=True,

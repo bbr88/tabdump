@@ -9,7 +9,9 @@ from core.renderer.rendering import (
     _group_oneoffs_by_kind,
     _kind_display_label,
     _render_docs_callout,
+    _render_high,
     _render_quick_callout,
+    _sort_oneoffs_alpha,
     _today_context_line,
 )
 
@@ -113,6 +115,33 @@ def test_kind_labels_and_group_oneoffs_sorting():
     assert [label for label, _ in grouped_energy] == ["Deep Reads", "Quick References"]
 
 
+def test_sort_oneoffs_alpha_orders_by_title_then_url():
+    ordered = _sort_oneoffs_alpha(
+        [
+            ("b.com", _item(canonical_title="Beta", url="https://b.com/b")),
+            ("a.com", _item(canonical_title="Gamma", url="https://a.com/g")),
+            ("b.com", _item(canonical_title="Alpha", url="https://b.com/a")),
+            ("c.com", _item(canonical_title="Only", url="https://c.com/o")),
+        ]
+    )
+    assert [pair[1]["canonical_title"] for pair in ordered] == ["Alpha", "Beta", "Gamma", "Only"]
+
+
+def test_start_here_applies_title_clamp_without_changing_metadata_tokens():
+    cfg = {"startHereTitleMaxLen": 20, "emptyBucketMessage": "_(empty)_"}
+    badges_cfg = {"maxPerBullet": 3, "includeTopicInHighPriority": True, "includeQuickWinsWhy": False}
+    item = _item(canonical_title="This is a very long title for start here item", topics=[{"slug": "llm"}])
+
+    start_lines = _render_high([item], [item], cfg, badges_cfg)
+    start_text = "\n".join(start_lines)
+    assert "This is a very long title for start here item" not in start_text
+    assert "…" in start_text
+    assert "[medium effort] · docs · #llm" in start_text
+
+    non_start = _format_bullet(item, prefix="", cfg=cfg, badges_cfg=badges_cfg, context="docs")
+    assert "This is a very long title for start here item" in non_start
+
+
 def test_render_quick_callout_and_docs_large_mode_grouping():
     cfg = {
         "quickWinsEnableMiniCategories": True,
@@ -122,6 +151,7 @@ def test_render_quick_callout_and_docs_large_mode_grouping():
         "docsLargeSectionDomainsGte": 99,
         "docsMultiDomainMinItems": 2,
         "docsOneOffGroupByKindWhenDomainsGt": 1,
+        "docsOneOffGroupingMode": "kind",
         "docsOmitDomInBullets": True,
         "docsOmitKindFor": ["docs", "article"],
     }
@@ -157,7 +187,7 @@ def test_render_quick_callout_and_docs_large_mode_grouping():
     assert "> #### Docs" in docs_text
     assert "> #### Articles" in docs_text
     assert "> #### Papers" in docs_text
-    assert " · d1.com" in docs_text
+    assert " · d1.com" not in docs_text
 
 
 def test_today_context_line_prefers_topics_with_domain_fallback():

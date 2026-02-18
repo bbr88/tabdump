@@ -16,6 +16,8 @@ Fixtures are grouped by test domain to avoid a flat, hard-to-maintain file list.
   - quick-wins bucketing/scoring scenarios.
 - `classifier_eval/`
   - generic classifier benchmarks (v1 + v2) and frozen LLM prediction fixtures for classifier comparison tests.
+- `effort_eval/`
+  - domain-neutral effort benchmark fixture used by effort estimation integration tests.
 
 ## Conventions
 
@@ -27,3 +29,8 @@ Fixtures are grouped by test domain to avoid a flat, hard-to-maintain file list.
    - use `gold_generic_v2.json` as the primary benchmark (balanced distribution + `accepted_actions` + `rationale`);
    - keep `llm_predictions_frozen_v1.json` and `llm_predictions_frozen_v2.json` deterministic for CI;
    - refresh frozen predictions only via opt-in live runs (`TABDUMP_LIVE_LLM_EVAL=1 TABDUMP_REFRESH_LLM_FIXTURES=1`).
+5. Effort eval fixtures:
+   - keep `gold_effort_v1.json` generic and domain-neutral (not tied to one browsing session);
+   - keep action/kind distributions balanced enough to avoid single-band collapse for `video/docs/article/repo/tool`;
+   - allow `accepted_efforts` for intentionally ambiguous cases;
+   - use `TABDUMP_EVAL_ENFORCE_EFFORT=1` only when intentionally enforcing strict thresholds.

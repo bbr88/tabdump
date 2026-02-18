@@ -1425,8 +1425,8 @@ try:
       data[key] = value
     elif key == "docsMoreLinksGroupingMode":
       mode = raw.strip().lower()
-      if mode not in {"kind", "energy"}:
-        raise ValueError("docsMoreLinksGroupingMode must be kind or energy")
+      if mode not in {"domain", "kind", "energy"}:
+        raise ValueError("docsMoreLinksGroupingMode must be domain, kind, or energy")
       data[key] = mode
     elif key in {"tagModel", "outputFilenameTemplate"}:
       value = raw.strip()

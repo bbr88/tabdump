@@ -212,17 +212,23 @@ def test_docs_large_section_summary_and_singleton_split():
     assert "> ### a.com (2)" in docs
     assert "> ### b.com (2)" in docs
     assert "> [!summary]- More Links (4)" in docs
-    # singleton tail is flat and carries source domain hint
-    assert "> ### c.com" not in docs
-    assert " · c.com" in docs
-    assert " · f.com" in docs
+    # singleton tail is grouped by kind (default mode), with title-sorted entries.
+    assert "> #### Docs (4)" in docs
+    assert docs.index("[C1]") < docs.index("[D1]") < docs.index("[E1]") < docs.index("[F1]")
+    assert " · c.com" not in docs
+    assert " · f.com" not in docs
 
 
 def test_docs_oneoffs_grouped_by_kind_when_many_oneoff_domains():
     payload = {
         "meta": {"created": "2026-02-07T06:00:00Z", "source": "docs_oneoff_kinds.raw.json"},
         "counts": {"total": 12, "dumped": 12, "closed": 12, "kept": 0},
-        "cfg": {"highPriorityLimit": 0, "docsLargeSectionDomainsGte": 10, "docsOneOffGroupByKindWhenDomainsGt": 8},
+        "cfg": {
+            "highPriorityLimit": 0,
+            "docsLargeSectionDomainsGte": 10,
+            "docsOneOffGroupByKindWhenDomainsGt": 8,
+            "docsOneOffGroupingMode": "kind",
+        },
         "items": [
             {"url": "https://a.com/docs/1", "title": "A1", "kind": "docs"},
             {"url": "https://a.com/docs/2", "title": "A2", "kind": "docs"},

@@ -9,7 +9,7 @@ from urllib.parse import quote
 
 from .buckets import _quick_mini_classify
 from .config import SECTION_ORDER
-from .stats import _badge_cfg, _build_badges, _focus_line, _ordering_cfg, _status_pill, _top_domains, _top_kinds, _top_topics
+from .stats import _badge_cfg, _build_badges, _effort_band, _focus_line, _ordering_cfg, _status_pill, _top_domains, _top_kinds, _top_topics
 from .validate import _validate_rendered
 
 
@@ -221,8 +221,18 @@ def _render_high(items: List[dict], all_items: List[dict], cfg: Dict, badge_cfg:
     if not items:
         lines.append(cfg.get("emptyBucketMessage", "_(empty)_"))
         return lines
+    start_here_title_max = int(cfg.get("startHereTitleMaxLen", 72))
     for it in items:
-        lines.extend(_format_bullet_two_line(it, prefix="", cfg=cfg, badges_cfg=badge_cfg, context="high"))
+        lines.extend(
+            _format_bullet_two_line(
+                it,
+                prefix="",
+                cfg=cfg,
+                badges_cfg=badge_cfg,
+                context="high",
+                title_max_len=start_here_title_max,
+            )
+        )
     return lines
 
 
@@ -305,8 +315,6 @@ def _render_docs_callout(
     # For large docs sections, make the primary callout represent the focused subset.
     lines[1] = f"> [!info]- Main Sources ({main_items_count})"
 
-    one_off_domain_count = sum(1 for _, group_items in grouped if len(group_items) < multi_min)
-
     multi_groups: List[Tuple[str, List[dict]]] = []
     singleton_groups: List[Tuple[str, List[dict]]] = []
     for heading, group_items in grouped:
@@ -332,22 +340,7 @@ def _render_docs_callout(
                 flat_singletons.append((heading, it))
 
         oneoff_mode = str(cfg.get("docsOneOffGroupingMode", "kind")).strip().lower()
-        if oneoff_mode == "energy":
-            grouped_oneoffs = _group_oneoffs_by_energy(flat_singletons)
-            for label, arr in grouped_oneoffs:
-                lines.append(f"> #### {label} ({len(arr)})")
-                for source_domain, it in arr:
-                    lines.extend(
-                        _format_bullet_two_line(
-                            it,
-                            prefix="> ",
-                            cfg=cfg,
-                            badges_cfg=badge_cfg,
-                            context="docs",
-                            source_domain=source_domain,
-                        )
-                    )
-        elif one_off_domain_count > int(cfg.get("docsOneOffGroupByKindWhenDomainsGt", 8)):
+        if oneoff_mode == "kind":
             grouped_oneoffs = _group_oneoffs_by_kind(flat_singletons)
             for label, arr in grouped_oneoffs:
                 lines.append(f"> #### {label} ({len(arr)})")
@@ -362,8 +355,24 @@ def _render_docs_callout(
                             source_domain=source_domain,
                         )
                     )
+        elif oneoff_mode == "energy":
+            grouped_oneoffs = _group_oneoffs_by_energy(flat_singletons)
+            for label, arr in grouped_oneoffs:
+                lines.append(f"> #### {label} ({len(arr)})")
+                for source_domain, it in arr:
+                    lines.extend(
+                        _format_bullet_two_line(
+                            it,
+                            prefix="> ",
+                            cfg=cfg,
+                            badges_cfg=badge_cfg,
+                            context="docs",
+                            source_domain=source_domain,
+                        )
+                    )
         else:
-            for source_domain, it in flat_singletons:
+            # domain mode: flat one-offs, alphabetical by title.
+            for source_domain, it in _sort_oneoffs_alpha(flat_singletons):
                 lines.extend(
                     _format_bullet_two_line(
                         it,
@@ -459,10 +468,11 @@ def _format_bullet(
     badges_cfg: Dict,
     context: str,
     source_domain: str | None = None,
+    title_max_len: int | None = None,
 ) -> str:
-    display_title = _display_title(it)
+    display_title = _display_title(it, title_max_len=title_max_len)
     url = _escape_md_url(str(it.get("url") or ""))
-    meta = " · ".join(_meta_parts(it, badges_cfg, context, source_domain))
+    meta = " · ".join(_meta_parts(it, cfg, badges_cfg, context, source_domain))
     return f"{prefix}- [ ] [{display_title}]({url}) · {meta}"
 
 
@@ -473,27 +483,44 @@ def _format_bullet_two_line(
     badges_cfg: Dict,
     context: str,
     source_domain: str | None = None,
+    title_max_len: int | None = None,
 ) -> List[str]:
-    display_title = _display_title(it)
+    display_title = _display_title(it, title_max_len=title_max_len)
     url = _escape_md_url(str(it.get("url") or ""))
-    meta = " · ".join(_meta_parts(it, badges_cfg, context, source_domain))
+    meta = " · ".join(_meta_parts(it, cfg, badges_cfg, context, source_domain))
     return [f"{prefix}- [ ] [{display_title}]({url})", f"{prefix}  {meta}"]
 
 
-def _display_title(it: dict) -> str:
+def _display_title(it: dict, title_max_len: int | None = None) -> str:
     display_title = it.get("canonical_title") or it.get("title_render") or it.get("title") or ""
+    if title_max_len and title_max_len > 0:
+        display_title = _truncate_display_title(display_title, title_max_len)
     return _escape_md(display_title)
 
 
-def _meta_parts(it: dict, badges_cfg: Dict, context: str, source_domain: str | None = None) -> List[str]:
+def _meta_parts(
+    it: dict,
+    cfg: Dict,
+    badges_cfg: Dict,
+    context: str,
+    source_domain: str | None = None,
+) -> List[str]:
     badges = _build_badges(it, badges_cfg, context)
     if context == "admin":
         parts = [badges]
     else:
         parts = [_status_pill(it), badges]
-    if source_domain:
+    omit_docs_domain = context == "docs" and bool(cfg.get("docsOmitDomInBullets", True))
+    if source_domain and not omit_docs_domain:
         parts.append(_escape_md(source_domain))
     return [p for p in parts if p]
+
+
+def _truncate_display_title(text: str, max_len: int) -> str:
+    if len(text) <= max_len:
+        return text
+    truncated = text[: max_len - 1].rstrip()
+    return f"{truncated}…" if truncated else "…"
 
 
 def _escape_md_url(url: str) -> str:
@@ -556,6 +583,21 @@ def _group_oneoffs_by_kind(flat_singletons: List[Tuple[str, dict]]) -> List[Tupl
     return result
 
 
+def _sort_oneoffs_alpha(flat_singletons: List[Tuple[str, dict]]) -> List[Tuple[str, dict]]:
+    return sorted(
+        flat_singletons,
+        key=lambda pair: (
+            (
+                pair[1].get("canonical_title")
+                or pair[1].get("title_render")
+                or pair[1].get("title")
+                or ""
+            ).lower(),
+            pair[1].get("url") or "",
+        ),
+    )
+
+
 def _group_oneoffs_by_energy(flat_singletons: List[Tuple[str, dict]]) -> List[Tuple[str, List[Tuple[str, dict]]]]:
     grouped: Dict[str, List[Tuple[str, dict]]] = {"Deep Reads": [], "Quick References": []}
     for source_domain, it in flat_singletons:
@@ -585,11 +627,4 @@ def _group_oneoffs_by_energy(flat_singletons: List[Tuple[str, dict]]) -> List[Tu
 
 
 def _is_deep_read(item: dict) -> bool:
-    effort = str(item.get("effort") or "").strip().lower()
-    if effort == "deep":
-        return True
-    kind = str(item.get("kind") or "").strip().lower()
-    if kind in {"paper", "spec"}:
-        return True
-    action = str((item.get("intent") or {}).get("action") or "").strip().lower()
-    return action == "deep_work"
+    return _effort_band(item) == "deep"
