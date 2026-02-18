@@ -166,7 +166,7 @@ def test_llm_effort_passthrough_and_missing_fallback(monkeypatch):
 
     payload_items = captured["payload"]["items"]
     assert payload_items[0]["effort"] == "deep"
-    assert payload_items[1]["effort"] == "quick"
+    assert payload_items[1]["effort"] == "medium"
 
 
 def test_max_items_cap_limits_classification_only(monkeypatch):

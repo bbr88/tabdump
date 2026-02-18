@@ -106,8 +106,8 @@ def test_effort_band_and_status_pill_from_explicit_and_fallback_values():
     assert _status_pill(paper) == "[high effort]"
 
     video = _item(kind="video", effort="", intent={"action": "watch"})
-    assert _effort_band(video) == "quick"
-    assert _status_pill(video) == "[low effort]"
+    assert _effort_band(video) == "medium"
+    assert _status_pill(video) == "[medium effort]"
 
     medium = _item(kind="docs", effort="", intent={"action": "read"})
     assert _effort_band(medium) == "medium"

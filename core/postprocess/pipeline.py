@@ -1,11 +1,14 @@
 """Main pipeline orchestration for clean note generation."""
 
+import os
 import sys
 import time
+from collections import Counter
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
 
 from core.renderer.renderer import render_markdown
+from core.tab_policy.effort import resolve_effort_decision
 
 from .classify_local import (
     classify_local,
@@ -19,15 +22,11 @@ from .urls import default_kind_action, is_sensitive_url
 
 ACTION_POLICIES = {"raw", "derived", "hybrid"}
 
-
-def _infer_effort(kind: str, action: str) -> str:
-    kind_norm = str(kind or "").strip().lower()
-    action_norm = str(action or "").strip().lower()
-    if kind_norm in {"paper", "spec"} or action_norm == "deep_work":
-        return "deep"
-    if action_norm in {"reference", "watch", "ignore"}:
-        return "quick"
-    return "medium"
+def _env_flag(name: str, default: bool = False) -> bool:
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on", "y"}
 
 
 def _normalize_action_policy(value: str) -> str:
@@ -102,6 +101,9 @@ def build_clean_note(
 ) -> Tuple[str, dict]:
     indexed_items = list(enumerate(items))
     url_to_idx = {item.norm_url: idx for idx, item in indexed_items}
+    effort_debug_enabled = _env_flag("TABDUMP_EFFORT_DEBUG", default=False)
+    effort_band_counts: Counter[str] = Counter()
+    effort_signal_counts: Counter[str] = Counter()
     sensitive_items: Dict[int, bool] = {
         idx: is_sensitive_url_fn(item.clean_url) for idx, item in indexed_items
     }
@@ -149,7 +151,7 @@ def build_clean_note(
             kind, action = default_kind_action_fn(item.clean_url)
             topic = safe_topic_fn(None, item.domain)
             score = 3
-            effort = _infer_effort(kind, action)
+            effort_input = None
         elif cls:
             topic = safe_topic_fn(cls.get("topic"), item.domain)
             kind = safe_kind_fn(cls.get("kind"))
@@ -164,7 +166,7 @@ def build_clean_note(
                 is_action_compatible_fn=is_action_compatible_fn,
             )
             score = safe_score_fn(cls.get("score"))
-            effort = safe_effort_fn(cls.get("effort")) or _infer_effort(kind, action)
+            effort_input = safe_effort_fn(cls.get("effort"))
         elif use_local_classifier or fallback_unmapped_to_local:
             if use_llm:
                 diagnostics["llm_fallback_local"] += 1
@@ -173,7 +175,7 @@ def build_clean_note(
             kind = safe_kind_fn(local.get("kind"))
             action = safe_action_fn(local.get("action"))
             score = safe_score_fn(local.get("score"))
-            effort = safe_effort_fn(local.get("effort")) or _infer_effort(kind, action)
+            effort_input = safe_effort_fn(local.get("effort"))
         else:
             if use_llm:
                 diagnostics["llm_defaulted"] += 1
@@ -181,7 +183,23 @@ def build_clean_note(
             kind = safe_kind_fn(None)
             action = safe_action_fn(None)
             score = safe_score_fn(None)
-            effort = _infer_effort(kind, action)
+            effort_input = None
+
+        effort_decision = resolve_effort_decision(
+            kind=kind,
+            action=action,
+            title=item.title,
+            url=item.clean_url,
+            domain=item.domain,
+            provided_effort=effort_input,
+        )
+        effort = effort_decision.effort
+        if effort_debug_enabled:
+            effort_band_counts[effort] += 1
+            for reason in effort_decision.reasons:
+                if reason.startswith("base:"):
+                    continue
+                effort_signal_counts[reason] += 1
 
         enriched.append(
             {
@@ -220,6 +238,20 @@ def build_clean_note(
         f"action_policy={action_policy}",
         file=stderr,
     )
+    if effort_debug_enabled:
+        top_signals = ", ".join(
+            f"{name}={count}" for name, count in effort_signal_counts.most_common(8)
+        )
+        if not top_signals:
+            top_signals = "none"
+        print(
+            "Effort diagnostics: "
+            f"quick={effort_band_counts.get('quick', 0)} "
+            f"medium={effort_band_counts.get('medium', 0)} "
+            f"deep={effort_band_counts.get('deep', 0)} "
+            f"top_signals={top_signals}",
+            file=stderr,
+        )
 
     ts = extract_created_ts_fn(src_path, fallback=time.strftime("%Y-%m-%d %H-%M-%S"))
     meta = {

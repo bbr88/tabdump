@@ -9,7 +9,7 @@ from urllib.parse import quote
 
 from .buckets import _quick_mini_classify
 from .config import SECTION_ORDER
-from .stats import _badge_cfg, _build_badges, _focus_line, _ordering_cfg, _status_pill, _top_domains, _top_kinds, _top_topics
+from .stats import _badge_cfg, _build_badges, _effort_band, _focus_line, _ordering_cfg, _status_pill, _top_domains, _top_kinds, _top_topics
 from .validate import _validate_rendered
 
 
@@ -650,11 +650,4 @@ def _group_oneoffs_by_energy(flat_singletons: List[Tuple[str, dict]]) -> List[Tu
 
 
 def _is_deep_read(item: dict) -> bool:
-    effort = str(item.get("effort") or "").strip().lower()
-    if effort == "deep":
-        return True
-    kind = str(item.get("kind") or "").strip().lower()
-    if kind in {"paper", "spec"}:
-        return True
-    action = str((item.get("intent") or {}).get("action") or "").strip().lower()
-    return action == "deep_work"
+    return _effort_band(item) == "deep"

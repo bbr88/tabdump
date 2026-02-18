@@ -116,6 +116,11 @@ Key runtime controls for classifier behavior:
 - `TABDUMP_TAG_MODEL`: primary model selector for production tagging/classification
 - `TABDUMP_TAG_TEMPERATURE`: optional temperature override for LLM classification requests (`0.2` default, unset/empty to omit)
 - `TABDUMP_DOCS_MORE_LINKS_GROUPING_MODE`: `domain`, `kind`, or `energy` (default `domain`)
+- `TABDUMP_EFFORT_DEBUG`: optional effort diagnostics (`0/1`); prints effort band totals + top signal triggers per run
+
+Optional effort benchmark gate:
+
+- `TABDUMP_EVAL_ENFORCE_EFFORT`: when set to `1`, enforce effort benchmark thresholds in `tests/postprocess/integration/test_effort_estimation.py`
 
 ## Docs
 

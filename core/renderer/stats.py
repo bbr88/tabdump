@@ -6,6 +6,7 @@ from collections import Counter
 from typing import Dict, List
 
 from core.tab_policy.actions import canonical_action
+from core.tab_policy.effort import resolve_effort
 from core.tab_policy.text import slugify_kebab
 
 from .config import DEFAULT_CFG
@@ -105,11 +106,22 @@ def _effort_band(item: dict) -> str:
 
     action = canonical_action((item.get("intent") or {}).get("action") or "")
     kind = str(item.get("kind") or "").strip().lower()
-    if kind in {"paper", "spec"} or action == "deep_work":
-        return "deep"
-    if action in {"reference", "watch", "ignore"}:
-        return "quick"
-    return "medium"
+    title = (
+        item.get("canonical_title")
+        or item.get("title_render")
+        or item.get("title")
+        or ""
+    )
+    url = str(item.get("url") or "")
+    domain = str(item.get("domain") or "")
+    return resolve_effort(
+        kind=kind,
+        action=action,
+        title=title,
+        url=url,
+        domain=domain,
+        provided_effort=None,
+    )
 
 
 def _status_pill(item: dict) -> str:

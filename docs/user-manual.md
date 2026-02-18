@@ -239,6 +239,45 @@ The clean renderer adds quick orientation cues:
    - `energy`: `Deep Reads` / `Quick References`
 5. Legacy `kind` configs are migrated once to `domain` and marked in monitor state; after that, user-set `kind` remains respected.
 
+## Effort Estimation Model
+
+Effort pills are estimated with a shared domain-neutral resolver used by both postprocess and renderer fallback.
+
+Primary signals:
+
+1. Baseline by kind/action:
+   - `auth/local/internal` start at low effort.
+   - `paper/spec/deep_work` start at high effort.
+   - other kinds start at medium effort.
+2. Depth signals:
+   - long-form cues such as `full course`, `complete guide`, `masterclass`, `deep dive`, `step-by-step`.
+3. Quick-consumption signals:
+   - cues such as `trailer`, `clip`, `highlights`, `overview`, `faq`, `quickstart`, `cheat sheet`.
+4. Duration signals:
+   - parses `Xh`, `X-hour`, `HH:MM:SS`, and `MM min`.
+5. Task-complexity signals:
+   - setup/configuration, multi-step workflows, planning/onboarding, checkout/application flows.
+
+Important behavior notes:
+
+1. Effort is not tied only to `kind` or `action`.
+2. Model-provided effort (when present) is advisory and accepted only when within one band of derived effort.
+3. This prevents outlier labels while keeping flexibility for ambiguous items.
+
+Optional runtime diagnostics:
+
+```bash
+TABDUMP_EFFORT_DEBUG=1 tabdump now
+```
+
+This prints effort band totals and top signal triggers to stderr for the run.
+
+Optional strict benchmark enforcement in tests:
+
+```bash
+TABDUMP_EVAL_ENFORCE_EFFORT=1 python3 -m pytest -q tests/postprocess/integration/test_effort_estimation.py
+```
+
 ## Understanding `tabdump status`
 
 `tabdump status` shows:
