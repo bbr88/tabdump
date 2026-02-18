@@ -5,13 +5,13 @@ from core.renderer.rendering import (
     _format_bullet,
     _frontmatter,
     _group_oneoffs_by_energy,
-    _group_oneoffs_by_domain,
     _group_items,
     _group_oneoffs_by_kind,
     _kind_display_label,
     _render_docs_callout,
     _render_high,
     _render_quick_callout,
+    _sort_oneoffs_alpha,
     _today_context_line,
 )
 
@@ -115,8 +115,8 @@ def test_kind_labels_and_group_oneoffs_sorting():
     assert [label for label, _ in grouped_energy] == ["Deep Reads", "Quick References"]
 
 
-def test_group_oneoffs_by_domain_sorts_by_count_then_domain_and_title():
-    grouped = _group_oneoffs_by_domain(
+def test_sort_oneoffs_alpha_orders_by_title_then_url():
+    ordered = _sort_oneoffs_alpha(
         [
             ("b.com", _item(canonical_title="Beta", url="https://b.com/b")),
             ("a.com", _item(canonical_title="Gamma", url="https://a.com/g")),
@@ -124,8 +124,7 @@ def test_group_oneoffs_by_domain_sorts_by_count_then_domain_and_title():
             ("c.com", _item(canonical_title="Only", url="https://c.com/o")),
         ]
     )
-    assert [label for label, _ in grouped] == ["b.com", "a.com", "c.com"]
-    assert [pair[1]["canonical_title"] for pair in grouped[0][1]] == ["Alpha", "Beta"]
+    assert [pair[1]["canonical_title"] for pair in ordered] == ["Alpha", "Beta", "Gamma", "Only"]
 
 
 def test_start_here_applies_title_clamp_without_changing_metadata_tokens():

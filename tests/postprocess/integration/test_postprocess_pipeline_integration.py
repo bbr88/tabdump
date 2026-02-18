@@ -226,7 +226,7 @@ def test_cli_reads_docs_more_links_grouping_mode_from_env(monkeypatch):
     assert captured["cfg"] == {"docsOneOffGroupingMode": "energy"}
 
 
-def test_cli_defaults_docs_more_links_grouping_mode_to_domain(monkeypatch):
+def test_cli_defaults_docs_more_links_grouping_mode_to_kind(monkeypatch):
     items = _make_items(1)
     captured = {}
 
@@ -240,10 +240,10 @@ def test_cli_defaults_docs_more_links_grouping_mode_to_domain(monkeypatch):
 
     ppt.build_clean_note(Path("/tmp/ignore.md"), items, dump_id="id")
 
-    assert captured["cfg"] == {"docsOneOffGroupingMode": "domain"}
+    assert captured["cfg"] == {"docsOneOffGroupingMode": "kind"}
 
 
-def test_cli_invalid_docs_more_links_grouping_mode_falls_back_to_domain(monkeypatch):
+def test_cli_invalid_docs_more_links_grouping_mode_falls_back_to_kind(monkeypatch):
     items = _make_items(1)
     captured = {}
 
@@ -257,7 +257,7 @@ def test_cli_invalid_docs_more_links_grouping_mode_falls_back_to_domain(monkeypa
 
     ppt.build_clean_note(Path("/tmp/ignore.md"), items, dump_id="id")
 
-    assert captured["cfg"] == {"docsOneOffGroupingMode": "domain"}
+    assert captured["cfg"] == {"docsOneOffGroupingMode": "kind"}
 
 
 def test_monitor_passes_llm_env_from_config(tmp_path, monkeypatch):
@@ -326,7 +326,7 @@ def test_monitor_passes_llm_env_from_config(tmp_path, monkeypatch):
     assert state["lastReason"] == "postprocess_noop"
 
 
-def test_monitor_migrates_legacy_docs_more_links_kind_mode_once(tmp_path, monkeypatch):
+def test_monitor_migrates_legacy_docs_more_links_domain_mode_once(tmp_path, monkeypatch):
     vault_inbox = tmp_path / "inbox"
     vault_inbox.mkdir()
 
@@ -338,7 +338,7 @@ def test_monitor_migrates_legacy_docs_more_links_kind_mode_once(tmp_path, monkey
                     "vaultInbox": str(vault_inbox),
                     "checkEveryMinutes": 0,
                     "llmEnabled": False,
-                    "docsMoreLinksGroupingMode": "kind",
+                    "docsMoreLinksGroupingMode": "domain",
                 },
                 indent=2,
             )
@@ -371,16 +371,16 @@ def test_monitor_migrates_legacy_docs_more_links_kind_mode_once(tmp_path, monkey
 
     rc = monitor.main()
     assert rc == 0
-    assert captured_env["TABDUMP_DOCS_MORE_LINKS_GROUPING_MODE"] == "domain"
+    assert captured_env["TABDUMP_DOCS_MORE_LINKS_GROUPING_MODE"] == "kind"
 
     cfg_after = json.loads(config_path.read_text(encoding="utf-8"))
-    assert cfg_after["docsMoreLinksGroupingMode"] == "domain"
+    assert cfg_after["docsMoreLinksGroupingMode"] == "kind"
 
     state = json.loads(state_path.read_text(encoding="utf-8"))
     assert state["migrations"][monitor.DOCS_MORE_LINKS_MODE_MIGRATION_KEY] is True
 
 
-def test_monitor_keeps_explicit_kind_after_migration_marker(tmp_path, monkeypatch):
+def test_monitor_keeps_explicit_domain_after_migration_marker(tmp_path, monkeypatch):
     vault_inbox = tmp_path / "inbox"
     vault_inbox.mkdir()
 
@@ -392,7 +392,7 @@ def test_monitor_keeps_explicit_kind_after_migration_marker(tmp_path, monkeypatc
                     "vaultInbox": str(vault_inbox),
                     "checkEveryMinutes": 0,
                     "llmEnabled": False,
-                    "docsMoreLinksGroupingMode": "kind",
+                    "docsMoreLinksGroupingMode": "domain",
                 },
                 indent=2,
             )
@@ -430,10 +430,10 @@ def test_monitor_keeps_explicit_kind_after_migration_marker(tmp_path, monkeypatc
 
     rc = monitor.main()
     assert rc == 0
-    assert captured_env["TABDUMP_DOCS_MORE_LINKS_GROUPING_MODE"] == "kind"
+    assert captured_env["TABDUMP_DOCS_MORE_LINKS_GROUPING_MODE"] == "domain"
 
     cfg_after = json.loads(config_path.read_text(encoding="utf-8"))
-    assert cfg_after["docsMoreLinksGroupingMode"] == "kind"
+    assert cfg_after["docsMoreLinksGroupingMode"] == "domain"
 
 
 def test_monitor_waits_for_new_dump_after_app_launch(tmp_path, monkeypatch):

@@ -212,11 +212,9 @@ def test_docs_large_section_summary_and_singleton_split():
     assert "> ### a.com (2)" in docs
     assert "> ### b.com (2)" in docs
     assert "> [!summary]- More Links (4)" in docs
-    # singleton tail is grouped by source domain in domain mode.
-    assert "> #### c.com (1)" in docs
-    assert "> #### d.com (1)" in docs
-    assert "> #### e.com (1)" in docs
-    assert "> #### f.com (1)" in docs
+    # singleton tail is grouped by kind (default mode), with title-sorted entries.
+    assert "> #### Docs (4)" in docs
+    assert docs.index("[C1]") < docs.index("[D1]") < docs.index("[E1]") < docs.index("[F1]")
     assert " · c.com" not in docs
     assert " · f.com" not in docs
 

@@ -834,7 +834,7 @@ data = {
   "llmRedactQuery": True,
   "llmTitleMax": 200,
   "maxItems": 0,
-  "docsMoreLinksGroupingMode": "domain"
+  "docsMoreLinksGroupingMode": "kind"
 }
 
 with open(config_path, "w", encoding="utf-8") as f:
@@ -1279,7 +1279,7 @@ print(f"llmRedact={bool_txt(data.get('llmRedact', True), True)}")
 print(f"llmRedactQuery={bool_txt(data.get('llmRedactQuery', True), True)}")
 print(f"llmTitleMax={int(data.get('llmTitleMax', 200))}")
 print(f"maxItems={int(data.get('maxItems', 0))}")
-print(f"docsMoreLinksGroupingMode={str(data.get('docsMoreLinksGroupingMode', 'domain')).strip().lower() or 'domain'}")
+print(f"docsMoreLinksGroupingMode={str(data.get('docsMoreLinksGroupingMode', 'kind')).strip().lower() or 'kind'}")
 PY
 }
 

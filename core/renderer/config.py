@@ -137,7 +137,7 @@ DEFAULT_CFG: Dict = {
     "docsLargeSectionDomainsGte": 10,
     "docsMultiDomainMinItems": 2,
     "docsOneOffGroupByKindWhenDomainsGt": 8,
-    "docsOneOffGroupingMode": "domain",
+    "docsOneOffGroupingMode": "kind",
     "startHereTitleMaxLen": 72,
     "showDomChipInDomainGroupedSections": False,
     "showKindChipInSections": {"media": False, "repos": False, "projects": False, "tools": False, "docs": False},

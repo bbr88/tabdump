@@ -315,8 +315,6 @@ def _render_docs_callout(
     # For large docs sections, make the primary callout represent the focused subset.
     lines[1] = f"> [!info]- Main Sources ({main_items_count})"
 
-    one_off_domain_count = sum(1 for _, group_items in grouped if len(group_items) < multi_min)
-
     multi_groups: List[Tuple[str, List[dict]]] = []
     singleton_groups: List[Tuple[str, List[dict]]] = []
     for heading, group_items in grouped:
@@ -341,12 +339,12 @@ def _render_docs_callout(
             for it in _sort_items_alpha(group_items):
                 flat_singletons.append((heading, it))
 
-        oneoff_mode = str(cfg.get("docsOneOffGroupingMode", "domain")).strip().lower()
-        if oneoff_mode == "domain":
-            grouped_oneoffs = _group_oneoffs_by_domain(flat_singletons)
+        oneoff_mode = str(cfg.get("docsOneOffGroupingMode", "kind")).strip().lower()
+        if oneoff_mode == "kind":
+            grouped_oneoffs = _group_oneoffs_by_kind(flat_singletons)
             for label, arr in grouped_oneoffs:
                 lines.append(f"> #### {label} ({len(arr)})")
-                for _source_domain, it in arr:
+                for source_domain, it in arr:
                     lines.extend(
                         _format_bullet_two_line(
                             it,
@@ -354,6 +352,7 @@ def _render_docs_callout(
                             cfg=cfg,
                             badges_cfg=badge_cfg,
                             context="docs",
+                            source_domain=source_domain,
                         )
                     )
         elif oneoff_mode == "energy":
@@ -371,23 +370,9 @@ def _render_docs_callout(
                             source_domain=source_domain,
                         )
                     )
-        elif one_off_domain_count > int(cfg.get("docsOneOffGroupByKindWhenDomainsGt", 8)):
-            grouped_oneoffs = _group_oneoffs_by_kind(flat_singletons)
-            for label, arr in grouped_oneoffs:
-                lines.append(f"> #### {label} ({len(arr)})")
-                for source_domain, it in arr:
-                    lines.extend(
-                        _format_bullet_two_line(
-                            it,
-                            prefix="> ",
-                            cfg=cfg,
-                            badges_cfg=badge_cfg,
-                            context="docs",
-                            source_domain=source_domain,
-                        )
-                    )
         else:
-            for source_domain, it in flat_singletons:
+            # domain mode: flat one-offs, alphabetical by title.
+            for source_domain, it in _sort_oneoffs_alpha(flat_singletons):
                 lines.extend(
                     _format_bullet_two_line(
                         it,
@@ -598,27 +583,19 @@ def _group_oneoffs_by_kind(flat_singletons: List[Tuple[str, dict]]) -> List[Tupl
     return result
 
 
-def _group_oneoffs_by_domain(flat_singletons: List[Tuple[str, dict]]) -> List[Tuple[str, List[Tuple[str, dict]]]]:
-    grouped: Dict[str, List[Tuple[str, dict]]] = {}
-    for source_domain, it in flat_singletons:
-        grouped.setdefault(source_domain, []).append((source_domain, it))
-
-    result: List[Tuple[str, List[Tuple[str, dict]]]] = []
-    for domain, arr in sorted(grouped.items(), key=lambda kv: (-len(kv[1]), kv[0].lower())):
-        arr_sorted = sorted(
-            arr,
-            key=lambda pair: (
-                (
-                    pair[1].get("canonical_title")
-                    or pair[1].get("title_render")
-                    or pair[1].get("title")
-                    or ""
-                ).lower(),
-                pair[1].get("url") or "",
-            ),
-        )
-        result.append((domain, arr_sorted))
-    return result
+def _sort_oneoffs_alpha(flat_singletons: List[Tuple[str, dict]]) -> List[Tuple[str, dict]]:
+    return sorted(
+        flat_singletons,
+        key=lambda pair: (
+            (
+                pair[1].get("canonical_title")
+                or pair[1].get("title_render")
+                or pair[1].get("title")
+                or ""
+            ).lower(),
+            pair[1].get("url") or "",
+        ),
+    )
 
 
 def _group_oneoffs_by_energy(flat_singletons: List[Tuple[str, dict]]) -> List[Tuple[str, List[Tuple[str, dict]]]]:

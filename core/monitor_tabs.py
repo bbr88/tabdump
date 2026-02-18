@@ -59,7 +59,7 @@ COUNT_ONLY_MAX_TABS = 2_147_483_647
 TRUST_RAMP_DAYS = 3
 NEW_DUMP_WAIT_SECONDS = float(os.environ.get("TABDUMP_NEW_DUMP_WAIT_SECONDS", "8"))
 NEW_DUMP_POLL_SECONDS = float(os.environ.get("TABDUMP_NEW_DUMP_POLL_SECONDS", "0.25"))
-DOCS_MORE_LINKS_MODE_MIGRATION_KEY = "docsMoreLinksDomainDefault_v1"
+DOCS_MORE_LINKS_MODE_MIGRATION_KEY = "docsMoreLinksKindDefault_v1"
 
 
 def log(msg: str) -> None:
@@ -266,7 +266,7 @@ def _cfg_bool(value: object, default: bool = False) -> bool:
     return default
 
 
-def _normalize_docs_more_links_grouping_mode(value: object, default: str = "domain") -> str:
+def _normalize_docs_more_links_grouping_mode(value: object, default: str = "kind") -> str:
     mode = str(value or "").strip().lower()
     if mode in {"domain", "kind", "energy"}:
         return mode
@@ -283,9 +283,9 @@ def _ensure_docs_more_links_mode_migrated(cfg: dict, state: dict, cfg_path: Path
 
     changed = False
     raw_mode = str(cfg.get("docsMoreLinksGroupingMode", "")).strip().lower()
-    current_mode = _normalize_docs_more_links_grouping_mode(raw_mode, default="domain")
-    if raw_mode == "kind":
-        cfg["docsMoreLinksGroupingMode"] = "domain"
+    current_mode = _normalize_docs_more_links_grouping_mode(raw_mode, default="kind")
+    if raw_mode == "domain":
+        cfg["docsMoreLinksGroupingMode"] = "kind"
         changed = True
     elif raw_mode and raw_mode != current_mode:
         cfg["docsMoreLinksGroupingMode"] = current_mode
@@ -596,8 +596,8 @@ def main() -> int:
         env["TABDUMP_MIN_LLM_COVERAGE"] = str(cfg_for_run.get("minLlmCoverage", 0.7))
         env["TABDUMP_MAX_ITEMS"] = str(cfg_for_run.get("maxItems", 0))
         env["TABDUMP_DOCS_MORE_LINKS_GROUPING_MODE"] = _normalize_docs_more_links_grouping_mode(
-            cfg_for_run.get("docsMoreLinksGroupingMode", "domain"),
-            default="domain",
+            cfg_for_run.get("docsMoreLinksGroupingMode", "kind"),
+            default="kind",
         )
         pp = subprocess.run(
             [sys.executable, str(POSTPROCESS), str(newest)],
