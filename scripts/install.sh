@@ -834,7 +834,7 @@ data = {
   "llmRedactQuery": True,
   "llmTitleMax": 200,
   "maxItems": 0,
-  "docsMoreLinksGroupingMode": "kind"
+  "docsMoreLinksGroupingMode": "domain"
 }
 
 with open(config_path, "w", encoding="utf-8") as f:
@@ -1279,7 +1279,7 @@ print(f"llmRedact={bool_txt(data.get('llmRedact', True), True)}")
 print(f"llmRedactQuery={bool_txt(data.get('llmRedactQuery', True), True)}")
 print(f"llmTitleMax={int(data.get('llmTitleMax', 200))}")
 print(f"maxItems={int(data.get('maxItems', 0))}")
-print(f"docsMoreLinksGroupingMode={str(data.get('docsMoreLinksGroupingMode', 'kind')).strip().lower() or 'kind'}")
+print(f"docsMoreLinksGroupingMode={str(data.get('docsMoreLinksGroupingMode', 'domain')).strip().lower() or 'domain'}")
 PY
 }
 
@@ -1425,8 +1425,8 @@ try:
       data[key] = value
     elif key == "docsMoreLinksGroupingMode":
       mode = raw.strip().lower()
-      if mode not in {"kind", "energy"}:
-        raise ValueError("docsMoreLinksGroupingMode must be kind or energy")
+      if mode not in {"domain", "kind", "energy"}:
+        raise ValueError("docsMoreLinksGroupingMode must be domain, kind, or energy")
       data[key] = mode
     elif key in {"tagModel", "outputFilenameTemplate"}:
       value = raw.strip()

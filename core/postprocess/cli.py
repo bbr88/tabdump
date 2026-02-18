@@ -238,9 +238,9 @@ def _classify_with_llm(
 
 
 def _renderer_cfg_override() -> Dict:
-    mode = str(os.environ.get("TABDUMP_DOCS_MORE_LINKS_GROUPING_MODE", "kind")).strip().lower()
-    if mode not in {"kind", "energy"}:
-        mode = "kind"
+    mode = str(os.environ.get("TABDUMP_DOCS_MORE_LINKS_GROUPING_MODE", "domain")).strip().lower()
+    if mode not in {"domain", "kind", "energy"}:
+        mode = "domain"
     return {"docsOneOffGroupingMode": mode}
 
 

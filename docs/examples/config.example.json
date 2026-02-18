@@ -41,5 +41,5 @@
   "llmRedactQuery": true,
   "llmTitleMax": 200,
   "maxItems": 0,
-  "docsMoreLinksGroupingMode": "kind"
+  "docsMoreLinksGroupingMode": "domain"
 }

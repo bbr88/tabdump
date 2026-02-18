@@ -296,7 +296,7 @@ def test_install_writes_default_config_and_artifacts(tmp_path):
     assert data["onboardingStartedAt"] > 0
     assert data["llmEnabled"] is False
     assert data["browsers"] == ["Chrome", "Safari"]
-    assert data["docsMoreLinksGroupingMode"] == "kind"
+    assert data["docsMoreLinksGroupingMode"] == "domain"
 
     assert stat.S_IMODE(config_path.stat().st_mode) == 0o600
     assert stat.S_IMODE(config_dir.stat().st_mode) == 0o700
@@ -340,7 +340,7 @@ def test_install_noninteractive_skip_key_mode_disables_llm(tmp_path):
     assert data["onboardingStartedAt"] > 0
     assert data["llmEnabled"] is False
     assert data["browsers"] == ["Safari", "Chrome", "Firefox"]
-    assert data["docsMoreLinksGroupingMode"] == "kind"
+    assert data["docsMoreLinksGroupingMode"] == "domain"
 
 
 def test_install_applies_gate_overrides_from_args(tmp_path):
@@ -598,7 +598,7 @@ def test_generated_cli_config_show_get_set(tmp_path):
     assert "checkEveryMinutes=60" in show_output
     assert "cooldownMinutes=1440" in show_output
     assert "maxTabs=30" in show_output
-    assert "docsMoreLinksGroupingMode=kind" in show_output
+    assert "docsMoreLinksGroupingMode=domain" in show_output
 
     get_run = _run_generated_cli(install_run, args=["config", "get", "checkEveryMinutes"])
     get_output = get_run.stdout + get_run.stderr
@@ -608,7 +608,7 @@ def test_generated_cli_config_show_get_set(tmp_path):
     get_group_run = _run_generated_cli(install_run, args=["config", "get", "docsMoreLinksGroupingMode"])
     get_group_output = get_group_run.stdout + get_group_run.stderr
     assert get_group_run.returncode == 0, get_group_output
-    assert get_group_run.stdout.strip() == "kind"
+    assert get_group_run.stdout.strip() == "domain"
 
     set_run = _run_generated_cli(
         install_run,
@@ -641,6 +641,15 @@ def test_generated_cli_config_show_get_set(tmp_path):
     assert data["browsers"] == ["Safari", "Firefox"]
     assert data["llmEnabled"] is True
     assert data["docsMoreLinksGroupingMode"] == "energy"
+
+    set_domain_run = _run_generated_cli(
+        install_run,
+        args=["config", "set", "docsMoreLinksGroupingMode", "domain"],
+    )
+    set_domain_output = set_domain_run.stdout + set_domain_run.stderr
+    assert set_domain_run.returncode == 0, set_domain_output
+    data = _read_config(install_run.home)
+    assert data["docsMoreLinksGroupingMode"] == "domain"
 
 
 def test_generated_cli_config_set_rejects_invalid_key(tmp_path):

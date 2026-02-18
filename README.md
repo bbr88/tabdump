@@ -115,6 +115,7 @@ Key runtime controls for classifier behavior:
 - `TABDUMP_MIN_LLM_COVERAGE`: minimum mapped non-sensitive ratio before local fallback for unmapped items (default `0.7`)
 - `TABDUMP_TAG_MODEL`: primary model selector for production tagging/classification
 - `TABDUMP_TAG_TEMPERATURE`: optional temperature override for LLM classification requests (`0.2` default, unset/empty to omit)
+- `TABDUMP_DOCS_MORE_LINKS_GROUPING_MODE`: `domain`, `kind`, or `energy` (default `domain`)
 
 ## Docs
 

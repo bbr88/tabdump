@@ -234,8 +234,10 @@ The clean renderer adds quick orientation cues:
 2. Bullets include effort pills such as `[low effort]`, `[medium effort]`, `[high effort]`.
 3. Non-admin sections use two-line bullets for better title readability, while `Accounts & Settings` stays compact one-line.
 4. `docsMoreLinksGroupingMode` controls singleton grouping:
-   - `kind` (default): `Docs` / `Articles` / `Papers`...
+   - `domain` (default): grouped by source domain; domains sorted by count desc, then domain asc; items sorted by title asc.
+   - `kind`: `Docs` / `Articles` / `Papers`...
    - `energy`: `Deep Reads` / `Quick References`
+5. Legacy `kind` configs are migrated once to `domain` and marked in monitor state; after that, user-set `kind` remains respected.
 
 ## Understanding `tabdump status`
 
