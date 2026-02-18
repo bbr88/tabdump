@@ -7,6 +7,22 @@ description: OpenClaw skill for TabDump on macOS. Trigger on requests like dump 
 
 Use this skill when the user asks to dump tabs, capture browser tabs, operate TabDump, check reading queue output, troubleshoot Obsidian inbox notes, or inspect launch agent status.
 
+## 30-second quickstart
+
+```bash
+brew tap bbr88/tap
+brew install tabdump
+tabdump init --yes --vault-inbox ~/obsidian/Inbox --enable-llm true --key-mode keychain
+# Optional no-LLM setup:
+tabdump init --yes --vault-inbox ~/obsidian/Inbox
+```
+
+Then run:
+
+- `scripts/tabdump_status.sh`
+- `scripts/tabdump_run_once.sh`
+- `scripts/tabdump_reload_launchagent.sh`
+
 ## Runtime layout
 
 Expected install paths:
@@ -22,24 +38,30 @@ Expected install paths:
   - `~/Library/Application Support/TabDump/logs/monitor.err.log`
 - Launch agent plist: `~/Library/LaunchAgents/io.orc-visioner.tabdump.monitor.plist`
 
+Path contract: these scripts intentionally assume the exact paths above. Keep Homebrew runtime installation aligned with these paths.
+
 ## Primary commands
 
-1. Check status and logs:
+1. Tail runtime logs:
+   - `tabdump logs`
+   - `tabdump logs --lines 80`
+   - `tabdump logs --follow`
+2. Check status and logs:
    - `scripts/tabdump_status.sh`
-2. Count current tabs (monitor path; same TCC surface):
+3. Count current tabs (monitor path; same TCC surface):
    - `scripts/tabdump_count.sh`
    - `scripts/tabdump_count.sh --json`
-3. Run one-shot dump (default dump-only):
+4. Run one-shot dump (default dump-only):
    - `scripts/tabdump_run_once.sh`
-4. Run one-shot dump+close:
+5. Run one-shot dump+close:
    - `scripts/tabdump_run_once.sh --close`
-5. Reload launch agent:
+6. Reload launch agent:
    - `scripts/tabdump_reload_launchagent.sh`
-6. Reset TCC AppleEvents permissions:
+7. Reset TCC AppleEvents permissions:
    - `scripts/tabdump_permissions_reset.sh`
-7. Safe smoke checks:
+8. Safe smoke checks:
    - `scripts/test_skill_smoke.sh`
-8. Active smoke checks (may open app and trigger prompts):
+9. Active smoke checks (may open app and trigger prompts):
    - `scripts/test_skill_smoke.sh --active`
 
 ## Config updates

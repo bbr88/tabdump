@@ -972,6 +972,7 @@ Usage:
   tabdump mode [show|dump-only|dump-close|auto]
   tabdump config [show|get <key>|set <key> <value> ...]
   tabdump status
+  tabdump logs [--lines N] [--follow]
   tabdump permissions
   tabdump help
 USAGE
@@ -1634,6 +1635,94 @@ now_cmd() {
   return 1
 }
 
+logs_cmd() {
+  local lines=30
+  local follow=0
+  local arg
+  local out_log="${LOG_DIR}/monitor.out.log"
+  local err_log="${LOG_DIR}/monitor.err.log"
+  local out_exists=0
+  local err_exists=0
+  local -a existing_logs=()
+
+  while [[ "$#" -gt 0 ]]; do
+    arg="$1"
+    case "${arg}" in
+      --lines)
+        shift
+        if [[ "$#" -eq 0 ]]; then
+          echo "[error] Missing value for --lines." >&2
+          echo "Usage: tabdump logs [--lines N] [--follow]" >&2
+          return 1
+        fi
+        if [[ ! "$1" =~ ^[1-9][0-9]*$ ]]; then
+          echo "[error] Invalid value for --lines: $1. Expected a positive integer." >&2
+          return 1
+        fi
+        lines="$1"
+        ;;
+      --follow)
+        follow=1
+        ;;
+      -h|--help)
+        echo "Usage: tabdump logs [--lines N] [--follow]"
+        return 0
+        ;;
+      *)
+        echo "[error] Unknown option for tabdump logs: ${arg}" >&2
+        echo "Usage: tabdump logs [--lines N] [--follow]" >&2
+        return 1
+        ;;
+    esac
+    shift
+  done
+
+  if [[ -f "${out_log}" ]]; then
+    out_exists=1
+    existing_logs+=("${out_log}")
+  fi
+  if [[ -f "${err_log}" ]]; then
+    err_exists=1
+    existing_logs+=("${err_log}")
+  fi
+
+  if [[ "${follow}" -eq 1 ]]; then
+    if [[ "${#existing_logs[@]}" -eq 0 ]]; then
+      echo "- log tail: ${out_log}"
+      echo "  (missing)"
+      echo "- log tail: ${err_log}"
+      echo "  (missing)"
+      echo "[error] No log files found to follow under ${LOG_DIR}." >&2
+      return 1
+    fi
+    if [[ "${out_exists}" -eq 0 ]]; then
+      echo "- log tail: ${out_log}"
+      echo "  (missing)"
+    fi
+    if [[ "${err_exists}" -eq 0 ]]; then
+      echo "- log tail: ${err_log}"
+      echo "  (missing)"
+    fi
+    echo "[info] Following TabDump logs (Ctrl-C to stop)."
+    tail -n "${lines}" -f "${existing_logs[@]}"
+    return 0
+  fi
+
+  echo "- log tail: ${out_log}"
+  if [[ "${out_exists}" -eq 1 ]]; then
+    tail -n "${lines}" "${out_log}" | sed 's/^/  /'
+  else
+    echo "  (missing)"
+  fi
+
+  echo "- log tail: ${err_log}"
+  if [[ "${err_exists}" -eq 1 ]]; then
+    tail -n "${lines}" "${err_log}" | sed 's/^/  /'
+  else
+    echo "  (missing)"
+  fi
+}
+
 permissions_cmd() {
   local monitor_json
   local status
@@ -1864,6 +1953,10 @@ case "${cmd}" in
   status)
     status_cmd
     ;;
+  logs)
+    shift || true
+    logs_cmd "$@"
+    ;;
   permissions)
     permissions_cmd
     ;;
@@ -1980,6 +2073,7 @@ print_summary() {
   echo
   echo "Quick start:"
   echo "  tabdump status"
+  echo "  tabdump logs --lines 30"
   echo "  tabdump config show"
   echo "  tabdump mode show"
   echo "  tabdump count"

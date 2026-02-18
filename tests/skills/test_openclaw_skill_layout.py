@@ -81,6 +81,13 @@ set -euo pipefail
 echo "install" >> "{call_log}"
 """,
     )
+    _write_executable(
+        scripts_dir / "tabdump_install_brew.sh",
+        f"""#!/usr/bin/env bash
+set -euo pipefail
+echo "install_brew" >> "{call_log}"
+""",
+    )
     return scripts_dir, call_log
 
 
@@ -94,6 +101,7 @@ def test_openclaw_skill_layout_contains_required_files():
         SKILL_DIR / "scripts" / "tabdump_reload_launchagent.sh",
         SKILL_DIR / "scripts" / "tabdump_permissions_reset.sh",
         SKILL_DIR / "scripts" / "tabdump_install_from_repo.sh",
+        SKILL_DIR / "scripts" / "tabdump_install_brew.sh",
         SKILL_DIR / "scripts" / "test_skill_smoke.sh",
     ]
     for path in required:
@@ -108,6 +116,7 @@ def test_openclaw_skill_scripts_are_executable():
         SKILL_DIR / "scripts" / "tabdump_reload_launchagent.sh",
         SKILL_DIR / "scripts" / "tabdump_permissions_reset.sh",
         SKILL_DIR / "scripts" / "tabdump_install_from_repo.sh",
+        SKILL_DIR / "scripts" / "tabdump_install_brew.sh",
         SKILL_DIR / "scripts" / "test_skill_smoke.sh",
     ]
     for script in scripts:
