@@ -940,3 +940,65 @@ def test_generated_cli_status_prints_expected_sections(tmp_path):
     assert "- app state (legacy self-gating):" in output
     assert "- launch agent: loaded" in output
     assert "- log tail:" in output
+
+
+def test_generated_cli_logs_prints_both_log_tails(tmp_path):
+    install_run = _run_install(tmp_path, user_input="~/vault/inbox\n\nn\nn\n")
+    assert install_run.returncode == 0, install_run.stdout + install_run.stderr
+
+    logs_dir = install_run.home / "Library" / "Application Support" / "TabDump" / "logs"
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    (logs_dir / "monitor.out.log").write_text("out one\nout two\n", encoding="utf-8")
+    (logs_dir / "monitor.err.log").write_text("err one\nerr two\n", encoding="utf-8")
+
+    cli_run = _run_generated_cli(install_run, args=["logs"])
+    output = cli_run.stdout + cli_run.stderr
+    assert cli_run.returncode == 0, output
+    assert "- log tail:" in output
+    assert "monitor.out.log" in output
+    assert "monitor.err.log" in output
+    assert "out one" in output
+    assert "err one" in output
+
+
+def test_generated_cli_logs_honors_lines_option(tmp_path):
+    install_run = _run_install(tmp_path, user_input="~/vault/inbox\n\nn\nn\n")
+    assert install_run.returncode == 0, install_run.stdout + install_run.stderr
+
+    logs_dir = install_run.home / "Library" / "Application Support" / "TabDump" / "logs"
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    (logs_dir / "monitor.out.log").write_text("out-a\nout-b\nout-c\n", encoding="utf-8")
+    (logs_dir / "monitor.err.log").write_text("err-a\nerr-b\nerr-c\n", encoding="utf-8")
+
+    cli_run = _run_generated_cli(install_run, args=["logs", "--lines", "2"])
+    output = cli_run.stdout + cli_run.stderr
+    assert cli_run.returncode == 0, output
+    assert "out-a" not in output
+    assert "err-a" not in output
+    assert "out-b" in output
+    assert "out-c" in output
+    assert "err-b" in output
+    assert "err-c" in output
+
+
+def test_generated_cli_logs_rejects_invalid_lines(tmp_path):
+    install_run = _run_install(tmp_path, user_input="~/vault/inbox\n\nn\nn\n")
+    assert install_run.returncode == 0, install_run.stdout + install_run.stderr
+
+    cli_run = _run_generated_cli(install_run, args=["logs", "--lines", "0"])
+    output = cli_run.stdout + cli_run.stderr
+    assert cli_run.returncode == 1
+    assert "Invalid value for --lines: 0. Expected a positive integer." in output
+
+
+def test_generated_cli_logs_follow_fails_when_no_logs_exist(tmp_path):
+    install_run = _run_install(tmp_path, user_input="~/vault/inbox\n\nn\nn\n")
+    assert install_run.returncode == 0, install_run.stdout + install_run.stderr
+
+    logs_dir = install_run.home / "Library" / "Application Support" / "TabDump" / "logs"
+    logs_dir.mkdir(parents=True, exist_ok=True)
+
+    cli_run = _run_generated_cli(install_run, args=["logs", "--follow"])
+    output = cli_run.stdout + cli_run.stderr
+    assert cli_run.returncode == 1
+    assert "No log files found to follow" in output
