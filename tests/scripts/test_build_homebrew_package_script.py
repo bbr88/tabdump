@@ -68,6 +68,8 @@ def test_build_homebrew_package_contains_runtime_and_app_archive(tmp_path):
     assert "skills/tabdump-macos/scripts/tabdump_run_once.sh" in names
     assert "skills/tabdump-macos/scripts/tabdump_count.sh" in names
     assert "skills/tabdump-macos/scripts/tabdump_status.sh" in names
+    assert "skills/tabdump-macos/scripts/tabdump_doctor.sh" in names
+    assert "skills/tabdump-macos/scripts/tabdump_install_launchagent.sh" in names
 
 
 def test_build_homebrew_package_fails_when_app_archive_missing(tmp_path):

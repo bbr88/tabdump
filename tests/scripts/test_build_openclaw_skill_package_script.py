@@ -42,6 +42,7 @@ def test_build_openclaw_skill_package_happy_path(tmp_path):
     assert "tabdump-macos/scripts/tabdump_count.sh" in names
     assert "tabdump-macos/scripts/tabdump_status.sh" in names
     assert "tabdump-macos/scripts/tabdump_doctor.sh" in names
+    assert "tabdump-macos/scripts/tabdump_install_launchagent.sh" in names
     assert "tabdump-macos/scripts/test_skill_smoke.sh" in names
 
 

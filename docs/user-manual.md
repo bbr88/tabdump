@@ -102,10 +102,13 @@ The skill bundle includes helper wrappers:
 1. `scripts/tabdump_run_once.sh [--close]`
 2. `scripts/tabdump_count.sh [--json]`
 3. `scripts/tabdump_status.sh`
-4. `scripts/tabdump_reload_launchagent.sh`
-5. `scripts/tabdump_permissions_reset.sh`
-6. `scripts/tabdump_install_from_repo.sh`
-7. `scripts/test_skill_smoke.sh [--active]`
+4. `scripts/tabdump_doctor.sh [--tail N]`
+5. `scripts/tabdump_reload_launchagent.sh`
+6. `scripts/tabdump_install_launchagent.sh`
+7. `scripts/tabdump_permissions_reset.sh`
+8. `scripts/tabdump_install_from_repo.sh`
+9. `scripts/tabdump_install_brew.sh`
+10. `scripts/test_skill_smoke.sh [--active]`
 
 ## Core Commands
 
@@ -310,6 +313,12 @@ TabDump installs a launch agent:
 `~/Library/LaunchAgents/io.orc-visioner.tabdump.monitor.plist`
 
 If you update `checkEveryMinutes` with `tabdump config set`, TabDump updates `StartInterval` in the plist and reloads the launch agent automatically.
+
+Clean reinstall from config (recommended when plist is missing/broken):
+
+```bash
+scripts/tabdump_install_launchagent.sh
+```
 
 Manual reload (for direct plist/config edits):
 

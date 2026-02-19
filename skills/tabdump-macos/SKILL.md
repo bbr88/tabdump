@@ -1,6 +1,6 @@
 ---
 name: tabdump-macos
-description: OpenClaw skill for TabDump on macOS. Trigger on requests like dump tabs, capture browser tabs, TabDump, reading queue, Obsidian inbox, and launch agent status. Use to run one-shot dumps, inspect status/logs, run doctor diagnostics, reload launch agent, and reset Automation permissions.
+description: OpenClaw skill for TabDump on macOS. Trigger on requests like dump tabs, capture browser tabs, TabDump, reading queue, Obsidian inbox, and launch agent status. Use to run one-shot dumps, inspect status/logs, run doctor diagnostics, reinstall/reload launch agent, and reset Automation permissions.
 ---
 
 # TabDump (macOS)
@@ -21,6 +21,7 @@ Then run:
 
 - `scripts/tabdump_status.sh`
 - `scripts/tabdump_doctor.sh`
+- `scripts/tabdump_install_launchagent.sh`
 - `scripts/tabdump_run_once.sh`
 - `scripts/tabdump_reload_launchagent.sh`
 
@@ -61,11 +62,13 @@ Path contract: these scripts intentionally assume the exact paths above. Keep Ho
    - `scripts/tabdump_run_once.sh --close`
 7. Reload launch agent:
    - `scripts/tabdump_reload_launchagent.sh`
-8. Reset TCC AppleEvents permissions:
+8. Reinstall launch agent from config (clean rebuild):
+   - `scripts/tabdump_install_launchagent.sh`
+9. Reset TCC AppleEvents permissions:
    - `scripts/tabdump_permissions_reset.sh`
-9. Safe smoke checks:
+10. Safe smoke checks:
    - `scripts/test_skill_smoke.sh`
-10. Active smoke checks (may open app and trigger prompts):
+11. Active smoke checks (may open app and trigger prompts):
    - `scripts/test_skill_smoke.sh --active`
 
 ## Config updates

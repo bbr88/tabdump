@@ -76,6 +76,13 @@ echo "reload" >> "{call_log}"
 """,
     )
     _write_executable(
+        scripts_dir / "tabdump_install_launchagent.sh",
+        f"""#!/usr/bin/env bash
+set -euo pipefail
+echo "install_launchagent" >> "{call_log}"
+""",
+    )
+    _write_executable(
         scripts_dir / "tabdump_permissions_reset.sh",
         f"""#!/usr/bin/env bash
 set -euo pipefail
@@ -108,6 +115,7 @@ def test_openclaw_skill_layout_contains_required_files():
         SKILL_DIR / "scripts" / "tabdump_status.sh",
         SKILL_DIR / "scripts" / "tabdump_doctor.sh",
         SKILL_DIR / "scripts" / "tabdump_reload_launchagent.sh",
+        SKILL_DIR / "scripts" / "tabdump_install_launchagent.sh",
         SKILL_DIR / "scripts" / "tabdump_permissions_reset.sh",
         SKILL_DIR / "scripts" / "tabdump_install_from_repo.sh",
         SKILL_DIR / "scripts" / "tabdump_install_brew.sh",
@@ -124,6 +132,7 @@ def test_openclaw_skill_scripts_are_executable():
         SKILL_DIR / "scripts" / "tabdump_status.sh",
         SKILL_DIR / "scripts" / "tabdump_doctor.sh",
         SKILL_DIR / "scripts" / "tabdump_reload_launchagent.sh",
+        SKILL_DIR / "scripts" / "tabdump_install_launchagent.sh",
         SKILL_DIR / "scripts" / "tabdump_permissions_reset.sh",
         SKILL_DIR / "scripts" / "tabdump_install_from_repo.sh",
         SKILL_DIR / "scripts" / "tabdump_install_brew.sh",

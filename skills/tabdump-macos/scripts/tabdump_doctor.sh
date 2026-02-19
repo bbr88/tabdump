@@ -17,6 +17,8 @@ SCAN_LINES=200
 SHOW_FIX_HINTS=1
 ISSUE_KEYS=""
 ISSUE_COUNT=0
+CONFIG_CHECK_EVERY=""
+PLIST_START_INTERVAL=""
 
 usage() {
   cat <<'USAGE'
@@ -141,6 +143,27 @@ PY
     say "[warn] vaultInbox path missing: ${expanded_vault}"
     mark_issue "vault_inbox_path_missing"
   fi
+
+  CONFIG_CHECK_EVERY="$(printf '%s\n' "${cfg_dump}" | sed -n 's/^checkEveryMinutes=//p' | head -n 1)"
+}
+
+print_launch_interval_alignment() {
+  local expected_interval
+
+  if [[ -z "${CONFIG_CHECK_EVERY}" || ! "${CONFIG_CHECK_EVERY}" =~ ^[0-9]+$ ]]; then
+    return 0
+  fi
+  if [[ -z "${PLIST_START_INTERVAL}" || ! "${PLIST_START_INTERVAL}" =~ ^[0-9]+$ ]]; then
+    return 0
+  fi
+
+  expected_interval=$(( CONFIG_CHECK_EVERY < 1 ? 60 : CONFIG_CHECK_EVERY * 60 ))
+  if [[ "${PLIST_START_INTERVAL}" -ne "${expected_interval}" ]]; then
+    say "[warn] LaunchAgent StartInterval mismatch: plist=${PLIST_START_INTERVAL}s, expected=${expected_interval}s from checkEveryMinutes=${CONFIG_CHECK_EVERY}."
+    mark_issue "launch_interval_mismatch"
+  else
+    say "[ok] LaunchAgent StartInterval matches checkEveryMinutes (${PLIST_START_INTERVAL}s)."
+  fi
 }
 
 print_launch_agent_status() {
@@ -172,6 +195,7 @@ if isinstance(interval, int):
 PY
 )"; then
       printf '%s\n' "${plist_dump}" | sed 's/^/  - /'
+      PLIST_START_INTERVAL="$(printf '%s\n' "${plist_dump}" | sed -n 's/^StartInterval=//p' | head -n 1)"
     else
       say "[warn] Failed to parse plist: ${PLIST}"
       mark_issue "plist_parse_error"
@@ -213,6 +237,8 @@ PY
     printf '%s\n' "${print_output}" | sed 's/^/  | /'
     mark_issue "launch_not_loaded"
   fi
+
+  print_launch_interval_alignment
 }
 
 print_logs_and_signatures() {
@@ -293,8 +319,10 @@ print_fix_hints() {
   say "- Refresh status and logs:"
   say "  scripts/tabdump_status.sh"
 
-  if has_issue "launch_not_loaded" || has_issue "launch_not_listed" || has_issue "launch_last_exit_nonzero" || has_issue "plist_missing"; then
-    say "- Reload launch agent:"
+  if has_issue "launch_not_loaded" || has_issue "launch_not_listed" || has_issue "launch_last_exit_nonzero" || has_issue "plist_missing" || has_issue "launch_interval_mismatch"; then
+    say "- Reinstall LaunchAgent from config (clean rebuild):"
+    say "  scripts/tabdump_install_launchagent.sh"
+    say "- If plist already looks correct, simple reload is also available:"
     say "  scripts/tabdump_reload_launchagent.sh"
   fi
 
