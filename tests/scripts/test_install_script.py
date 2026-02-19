@@ -641,6 +641,9 @@ def test_generated_cli_config_show_get_set(tmp_path):
     assert data["browsers"] == ["Safari", "Firefox"]
     assert data["llmEnabled"] is True
     assert data["docsMoreLinksGroupingMode"] == "energy"
+    plist_path = install_run.home / "Library" / "LaunchAgents" / "io.orc-visioner.tabdump.monitor.plist"
+    plist_text = plist_path.read_text(encoding="utf-8")
+    assert "<integer>1800</integer>" in plist_text
 
     set_domain_run = _run_generated_cli(
         install_run,
@@ -1002,3 +1005,26 @@ def test_generated_cli_logs_follow_fails_when_no_logs_exist(tmp_path):
     output = cli_run.stdout + cli_run.stderr
     assert cli_run.returncode == 1
     assert "No log files found to follow" in output
+
+
+def test_generated_cli_version_commands_print_runtime_metadata(tmp_path):
+    install_run = _run_install(tmp_path, user_input="~/vault/inbox\n\nn\nn\n")
+    assert install_run.returncode == 0, install_run.stdout + install_run.stderr
+
+    cli_run = _run_generated_cli(install_run, args=["--version"])
+    output = cli_run.stdout + cli_run.stderr
+    assert cli_run.returncode == 0, output
+    assert "tabdump runtime" in output
+    assert "app_path=" in output
+    assert "app_version=" in output
+    assert "app_build=" in output
+
+    alias_run = _run_generated_cli(install_run, args=["version"])
+    alias_output = alias_run.stdout + alias_run.stderr
+    assert alias_run.returncode == 0, alias_output
+    assert "tabdump runtime" in alias_output
+
+    short_run = _run_generated_cli(install_run, args=["-v"])
+    short_output = short_run.stdout + short_run.stderr
+    assert short_run.returncode == 0, short_output
+    assert "tabdump runtime" in short_output

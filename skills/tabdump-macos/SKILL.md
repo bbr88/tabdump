@@ -1,6 +1,6 @@
 ---
 name: tabdump-macos
-description: OpenClaw skill for TabDump on macOS. Trigger on requests like dump tabs, capture browser tabs, TabDump, reading queue, Obsidian inbox, and launch agent status. Use to run one-shot dumps, inspect status/logs, reload launch agent, and reset Automation permissions.
+description: OpenClaw skill for TabDump on macOS. Trigger on requests like dump tabs, capture browser tabs, TabDump, reading queue, Obsidian inbox, and launch agent status. Use to run one-shot dumps, inspect status/logs, run doctor diagnostics, reload launch agent, and reset Automation permissions.
 ---
 
 # TabDump (macOS)
@@ -20,6 +20,7 @@ tabdump init --yes --vault-inbox ~/obsidian/Inbox
 Then run:
 
 - `scripts/tabdump_status.sh`
+- `scripts/tabdump_doctor.sh`
 - `scripts/tabdump_run_once.sh`
 - `scripts/tabdump_reload_launchagent.sh`
 
@@ -48,20 +49,23 @@ Path contract: these scripts intentionally assume the exact paths above. Keep Ho
    - `tabdump logs --follow`
 2. Check status and logs:
    - `scripts/tabdump_status.sh`
-3. Count current tabs (monitor path; same TCC surface):
+3. Run doctor diagnostics (paths/config/launch agent/log signatures):
+   - `scripts/tabdump_doctor.sh`
+   - `scripts/tabdump_doctor.sh --tail 80`
+4. Count current tabs (monitor path; same TCC surface):
    - `scripts/tabdump_count.sh`
    - `scripts/tabdump_count.sh --json`
-4. Run one-shot dump (default dump-only):
+5. Run one-shot dump (default dump-only):
    - `scripts/tabdump_run_once.sh`
-5. Run one-shot dump+close:
+6. Run one-shot dump+close:
    - `scripts/tabdump_run_once.sh --close`
-6. Reload launch agent:
+7. Reload launch agent:
    - `scripts/tabdump_reload_launchagent.sh`
-7. Reset TCC AppleEvents permissions:
+8. Reset TCC AppleEvents permissions:
    - `scripts/tabdump_permissions_reset.sh`
-8. Safe smoke checks:
+9. Safe smoke checks:
    - `scripts/test_skill_smoke.sh`
-9. Active smoke checks (may open app and trigger prompts):
+10. Active smoke checks (may open app and trigger prompts):
    - `scripts/test_skill_smoke.sh --active`
 
 ## Config updates

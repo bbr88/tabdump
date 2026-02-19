@@ -309,7 +309,9 @@ TabDump installs a launch agent:
 
 `~/Library/LaunchAgents/io.orc-visioner.tabdump.monitor.plist`
 
-Reload after changing schedule-related config:
+If you update `checkEveryMinutes` with `tabdump config set`, TabDump updates `StartInterval` in the plist and reloads the launch agent automatically.
+
+Manual reload (for direct plist/config edits):
 
 ```bash
 launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/io.orc-visioner.tabdump.monitor.plist
