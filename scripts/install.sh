@@ -966,6 +966,7 @@ usage() {
 Usage:
   tabdump init [install-options]
   tabdump uninstall [uninstall-options]
+  tabdump [--version|-v|version]
   tabdump [run|open]
   tabdump count [--json]
   tabdump now [--close] [--json]
@@ -984,6 +985,33 @@ open_tabdump() {
     exit 1
   fi
   open "${APP_PATH}"
+}
+
+version_cmd() {
+  APP_PATH="${APP_PATH}" python3 - <<'PY'
+import os
+import plistlib
+from pathlib import Path
+
+app_path = Path(os.environ.get("APP_PATH", "")).expanduser()
+info_path = app_path / "Contents" / "Info.plist"
+app_version = "unknown"
+app_build = "unknown"
+
+if info_path.exists():
+    try:
+        with info_path.open("rb") as fh:
+            data = plistlib.load(fh) or {}
+        app_version = str(data.get("CFBundleShortVersionString") or data.get("CFBundleVersion") or "unknown")
+        app_build = str(data.get("CFBundleVersion") or "unknown")
+    except Exception:
+        pass
+
+print(f"tabdump runtime {app_version}")
+print(f"app_path={app_path}")
+print(f"app_version={app_version}")
+print(f"app_build={app_build}")
+PY
 }
 
 find_brew_libexec_root() {
@@ -1245,6 +1273,49 @@ reload_launch_agent_if_present() {
   echo "[ok] Reloaded launch agent to apply schedule changes."
 }
 
+update_launch_agent_interval_if_present() {
+  if [[ ! -f "${LAUNCH_AGENT_PATH}" ]]; then
+    echo "[warn] Launch agent plist not found at ${LAUNCH_AGENT_PATH}. Skipping StartInterval update."
+    return 0
+  fi
+
+  local new_interval
+  if ! new_interval="$(
+    CONFIG_PATH="${CONFIG_PATH}" LAUNCH_AGENT_PATH="${LAUNCH_AGENT_PATH}" python3 - <<'PY'
+import json
+import os
+import plistlib
+
+config_path = os.environ["CONFIG_PATH"]
+plist_path = os.environ["LAUNCH_AGENT_PATH"]
+
+with open(config_path, "r", encoding="utf-8") as fh:
+  config = json.load(fh) or {}
+
+minutes = int(config.get("checkEveryMinutes", 60))
+if minutes < 1:
+  minutes = 1
+interval = minutes * 60
+
+with open(plist_path, "rb") as fh:
+  plist = plistlib.load(fh) or {}
+
+plist["StartInterval"] = interval
+
+with open(plist_path, "wb") as fh:
+  plistlib.dump(plist, fh)
+
+print(interval)
+PY
+  )"; then
+    echo "[warn] Failed to update StartInterval in ${LAUNCH_AGENT_PATH}." >&2
+    return 0
+  fi
+
+  chmod 600 "${LAUNCH_AGENT_PATH}" >/dev/null 2>&1 || true
+  echo "[ok] Updated launch agent StartInterval to ${new_interval} seconds."
+}
+
 config_show_cmd() {
   ensure_config
   CONFIG_PATH="${CONFIG_PATH}" python3 - <<'PY'
@@ -1453,6 +1524,7 @@ PY
   fi
 
   if [[ "${reload_needed}" -eq 1 ]]; then
+    update_launch_agent_interval_if_present
     reload_launch_agent_if_present
   fi
 }
@@ -1932,6 +2004,9 @@ case "${cmd}" in
     shift || true
     uninstall_cmd "$@"
     ;;
+  version|-v|--version)
+    version_cmd
+    ;;
   run|open)
     open_tabdump
     ;;
@@ -2072,6 +2147,7 @@ print_summary() {
   echo "Installed job:    ${LAUNCH_AGENT_PATH}"
   echo
   echo "Quick start:"
+  echo "  tabdump --version"
   echo "  tabdump status"
   echo "  tabdump logs --lines 30"
   echo "  tabdump config show"

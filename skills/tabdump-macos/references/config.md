@@ -30,7 +30,7 @@ Prefer CLI updates:
 - `dryRunPolicy` (`manual|auto`): auto mode may switch to close mode after first clean dump.
 - `onboardingStartedAt` (epoch int): onboarding/trust-ramp anchor timestamp.
 - `maxTabs` (int >= 0): minimum open-tab threshold before normal scheduled runs dump.
-- `checkEveryMinutes` (int >= 0): scheduler gate interval.
+- `checkEveryMinutes` (int >= 0): scheduler gate interval. `tabdump config set checkEveryMinutes ...` also updates LaunchAgent `StartInterval`.
 - `cooldownMinutes` (int >= 0): minimum interval between dumps.
 
 ## LLM/postprocess fields
@@ -53,5 +53,5 @@ Prefer CLI updates:
 
 ## Count semantics
 
-- `tabdump count` / skill wrapper count are fail-hard.
+- `tabdump count` is fail-hard.
 - If fresh count evidence is unavailable, reason is `count_unavailable` and `tabCount` is null/empty.

@@ -39,7 +39,7 @@ Renderer tuning defaults in `core/renderer/config.py` are internal defaults and 
 | Key | Type | Default | Used by | Description |
 |---|---|---------|---|---|
 | `maxTabs` | integer | `30`    | app | Minimum tab threshold before app-level dump action. |
-| `checkEveryMinutes` | integer | `60`   | monitor + launch agent + app | Poll interval and monitor gate window. |
+| `checkEveryMinutes` | integer | `60`   | monitor + launch agent + app | Poll interval and monitor gate window. `tabdump config set checkEveryMinutes ...` rewrites plist `StartInterval` and reloads launch agent. |
 | `cooldownMinutes` | integer | `1440` | app | Cooldown between app-side dump actions (`1440` = 24 hours). |
 
 ## LLM / Postprocess Controls
