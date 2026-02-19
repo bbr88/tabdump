@@ -50,11 +50,12 @@ jobs:
           bash -n scripts/install.sh
           bash -n scripts/uninstall.sh
           bash -n scripts/update-runtime-manifest.sh
+          bash -n skills/tabdump-macos/scripts/tabdump_doctor.sh
+          bash -n skills/tabdump-macos/scripts/tabdump_install_brew.sh
           bash -n skills/tabdump-macos/scripts/tabdump_install_from_repo.sh
+          bash -n skills/tabdump-macos/scripts/tabdump_install_launchagent.sh
           bash -n skills/tabdump-macos/scripts/tabdump_permissions_reset.sh
           bash -n skills/tabdump-macos/scripts/tabdump_reload_launchagent.sh
-          bash -n skills/tabdump-macos/scripts/tabdump_run_once.sh
-          bash -n skills/tabdump-macos/scripts/tabdump_status.sh
           bash -n skills/tabdump-macos/scripts/test_skill_smoke.sh
 
       - name: Install shellcheck
