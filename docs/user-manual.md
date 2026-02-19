@@ -97,18 +97,27 @@ Result:
 - `dist/tabdump-openclaw-skill-v0.1.0-local.tar.gz`
 - `dist/tabdump-openclaw-skill-v0.1.0-local.tar.gz.sha256`
 
-The skill bundle includes helper wrappers:
+Skill runtime commands are CLI-first:
 
-1. `scripts/tabdump_run_once.sh [--close]`
-2. `scripts/tabdump_count.sh [--json]`
-3. `scripts/tabdump_status.sh`
-4. `scripts/tabdump_doctor.sh [--tail N]`
-5. `scripts/tabdump_reload_launchagent.sh`
-6. `scripts/tabdump_install_launchagent.sh`
-7. `scripts/tabdump_permissions_reset.sh`
-8. `scripts/tabdump_install_from_repo.sh`
-9. `scripts/tabdump_install_brew.sh`
-10. `scripts/test_skill_smoke.sh [--active]`
+1. `tabdump status`
+2. `tabdump logs [--lines N] [--follow]`
+3. `tabdump now --json`
+4. `tabdump now --close --json`
+5. `tabdump count --json`
+6. `tabdump permissions`
+7. `tabdump config show|get|set ...`
+8. `tabdump mode show|dump-only|dump-close|auto`
+
+Skill helper scripts (non-CLI gaps):
+
+1. `scripts/tabdump_doctor.sh --json` (canonical machine diagnostic entrypoint)
+2. `scripts/tabdump_doctor.sh [--tail N]`
+3. `scripts/tabdump_reload_launchagent.sh`
+4. `scripts/tabdump_install_launchagent.sh`
+5. `scripts/tabdump_permissions_reset.sh`
+6. `scripts/tabdump_install_from_repo.sh`
+7. `scripts/tabdump_install_brew.sh`
+8. `scripts/test_skill_smoke.sh [--active]`
 
 ## Core Commands
 

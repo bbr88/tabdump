@@ -53,5 +53,5 @@ Prefer CLI updates:
 
 ## Count semantics
 
-- `tabdump count` / skill wrapper count are fail-hard.
+- `tabdump count` is fail-hard.
 - If fresh count evidence is unavailable, reason is `count_unavailable` and `tabCount` is null/empty.

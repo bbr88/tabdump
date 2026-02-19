@@ -15,30 +15,42 @@ TARGET="gui/$(id -u)/${LABEL}"
 TAIL_LINES=40
 SCAN_LINES=200
 SHOW_FIX_HINTS=1
+JSON_MODE=0
 ISSUE_KEYS=""
 ISSUE_COUNT=0
+ACTION_KEYS=""
 CONFIG_CHECK_EVERY=""
 PLIST_START_INTERVAL=""
 
 usage() {
   cat <<'USAGE'
 Usage:
-  scripts/tabdump_doctor.sh [--tail N] [--no-fix-hints]
+  scripts/tabdump_doctor.sh [--tail N] [--json] [--no-fix-hints]
 
 Options:
   --tail N          Log lines to print per log file (default: 40).
+  --json            Emit machine-readable JSON only.
   --no-fix-hints    Skip repair suggestion section.
   -h, --help        Show this help.
 USAGE
 }
 
+on_runtime_error() {
+  exit 2
+}
+trap on_runtime_error ERR
+
 say() {
-  printf '%s\n' "$*"
+  if [[ "${JSON_MODE}" -eq 0 ]]; then
+    printf '%s\n' "$*"
+  fi
 }
 
 section() {
-  echo
-  say "$1"
+  if [[ "${JSON_MODE}" -eq 0 ]]; then
+    echo
+    say "$1"
+  fi
 }
 
 has_issue() {
@@ -56,6 +68,32 @@ mark_issue() {
   fi
   ISSUE_KEYS="${ISSUE_KEYS},${key}"
   ISSUE_COUNT=$((ISSUE_COUNT + 1))
+}
+
+has_action() {
+  local key="$1"
+  case ",${ACTION_KEYS}," in
+    *",${key},"*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+add_action() {
+  local key="$1"
+  if has_action "${key}"; then
+    return 0
+  fi
+  ACTION_KEYS="${ACTION_KEYS},${key}"
+}
+
+any_issue_in() {
+  local key
+  for key in "$@"; do
+    if has_issue "${key}"; then
+      return 0
+    fi
+  done
+  return 1
 }
 
 check_path() {
@@ -126,7 +164,9 @@ PY
     return 0
   fi
 
-  printf '%s\n' "${cfg_dump}" | sed 's/^/  - /'
+  if [[ "${JSON_MODE}" -eq 0 ]]; then
+    printf '%s\n' "${cfg_dump}" | sed 's/^/  - /'
+  fi
 
   local vault_inbox expanded_vault
   vault_inbox="$(printf '%s\n' "${cfg_dump}" | sed -n 's/^vaultInbox=//p' | head -n 1)"
@@ -194,7 +234,9 @@ if isinstance(interval, int):
     print(f"StartIntervalMinutes={mins_txt}")
 PY
 )"; then
-      printf '%s\n' "${plist_dump}" | sed 's/^/  - /'
+      if [[ "${JSON_MODE}" -eq 0 ]]; then
+        printf '%s\n' "${plist_dump}" | sed 's/^/  - /'
+      fi
       PLIST_START_INTERVAL="$(printf '%s\n' "${plist_dump}" | sed -n 's/^StartInterval=//p' | head -n 1)"
     else
       say "[warn] Failed to parse plist: ${PLIST}"
@@ -214,27 +256,35 @@ PY
   local list_output
   if list_output="$(launchctl list "${LABEL}" 2>&1)"; then
     say "[ok] launchctl list ${LABEL}:"
-    printf '%s\n' "${list_output}" | sed 's/^/  | /'
+    if [[ "${JSON_MODE}" -eq 0 ]]; then
+      printf '%s\n' "${list_output}" | sed 's/^/  | /'
+    fi
   else
     say "[warn] launchctl list could not find ${LABEL}."
-    printf '%s\n' "${list_output}" | sed 's/^/  | /'
+    if [[ "${JSON_MODE}" -eq 0 ]]; then
+      printf '%s\n' "${list_output}" | sed 's/^/  | /'
+    fi
     mark_issue "launch_not_listed"
   fi
 
   local print_output state_line exit_line last_exit
   if print_output="$(launchctl print "${TARGET}" 2>&1)"; then
     say "[ok] launchctl print ${TARGET}: loaded"
-    state_line="$(printf '%s\n' "${print_output}" | sed -n 's/^[[:space:]]*state = /state=/p' | head -n 1)"
-    exit_line="$(printf '%s\n' "${print_output}" | sed -n 's/^[[:space:]]*last exit code = /last_exit=/p' | head -n 1)"
-    [[ -n "${state_line}" ]] && say "  ${state_line}"
-    [[ -n "${exit_line}" ]] && say "  ${exit_line}"
-    last_exit="$(printf '%s\n' "${exit_line}" | sed -n 's/^last_exit=//p')"
+    if [[ "${JSON_MODE}" -eq 0 ]]; then
+      state_line="$(printf '%s\n' "${print_output}" | sed -n 's/^[[:space:]]*state = /state=/p' | head -n 1)"
+      exit_line="$(printf '%s\n' "${print_output}" | sed -n 's/^[[:space:]]*last exit code = /last_exit=/p' | head -n 1)"
+      [[ -n "${state_line}" ]] && say "  ${state_line}"
+      [[ -n "${exit_line}" ]] && say "  ${exit_line}"
+    fi
+    last_exit="$(printf '%s\n' "${print_output}" | sed -n 's/^[[:space:]]*last exit code = //p' | head -n 1)"
     if [[ -n "${last_exit}" && "${last_exit}" != "0" ]]; then
       mark_issue "launch_last_exit_nonzero"
     fi
   else
     say "[warn] launchctl print failed for ${TARGET}."
-    printf '%s\n' "${print_output}" | sed 's/^/  | /'
+    if [[ "${JSON_MODE}" -eq 0 ]]; then
+      printf '%s\n' "${print_output}" | sed 's/^/  | /'
+    fi
     mark_issue "launch_not_loaded"
   fi
 
@@ -246,7 +296,9 @@ print_logs_and_signatures() {
 
   say "- monitor.out.log (last ${TAIL_LINES} lines):"
   if [[ -f "${OUT_LOG}" ]]; then
-    tail -n "${TAIL_LINES}" "${OUT_LOG}" | sed 's/^/  | /'
+    if [[ "${JSON_MODE}" -eq 0 ]]; then
+      tail -n "${TAIL_LINES}" "${OUT_LOG}" | sed 's/^/  | /'
+    fi
   else
     say "  | (missing)"
     mark_issue "out_log_missing"
@@ -254,7 +306,9 @@ print_logs_and_signatures() {
 
   say "- monitor.err.log (last ${TAIL_LINES} lines):"
   if [[ -f "${ERR_LOG}" ]]; then
-    tail -n "${TAIL_LINES}" "${ERR_LOG}" | sed 's/^/  | /'
+    if [[ "${JSON_MODE}" -eq 0 ]]; then
+      tail -n "${TAIL_LINES}" "${ERR_LOG}" | sed 's/^/  | /'
+    fi
   else
     say "  | (missing)"
     mark_issue "err_log_missing"
@@ -310,6 +364,41 @@ print_logs_and_signatures() {
   fi
 }
 
+collect_recommended_actions() {
+  ACTION_KEYS=""
+
+  if [[ "${ISSUE_COUNT}" -eq 0 ]]; then
+    return 0
+  fi
+
+  add_action "check_status"
+  add_action "check_logs"
+
+  if any_issue_in "launch_not_loaded" "launch_not_listed" "launch_last_exit_nonzero" "plist_missing" "launch_interval_mismatch" "plist_parse_error" "launchctl_missing"; then
+    add_action "reinstall_launchagent"
+    add_action "reload_launchagent"
+  fi
+
+  if any_issue_in "tcc_appleevents_denied" "permission_denied"; then
+    add_action "reset_appleevents"
+    add_action "run_now"
+  fi
+
+  if any_issue_in "vault_inbox_missing" "vault_inbox_path_missing"; then
+    add_action "set_vault_inbox"
+  fi
+
+  if any_issue_in "app_missing" "app_support_missing" "config_missing" "monitor_missing" "runtime_file_missing"; then
+    add_action "reinstall_runtime"
+  fi
+
+  if has_issue "count_unavailable"; then
+    add_action "recheck_count"
+  fi
+
+  add_action "rerun_doctor"
+}
+
 print_fix_hints() {
   if [[ "${SHOW_FIX_HINTS}" -ne 1 ]]; then
     return 0
@@ -317,34 +406,191 @@ print_fix_hints() {
 
   section "Safe repair suggestions"
   say "- Refresh status and logs:"
-  say "  scripts/tabdump_status.sh"
+  say "  tabdump status"
+  say "  tabdump logs --lines 80"
 
-  if has_issue "launch_not_loaded" || has_issue "launch_not_listed" || has_issue "launch_last_exit_nonzero" || has_issue "plist_missing" || has_issue "launch_interval_mismatch"; then
+  if any_issue_in "launch_not_loaded" "launch_not_listed" "launch_last_exit_nonzero" "plist_missing" "launch_interval_mismatch" "plist_parse_error" "launchctl_missing"; then
     say "- Reinstall LaunchAgent from config (clean rebuild):"
     say "  scripts/tabdump_install_launchagent.sh"
     say "- If plist already looks correct, simple reload is also available:"
     say "  scripts/tabdump_reload_launchagent.sh"
   fi
 
-  if has_issue "tcc_appleevents_denied" || has_issue "permission_denied"; then
+  if any_issue_in "tcc_appleevents_denied" "permission_denied"; then
     say "- Reset AppleEvents permissions and re-approve prompts:"
     say "  scripts/tabdump_permissions_reset.sh"
-    say "  Then run: scripts/tabdump_run_once.sh"
+    say "  Then run: tabdump now"
     say "  Open: System Settings -> Privacy & Security -> Automation -> TabDump"
   fi
 
-  if has_issue "vault_inbox_missing" || has_issue "vault_inbox_path_missing"; then
+  if any_issue_in "vault_inbox_missing" "vault_inbox_path_missing"; then
     say "- Fix inbox path in config (example):"
     say "  tabdump config set vaultInbox ~/obsidian/Inbox/"
   fi
 
-  if has_issue "app_missing" || has_issue "config_missing" || has_issue "monitor_missing" || has_issue "runtime_file_missing"; then
+  if any_issue_in "app_missing" "app_support_missing" "config_missing" "monitor_missing" "runtime_file_missing"; then
     say "- Reinstall/repair runtime files:"
     say "  bash scripts/install.sh --yes --vault-inbox ~/obsidian/Inbox"
   fi
 
   say "- Re-run doctor:"
   say "  scripts/tabdump_doctor.sh"
+  say "  scripts/tabdump_doctor.sh --json"
+}
+
+emit_json_output() {
+  local status
+
+  collect_recommended_actions
+
+  if [[ "${ISSUE_COUNT}" -eq 0 ]]; then
+    status="ok"
+  else
+    status="issues"
+  fi
+
+  TABDUMP_DOCTOR_STATUS="${status}" \
+  TABDUMP_DOCTOR_ISSUE_COUNT="${ISSUE_COUNT}" \
+  TABDUMP_DOCTOR_ISSUE_KEYS="${ISSUE_KEYS}" \
+  TABDUMP_DOCTOR_ACTION_KEYS="${ACTION_KEYS}" \
+  TABDUMP_PATH_APP="${APP}" \
+  TABDUMP_PATH_APP_SUPPORT="${APP_SUPPORT}" \
+  TABDUMP_PATH_CONFIG="${CFG}" \
+  TABDUMP_PATH_MONITOR="${MONITOR}" \
+  TABDUMP_PATH_LOG_DIR="${LOG_DIR}" \
+  TABDUMP_PATH_OUT_LOG="${OUT_LOG}" \
+  TABDUMP_PATH_ERR_LOG="${ERR_LOG}" \
+  TABDUMP_PATH_PLIST="${PLIST}" \
+  python3 - <<'PY'
+import datetime
+import json
+import os
+
+issue_meta = {
+    "app_missing": {"severity": "high", "category": "runtime", "message": "TabDump.app is missing."},
+    "app_support_missing": {"severity": "medium", "category": "runtime", "message": "App Support directory is missing."},
+    "config_missing": {"severity": "high", "category": "config", "message": "config.json is missing."},
+    "monitor_missing": {"severity": "high", "category": "runtime", "message": "monitor_tabs.py is missing."},
+    "logs_dir_missing": {"severity": "medium", "category": "logs", "message": "Log directory is missing."},
+    "plist_missing": {"severity": "medium", "category": "launchagent", "message": "LaunchAgent plist is missing."},
+    "config_parse_error": {"severity": "medium", "category": "config", "message": "config.json could not be parsed."},
+    "vault_inbox_missing": {"severity": "medium", "category": "config", "message": "vaultInbox is empty in config."},
+    "vault_inbox_path_missing": {"severity": "medium", "category": "config", "message": "vaultInbox path does not exist."},
+    "launch_interval_mismatch": {"severity": "medium", "category": "launchagent", "message": "LaunchAgent StartInterval does not match checkEveryMinutes."},
+    "plist_parse_error": {"severity": "medium", "category": "launchagent", "message": "LaunchAgent plist could not be parsed."},
+    "launchctl_missing": {"severity": "medium", "category": "launchagent", "message": "launchctl command is not available."},
+    "launch_not_listed": {"severity": "medium", "category": "launchagent", "message": "LaunchAgent label is not listed by launchctl."},
+    "launch_last_exit_nonzero": {"severity": "medium", "category": "launchagent", "message": "LaunchAgent last exit code is non-zero."},
+    "launch_not_loaded": {"severity": "high", "category": "launchagent", "message": "LaunchAgent is not loaded."},
+    "out_log_missing": {"severity": "low", "category": "logs", "message": "monitor.out.log is missing."},
+    "err_log_missing": {"severity": "low", "category": "logs", "message": "monitor.err.log is missing."},
+    "tcc_appleevents_denied": {"severity": "high", "category": "permissions", "message": "AppleEvents/TCC denial detected."},
+    "permission_denied": {"severity": "medium", "category": "permissions", "message": "Permission denial detected in logs."},
+    "runtime_file_missing": {"severity": "high", "category": "runtime", "message": "Runtime file missing signature detected in logs."},
+    "count_unavailable": {"severity": "low", "category": "runtime", "message": "count_unavailable observed in logs."},
+}
+
+action_meta = {
+    "check_status": {
+        "command": "tabdump status",
+        "reason": "Inspect mode, monitor state, launch agent status, and recent log tails.",
+    },
+    "check_logs": {
+        "command": "tabdump logs --lines 80",
+        "reason": "Inspect a broader runtime log window for recurring errors.",
+    },
+    "reinstall_launchagent": {
+        "command": "scripts/tabdump_install_launchagent.sh",
+        "reason": "Rebuild LaunchAgent plist from config and restart the job.",
+    },
+    "reload_launchagent": {
+        "command": "scripts/tabdump_reload_launchagent.sh",
+        "reason": "Reload an existing LaunchAgent without rewriting the plist.",
+    },
+    "reset_appleevents": {
+        "command": "scripts/tabdump_permissions_reset.sh",
+        "reason": "Reset Automation permissions and trigger fresh approval prompts.",
+    },
+    "run_now": {
+        "command": "tabdump now",
+        "reason": "Run a forced one-shot dump to verify current runtime health.",
+    },
+    "set_vault_inbox": {
+        "command": "tabdump config set vaultInbox ~/obsidian/Inbox/",
+        "reason": "Set a valid inbox path for raw/clean note output.",
+    },
+    "reinstall_runtime": {
+        "command": "bash scripts/install.sh --yes --vault-inbox ~/obsidian/Inbox",
+        "reason": "Restore missing runtime app/support files.",
+    },
+    "recheck_count": {
+        "command": "tabdump count --json",
+        "reason": "Re-run count to confirm whether fresh tab evidence is available.",
+    },
+    "rerun_doctor": {
+        "command": "scripts/tabdump_doctor.sh --json",
+        "reason": "Re-run diagnostics after applying fixes.",
+    },
+}
+
+status = os.environ.get("TABDUMP_DOCTOR_STATUS", "issues")
+issue_count = int(os.environ.get("TABDUMP_DOCTOR_ISSUE_COUNT", "0"))
+issue_keys = [k for k in os.environ.get("TABDUMP_DOCTOR_ISSUE_KEYS", "").split(",") if k]
+action_keys = [k for k in os.environ.get("TABDUMP_DOCTOR_ACTION_KEYS", "").split(",") if k]
+
+issues = []
+for key in issue_keys:
+    meta = issue_meta.get(
+        key,
+        {
+            "severity": "medium",
+            "category": "unknown",
+            "message": "Unknown diagnostic issue.",
+        },
+    )
+    issues.append(
+        {
+            "id": key,
+            "severity": meta["severity"],
+            "category": meta["category"],
+            "message": meta["message"],
+        }
+    )
+
+actions = []
+for key in action_keys:
+    meta = action_meta.get(key)
+    if not meta:
+        continue
+    actions.append(
+        {
+            "id": key,
+            "command": meta["command"],
+            "reason": meta["reason"],
+        }
+    )
+
+payload = {
+    "schemaVersion": "tabdump-doctor/v1",
+    "status": status,
+    "issueCount": issue_count,
+    "generatedAt": datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z"),
+    "issues": issues,
+    "recommendedActions": actions,
+    "paths": {
+        "app": os.environ.get("TABDUMP_PATH_APP", ""),
+        "appSupport": os.environ.get("TABDUMP_PATH_APP_SUPPORT", ""),
+        "config": os.environ.get("TABDUMP_PATH_CONFIG", ""),
+        "monitor": os.environ.get("TABDUMP_PATH_MONITOR", ""),
+        "logDir": os.environ.get("TABDUMP_PATH_LOG_DIR", ""),
+        "outLog": os.environ.get("TABDUMP_PATH_OUT_LOG", ""),
+        "errLog": os.environ.get("TABDUMP_PATH_ERR_LOG", ""),
+        "plist": os.environ.get("TABDUMP_PATH_PLIST", ""),
+    },
+}
+
+print(json.dumps(payload, separators=(",", ":"), sort_keys=False))
+PY
 }
 
 while [[ "$#" -gt 0 ]]; do
@@ -360,6 +606,10 @@ while [[ "$#" -gt 0 ]]; do
       fi
       TAIL_LINES="${2}"
       shift 2
+      ;;
+    --json)
+      JSON_MODE=1
+      shift
       ;;
     --no-fix-hints)
       SHOW_FIX_HINTS=0
@@ -391,6 +641,14 @@ print_config_highlights
 print_launch_agent_status
 print_logs_and_signatures
 print_fix_hints
+
+if [[ "${JSON_MODE}" -eq 1 ]]; then
+  emit_json_output
+  if [[ "${ISSUE_COUNT}" -eq 0 ]]; then
+    exit 0
+  fi
+  exit 1
+fi
 
 section "Summary"
 if [[ "${ISSUE_COUNT}" -eq 0 ]]; then
