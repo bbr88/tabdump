@@ -53,6 +53,7 @@ tabdump permissions
 `tabdump count` fails with `count_unavailable` when a fresh post-launch tab count cannot be confirmed.
 `tabdump count`, `tabdump now`, and `tabdump now --close` run TabDump in background/hidden mode to avoid stealing focus (except first-time permission prompts).
 `tabdump logs` reads `~/Library/Application Support/TabDump/logs/monitor.out.log` (combined stdout/stderr), and launch-agent monitor runs in verbose mode by default.
+`tabdump permissions` uses a lightweight permissions probe (raw dump check only, no clean-note postprocess).
 
 ## OpenClaw Skill
 

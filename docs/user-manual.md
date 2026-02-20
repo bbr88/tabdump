@@ -162,6 +162,8 @@ Safe permissions check (forced dump-only, no tab closing):
 tabdump permissions
 ```
 
+`tabdump permissions` uses a lightweight permissions probe mode: it runs TabDump safely and checks for a fresh raw dump, but intentionally skips clean-note postprocess for faster feedback.
+
 Inspect current state:
 
 ```bash
@@ -314,6 +316,11 @@ tccutil reset AppleEvents io.orc-visioner.tabdump
 ```
 
 Then run `tabdump permissions` again.
+
+Expected permission check outcomes:
+
+1. `[ok] Permissions check produced raw dump: <path>` when a fresh raw dump is observed.
+2. `[info] Permissions check completed (permissions_no_new_dump).` when no fresh raw dump is observed during the probe window.
 
 ## Launch Agent
 

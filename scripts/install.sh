@@ -1582,12 +1582,67 @@ PY
 
 run_monitor_json() {
   local mode_arg="$1"
-  local output
-  if ! output="$(python3 "${MONITOR_PATH}" --force --mode "${mode_arg}" --json 2>&1)"; then
-    echo "[error] monitor_tabs failed: ${output}" >&2
+  local stdout_file
+  local stderr_file
+  local stdout_payload
+  local stderr_payload
+  local monitor_json
+  local rc
+
+  stdout_file="$(mktemp)"
+  stderr_file="$(mktemp)"
+  if ! python3 "${MONITOR_PATH}" --force --mode "${mode_arg}" --json >"${stdout_file}" 2>"${stderr_file}"; then
+    rc=$?
+    stdout_payload="$(cat "${stdout_file}")"
+    stderr_payload="$(cat "${stderr_file}")"
+    rm -f "${stdout_file}" "${stderr_file}"
+    if [[ -n "${stderr_payload}" ]]; then
+      echo "[error] monitor_tabs stderr:" >&2
+      printf '%s\n' "${stderr_payload}" >&2
+    fi
+    if [[ -n "${stdout_payload}" ]]; then
+      echo "[error] monitor_tabs stdout:" >&2
+      printf '%s\n' "${stdout_payload}" >&2
+    fi
+    echo "[error] monitor_tabs failed with exit code ${rc}." >&2
     return 1
   fi
-  echo "${output}"
+
+  stdout_payload="$(cat "${stdout_file}")"
+  stderr_payload="$(cat "${stderr_file}")"
+  rm -f "${stdout_file}" "${stderr_file}"
+
+  if [[ -n "${stderr_payload}" ]]; then
+    printf '%s\n' "${stderr_payload}" >&2
+  fi
+
+  if ! monitor_json="$(MONITOR_STDOUT="${stdout_payload}" python3 - <<'PY'
+import json
+import os
+import sys
+
+text = os.environ.get("MONITOR_STDOUT", "")
+lines = [line.strip() for line in text.splitlines() if line.strip()]
+for line in reversed(lines):
+    try:
+        data = json.loads(line)
+    except Exception:
+        continue
+    if isinstance(data, dict):
+        print(json.dumps(data, sort_keys=True))
+        raise SystemExit(0)
+raise SystemExit(1)
+PY
+)"; then
+    echo "[error] monitor_tabs did not return valid JSON payload on stdout." >&2
+    if [[ -n "${stdout_payload}" ]]; then
+      echo "[error] monitor_tabs stdout:" >&2
+      printf '%s\n' "${stdout_payload}" >&2
+    fi
+    return 1
+  fi
+
+  echo "${monitor_json}"
 }
 
 count_cmd() {
@@ -1775,6 +1830,7 @@ permissions_cmd() {
   local status
   local reason
   local clean_note
+  local raw_dump
   local browsers_csv
   local old_ifs
   local -a browsers=()
@@ -1788,14 +1844,19 @@ permissions_cmd() {
   ensure_config
   ensure_monitor
   echo "[info] Running a safe permissions check (forced dump-only; tabs will not be closed)."
-  if ! monitor_json="$(run_monitor_json "dump-only")"; then
+  echo "[info] Waiting for browser Automation responses..."
+  if ! monitor_json="$(run_monitor_json "permissions")"; then
     return 1
   fi
   status="$(read_json_field "${monitor_json}" "status")"
   reason="$(read_json_field "${monitor_json}" "reason")"
   clean_note="$(read_json_field "${monitor_json}" "cleanNote")"
+  raw_dump="$(read_json_field "${monitor_json}" "rawDump")"
   if [[ "${status}" == "ok" && -n "${clean_note}" ]]; then
     echo "[ok] Permissions check produced clean dump: ${clean_note}"
+  elif [[ "${status}" == "ok" && -n "${raw_dump}" ]]; then
+    echo "[ok] Permissions check produced raw dump: ${raw_dump}"
+    echo "[info] Lightweight permissions mode skips clean-note postprocess by design."
   elif [[ "${status}" == "noop" ]]; then
     if [[ -z "${reason}" ]]; then
       reason="noop"

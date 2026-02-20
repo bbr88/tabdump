@@ -554,7 +554,46 @@ print(json.dumps(payload, sort_keys=True))
     assert "System Settings -> Privacy & Security -> Automation -> TabDump -> Safari" in output
 
     log = install_run.log_path.read_text(encoding="utf-8")
-    assert "monitor --force --mode dump-only --json" in log
+    assert "monitor --force --mode permissions --json" in log
+
+
+def test_generated_cli_permissions_reports_raw_dump_in_lightweight_mode(tmp_path):
+    install_run = _run_install(tmp_path, user_input="~/vault/inbox\n\nn\nn\n")
+    assert install_run.returncode == 0, install_run.stdout + install_run.stderr
+
+    monitor_path = install_run.home / "Library" / "Application Support" / "TabDump" / "monitor_tabs.py"
+    monitor_path.write_text(
+        """#!/usr/bin/env python3
+import json
+import os
+import sys
+log = os.environ.get("TABDUMP_TEST_LOG")
+if log:
+  with open(log, "a", encoding="utf-8") as fh:
+    fh.write("monitor " + " ".join(sys.argv[1:]) + "\\n")
+payload = {
+  "status": "ok",
+  "reason": "permissions_raw_dump",
+  "forced": True,
+  "mode": "permissions",
+  "rawDump": "/tmp/raw.md",
+  "cleanNote": "",
+  "autoSwitched": False,
+}
+print(json.dumps(payload, sort_keys=True))
+""",
+        encoding="utf-8",
+    )
+
+    cli_run = _run_generated_cli(install_run, args=["permissions"])
+    output = cli_run.stdout + cli_run.stderr
+
+    assert cli_run.returncode == 0, output
+    assert "[ok] Permissions check produced raw dump: /tmp/raw.md" in output
+    assert "Lightweight permissions mode skips clean-note postprocess by design." in output
+
+    log = install_run.log_path.read_text(encoding="utf-8")
+    assert "monitor --force --mode permissions --json" in log
 
 
 def test_generated_cli_mode_commands_update_config(tmp_path):
@@ -705,6 +744,40 @@ print(json.dumps(payload, sort_keys=True))
     log = install_run.log_path.read_text(encoding="utf-8")
     assert "monitor --force --mode dump-only --json" in log
 
+
+def test_generated_cli_now_ignores_monitor_stderr_noise_when_json_is_valid(tmp_path):
+    install_run = _run_install(tmp_path, user_input="~/vault/inbox\n\nn\nn\n")
+    assert install_run.returncode == 0, install_run.stdout + install_run.stderr
+
+    monitor_path = install_run.home / "Library" / "Application Support" / "TabDump" / "monitor_tabs.py"
+    monitor_path.write_text(
+        """#!/usr/bin/env python3
+import json
+import os
+import sys
+log = os.environ.get("TABDUMP_TEST_LOG")
+if log:
+  with open(log, "a", encoding="utf-8") as fh:
+    fh.write("monitor " + " ".join(sys.argv[1:]) + "\\n")
+print("[monitor_tabs] noisy diagnostic line", file=sys.stderr)
+payload = {
+  "status": "ok",
+  "reason": "",
+  "forced": True,
+  "mode": "dump-only",
+  "rawDump": "/tmp/raw.md",
+  "cleanNote": "/tmp/clean.md",
+  "autoSwitched": False,
+}
+print(json.dumps(payload, sort_keys=True))
+""",
+        encoding="utf-8",
+    )
+
+    cli_run = _run_generated_cli(install_run, args=["now"])
+    output = cli_run.stdout + cli_run.stderr
+    assert cli_run.returncode == 0, output
+    assert "[ok] Clean dump: /tmp/clean.md" in output
 
 def test_generated_cli_now_noop_returns_zero(tmp_path):
     install_run = _run_install(tmp_path, user_input="~/vault/inbox\n\nn\nn\n")

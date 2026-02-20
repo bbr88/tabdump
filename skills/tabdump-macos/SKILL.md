@@ -57,6 +57,7 @@ Path contract: these diagnostics intentionally assume the exact paths above. Kee
    - `tabdump count --json`
 4. Safe permissions check:
    - `tabdump permissions`
+   - Uses lightweight probe mode (raw-dump permission signal; skips clean-note postprocess).
 5. Mode and config:
    - `tabdump mode show`
    - `tabdump mode dump-only|dump-close|auto`

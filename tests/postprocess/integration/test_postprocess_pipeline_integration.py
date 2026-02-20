@@ -826,6 +826,113 @@ def test_monitor_count_mode_reports_unavailable_missing_state(tmp_path, monkeypa
     assert state["lastReason"] == "count_unavailable"
 
 
+def test_monitor_permissions_mode_returns_raw_dump_without_postprocess(tmp_path, monkeypatch, capsys):
+    vault_inbox = tmp_path / "inbox"
+    vault_inbox.mkdir()
+
+    base_cfg = {
+        "vaultInbox": str(vault_inbox),
+        "checkEveryMinutes": 99,
+        "cooldownMinutes": 45,
+        "maxTabs": 30,
+        "dryRun": False,
+        "dryRunPolicy": "manual",
+        "llmEnabled": False,
+    }
+    config_path = tmp_path / "config.json"
+    config_path.write_text(json.dumps(base_cfg, indent=2) + "\n", encoding="utf-8")
+
+    dump_path = _write_dump(vault_inbox / "TabDump 2026-02-07 00-00-00.md", with_id=True)
+    old_ts = time.time() - 60
+    os.utime(dump_path, (old_ts, old_ts))
+
+    monitor_state_path = tmp_path / "monitor_state.json"
+    monkeypatch.setattr(monitor, "DEFAULT_CFG", config_path)
+    monkeypatch.setattr(monitor, "STATE_PATH", monitor_state_path)
+    monkeypatch.setattr(monitor, "LOCK_PATH", monitor_state_path.with_suffix(".lock"))
+    monkeypatch.setattr(monitor.sys, "argv", ["monitor_tabs.py", "--mode", "permissions", "--json"])
+    monkeypatch.setattr(monitor, "run_tabdump_app", lambda: os.utime(dump_path, (time.time(), time.time())))
+    monkeypatch.setattr(
+        monitor.subprocess,
+        "run",
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            AssertionError("postprocess should not run in permissions mode")
+        ),
+    )
+
+    rc = monitor.main()
+    assert rc == 0
+
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert payload["status"] == "ok"
+    assert payload["reason"] == "permissions_raw_dump"
+    assert payload["mode"] == "permissions"
+    assert payload["rawDump"] == str(dump_path)
+    assert payload["cleanNote"] == ""
+
+    state = json.loads(monitor_state_path.read_text(encoding="utf-8"))
+    assert state["lastStatus"] == "ok"
+    assert state["lastReason"] == "permissions_raw_dump"
+    assert state["lastResultRawDump"] == str(dump_path)
+
+    restored_cfg = json.loads(config_path.read_text(encoding="utf-8"))
+    assert restored_cfg == base_cfg
+
+
+def test_monitor_permissions_mode_returns_noop_when_no_new_dump(tmp_path, monkeypatch, capsys):
+    vault_inbox = tmp_path / "inbox"
+    vault_inbox.mkdir()
+
+    config_path = tmp_path / "config.json"
+    config_path.write_text(
+        (
+            json.dumps(
+                {
+                    "vaultInbox": str(vault_inbox),
+                    "checkEveryMinutes": 99,
+                    "cooldownMinutes": 45,
+                    "maxTabs": 30,
+                    "dryRun": True,
+                    "dryRunPolicy": "manual",
+                    "llmEnabled": False,
+                },
+                indent=2,
+            )
+            + "\n"
+        ),
+        encoding="utf-8",
+    )
+
+    monitor_state_path = tmp_path / "monitor_state.json"
+    monkeypatch.setattr(monitor, "DEFAULT_CFG", config_path)
+    monkeypatch.setattr(monitor, "STATE_PATH", monitor_state_path)
+    monkeypatch.setattr(monitor, "LOCK_PATH", monitor_state_path.with_suffix(".lock"))
+    monkeypatch.setattr(monitor, "NEW_DUMP_WAIT_SECONDS", 0.2)
+    monkeypatch.setattr(monitor, "NEW_DUMP_POLL_SECONDS", 0.01)
+    monkeypatch.setattr(monitor, "run_tabdump_app", lambda: None)
+    monkeypatch.setattr(monitor.sys, "argv", ["monitor_tabs.py", "--mode", "permissions", "--json"])
+    monkeypatch.setattr(
+        monitor.subprocess,
+        "run",
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            AssertionError("postprocess should not run in permissions mode")
+        ),
+    )
+
+    rc = monitor.main()
+    assert rc == 0
+
+    payload = json.loads(capsys.readouterr().out.strip())
+    assert payload["status"] == "noop"
+    assert payload["reason"] == "permissions_no_new_dump"
+    assert payload["mode"] == "permissions"
+    assert payload["rawDump"] == ""
+    assert payload["cleanNote"] == ""
+
+    state = json.loads(monitor_state_path.read_text(encoding="utf-8"))
+    assert state["lastStatus"] == "noop"
+    assert state["lastReason"] == "permissions_no_new_dump"
+
 def test_monitor_force_override_preserves_auto_switch(tmp_path, monkeypatch):
     vault_inbox = tmp_path / "inbox"
     vault_inbox.mkdir()
