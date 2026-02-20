@@ -48,8 +48,8 @@ Prefer CLI updates:
   - includes `lastStatus`, `lastReason`, `lastProcessed`, `lastClean`, `lastCount`, `lastCountAt`
 - Legacy app state: `~/Library/Application Support/TabDump/state.json`
 - Logs:
-  - `~/Library/Application Support/TabDump/logs/monitor.out.log`
-  - `~/Library/Application Support/TabDump/logs/monitor.err.log`
+  - `~/Library/Application Support/TabDump/logs/monitor.out.log` (combined stdout/stderr stream)
+  - Launch-agent monitor runs with `--verbose` by default, so this log includes detailed runtime diagnostics.
 
 ## Count semantics
 

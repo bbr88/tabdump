@@ -14,6 +14,11 @@ Renderer tuning defaults in `core/renderer/config.py` are internal defaults and 
 | `vaultInbox` | string (absolute path) | required | app + monitor | Destination folder for raw/clean TabDump notes. |
 | `outputFilenameTemplate` | string | `TabDump {ts}.md` | app | Raw dump filename template. `{ts}` is replaced with timestamp. |
 
+Runtime monitor log path:
+
+- `~/Library/Application Support/TabDump/logs/monitor.out.log` (combined stdout/stderr)
+- Launch-agent monitor runs with `--verbose` by default.
+
 ## Browser Selection and Filters
 
 | Key | Type | Default | Used by | Description |

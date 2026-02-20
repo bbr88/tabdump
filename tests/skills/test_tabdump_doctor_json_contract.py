@@ -28,7 +28,6 @@ def _prepare_healthy_runtime(home: Path, check_every_minutes: int = 30) -> None:
 
     (app_support / "monitor_tabs.py").write_text("#!/usr/bin/env python3\n", encoding="utf-8")
     (logs_dir / "monitor.out.log").write_text("runtime ok\n", encoding="utf-8")
-    (logs_dir / "monitor.err.log").write_text("\n", encoding="utf-8")
 
     config = {
         "vaultInbox": str(inbox),
@@ -58,8 +57,10 @@ def _prepare_issue_runtime(home: Path) -> None:
     app_support = home / "Library" / "Application Support" / "TabDump"
     logs_dir = app_support / "logs"
     logs_dir.mkdir(parents=True, exist_ok=True)
-    (logs_dir / "monitor.out.log").write_text("count_unavailable\n", encoding="utf-8")
-    (logs_dir / "monitor.err.log").write_text("not authorized to send apple events\n", encoding="utf-8")
+    (logs_dir / "monitor.out.log").write_text(
+        "count_unavailable\nnot authorized to send apple events\n",
+        encoding="utf-8",
+    )
 
 
 def _install_launchctl_stub(bin_dir: Path) -> None:

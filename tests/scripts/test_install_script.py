@@ -302,9 +302,13 @@ def test_install_writes_default_config_and_artifacts(tmp_path):
     assert stat.S_IMODE(config_dir.stat().st_mode) == 0o700
     assert os.access(wrapper_path, os.X_OK)
     assert os.access(cli_path, os.X_OK)
+    wrapper_text = wrapper_path.read_text(encoding="utf-8")
+    assert "monitor_tabs.py\" --verbose" in wrapper_text
     plist_text = plist_path.read_text(encoding="utf-8")
     assert "<integer>3600</integer>" in plist_text
     assert f"<string>{wrapper_path}</string>" in plist_text
+    assert "<string>" + str(home / "Library" / "Application Support" / "TabDump" / "logs" / "monitor.out.log") + "</string>" in plist_text
+    assert "monitor.err.log" not in plist_text
 
     log = proc.log_path.read_text(encoding="utf-8")
     assert "shasum -a 256 -c" in log
@@ -928,7 +932,6 @@ def test_generated_cli_status_prints_expected_sections(tmp_path):
         encoding="utf-8",
     )
     (logs_dir / "monitor.out.log").write_text("out line\n", encoding="utf-8")
-    (logs_dir / "monitor.err.log").write_text("err line\n", encoding="utf-8")
 
     cli_run = _run_generated_cli(install_run, args=["status"])
     output = cli_run.stdout + cli_run.stderr
@@ -945,23 +948,20 @@ def test_generated_cli_status_prints_expected_sections(tmp_path):
     assert "- log tail:" in output
 
 
-def test_generated_cli_logs_prints_both_log_tails(tmp_path):
+def test_generated_cli_logs_prints_single_log_tail(tmp_path):
     install_run = _run_install(tmp_path, user_input="~/vault/inbox\n\nn\nn\n")
     assert install_run.returncode == 0, install_run.stdout + install_run.stderr
 
     logs_dir = install_run.home / "Library" / "Application Support" / "TabDump" / "logs"
     logs_dir.mkdir(parents=True, exist_ok=True)
     (logs_dir / "monitor.out.log").write_text("out one\nout two\n", encoding="utf-8")
-    (logs_dir / "monitor.err.log").write_text("err one\nerr two\n", encoding="utf-8")
 
     cli_run = _run_generated_cli(install_run, args=["logs"])
     output = cli_run.stdout + cli_run.stderr
     assert cli_run.returncode == 0, output
     assert "- log tail:" in output
     assert "monitor.out.log" in output
-    assert "monitor.err.log" in output
     assert "out one" in output
-    assert "err one" in output
 
 
 def test_generated_cli_logs_honors_lines_option(tmp_path):
@@ -971,17 +971,13 @@ def test_generated_cli_logs_honors_lines_option(tmp_path):
     logs_dir = install_run.home / "Library" / "Application Support" / "TabDump" / "logs"
     logs_dir.mkdir(parents=True, exist_ok=True)
     (logs_dir / "monitor.out.log").write_text("out-a\nout-b\nout-c\n", encoding="utf-8")
-    (logs_dir / "monitor.err.log").write_text("err-a\nerr-b\nerr-c\n", encoding="utf-8")
 
     cli_run = _run_generated_cli(install_run, args=["logs", "--lines", "2"])
     output = cli_run.stdout + cli_run.stderr
     assert cli_run.returncode == 0, output
     assert "out-a" not in output
-    assert "err-a" not in output
     assert "out-b" in output
     assert "out-c" in output
-    assert "err-b" in output
-    assert "err-c" in output
 
 
 def test_generated_cli_logs_rejects_invalid_lines(tmp_path):

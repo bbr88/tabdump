@@ -759,7 +759,7 @@ install_runtime_files() {
   cat > "${MONITOR_WRAPPER_DEST}" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
-exec "${PYTHON_BIN}" "${MONITOR_DEST}" "\$@"
+exec "${PYTHON_BIN}" "${MONITOR_DEST}" --verbose "\$@"
 EOF
   cp -f "${CORE_DIR}/__init__.py" "${CORE_PKG_DEST}/__init__.py"
   cp -f "${RENDERER_DIR}"/*.py "${RENDERER_DEST_DIR}/"
@@ -1712,10 +1712,7 @@ logs_cmd() {
   local follow=0
   local arg
   local out_log="${LOG_DIR}/monitor.out.log"
-  local err_log="${LOG_DIR}/monitor.err.log"
   local out_exists=0
-  local err_exists=0
-  local -a existing_logs=()
 
   while [[ "$#" -gt 0 ]]; do
     arg="$1"
@@ -1751,45 +1748,23 @@ logs_cmd() {
 
   if [[ -f "${out_log}" ]]; then
     out_exists=1
-    existing_logs+=("${out_log}")
-  fi
-  if [[ -f "${err_log}" ]]; then
-    err_exists=1
-    existing_logs+=("${err_log}")
   fi
 
   if [[ "${follow}" -eq 1 ]]; then
-    if [[ "${#existing_logs[@]}" -eq 0 ]]; then
+    if [[ "${out_exists}" -eq 0 ]]; then
       echo "- log tail: ${out_log}"
-      echo "  (missing)"
-      echo "- log tail: ${err_log}"
       echo "  (missing)"
       echo "[error] No log files found to follow under ${LOG_DIR}." >&2
       return 1
     fi
-    if [[ "${out_exists}" -eq 0 ]]; then
-      echo "- log tail: ${out_log}"
-      echo "  (missing)"
-    fi
-    if [[ "${err_exists}" -eq 0 ]]; then
-      echo "- log tail: ${err_log}"
-      echo "  (missing)"
-    fi
     echo "[info] Following TabDump logs (Ctrl-C to stop)."
-    tail -n "${lines}" -f "${existing_logs[@]}"
+    tail -n "${lines}" -f "${out_log}"
     return 0
   fi
 
   echo "- log tail: ${out_log}"
   if [[ "${out_exists}" -eq 1 ]]; then
     tail -n "${lines}" "${out_log}" | sed 's/^/  /'
-  else
-    echo "  (missing)"
-  fi
-
-  echo "- log tail: ${err_log}"
-  if [[ "${err_exists}" -eq 1 ]]; then
-    tail -n "${lines}" "${err_log}" | sed 's/^/  /'
   else
     echo "  (missing)"
   fi
@@ -1883,11 +1858,9 @@ status_cmd() {
   local run_state
   local last_exit
   local out_log
-  local err_log
 
   ensure_config
   out_log="${LOG_DIR}/monitor.out.log"
-  err_log="${LOG_DIR}/monitor.err.log"
 
   echo "TabDump status"
   echo "- config: ${CONFIG_PATH}"
@@ -1983,12 +1956,6 @@ PY
   echo "- log tail: ${out_log}"
   if [[ -f "${out_log}" ]]; then
     tail -n 8 "${out_log}" | sed 's/^/  /'
-  else
-    echo "  (missing)"
-  fi
-  echo "- log tail: ${err_log}"
-  if [[ -f "${err_log}" ]]; then
-    tail -n 8 "${err_log}" | sed 's/^/  /'
   else
     echo "  (missing)"
   fi
@@ -2089,7 +2056,7 @@ PY
   <key>StandardOutPath</key>
   <string>${LOG_DIR}/monitor.out.log</string>
   <key>StandardErrorPath</key>
-  <string>${LOG_DIR}/monitor.err.log</string>
+  <string>${LOG_DIR}/monitor.out.log</string>
 </dict>
 </plist>
 PLIST

@@ -93,6 +93,8 @@ def test_install_launchagent_rewrites_plist_and_restarts_job(tmp_path: Path):
     assert plist["ProgramArguments"] == [str(wrapper)]
     assert plist["EnvironmentVariables"]["TABDUMP_KEYCHAIN_SERVICE"] == "CustomService"
     assert plist["EnvironmentVariables"]["TABDUMP_KEYCHAIN_ACCOUNT"] == "custom-account"
+    assert plist["StandardOutPath"].endswith("/monitor.out.log")
+    assert plist["StandardErrorPath"].endswith("/monitor.out.log")
 
     calls = launchctl_log.read_text(encoding="utf-8")
     assert "launchctl bootout gui/" in calls
