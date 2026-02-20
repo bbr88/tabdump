@@ -131,7 +131,7 @@ plist = {
     "StartInterval": start_interval,
     "RunAtLoad": True,
     "StandardOutPath": os.path.join(log_dir, "monitor.out.log"),
-    "StandardErrorPath": os.path.join(log_dir, "monitor.err.log"),
+    "StandardErrorPath": os.path.join(log_dir, "monitor.out.log"),
 }
 
 with open(plist_path, "wb") as fh:

@@ -162,6 +162,8 @@ Safe permissions check (forced dump-only, no tab closing):
 tabdump permissions
 ```
 
+`tabdump permissions` uses a lightweight permissions probe mode: it runs TabDump safely and checks for a fresh raw dump, but intentionally skips clean-note postprocess for faster feedback.
+
 Inspect current state:
 
 ```bash
@@ -297,7 +299,7 @@ TABDUMP_EVAL_ENFORCE_EFFORT=1 python3 -m pytest -q tests/postprocess/integration
 1. Current mode/policy and gate values (`checkEveryMinutes`, `cooldownMinutes`, `maxTabs`).
 2. Monitor state (`monitor_state.json`): pipeline result (`lastStatus`, `lastReason`, `lastProcessed`, `lastClean`).
 3. Legacy app self-gating state (`state.json`): raw app-level checks (`lastCheck`, `lastDump`, `lastTabs`).
-4. Launch agent runtime state and recent logs.
+4. Launch agent runtime state and recent logs (`~/Library/Application Support/TabDump/logs/monitor.out.log`).
 
 ## Permissions (TCC / Automation)
 
@@ -314,6 +316,11 @@ tccutil reset AppleEvents io.orc-visioner.tabdump
 ```
 
 Then run `tabdump permissions` again.
+
+Expected permission check outcomes:
+
+1. `[ok] Permissions check produced raw dump: <path>` when a fresh raw dump is observed.
+2. `[info] Permissions check completed (permissions_no_new_dump).` when no fresh raw dump is observed during the probe window.
 
 ## Launch Agent
 
@@ -335,6 +342,13 @@ Manual reload (for direct plist/config edits):
 launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/io.orc-visioner.tabdump.monitor.plist
 launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/io.orc-visioner.tabdump.monitor.plist
 ```
+
+Launch-agent logging defaults:
+
+1. The monitor wrapper runs with `--verbose` by default.
+2. Launchd routes both stdout and stderr to one file:
+   - `~/Library/Application Support/TabDump/logs/monitor.out.log`
+3. Use `tabdump logs --lines 80` or `tabdump logs --follow` to inspect runtime output.
 
 ## Config File
 

@@ -55,6 +55,7 @@ FORCE = False
 JSON_OUTPUT = False
 PRINT_CLEAN = False
 MODE_OVERRIDE = "config"
+VALID_MODES = {"config", "dump-only", "dump-close", "count", "permissions"}
 COUNT_ONLY_MAX_TABS = 2_147_483_647
 TRUST_RAMP_DAYS = 3
 NEW_DUMP_WAIT_SECONDS = float(os.environ.get("TABDUMP_NEW_DUMP_WAIT_SECONDS", "8"))
@@ -170,18 +171,18 @@ def parse_args(argv: List[str]) -> None:
             PRINT_CLEAN = True
         elif arg == "--mode":
             if idx + 1 >= len(args):
-                raise SystemExit("--mode requires one of: config, dump-only, dump-close, count")
+                raise SystemExit("--mode requires one of: config, dump-only, dump-close, count, permissions")
             idx += 1
             MODE_OVERRIDE = args[idx].strip().lower()
-            if MODE_OVERRIDE not in {"config", "dump-only", "dump-close", "count"}:
+            if MODE_OVERRIDE not in VALID_MODES:
                 raise SystemExit(f"invalid --mode value: {MODE_OVERRIDE}")
         elif arg.startswith("--mode="):
             MODE_OVERRIDE = arg.split("=", 1)[1].strip().lower()
-            if MODE_OVERRIDE not in {"config", "dump-only", "dump-close", "count"}:
+            if MODE_OVERRIDE not in VALID_MODES:
                 raise SystemExit(f"invalid --mode value: {MODE_OVERRIDE}")
         elif arg in ("-h", "--help"):
             print(
-                "usage: monitor_tabs.py [--verbose] [--force] [--mode config|dump-only|dump-close|count] "
+                "usage: monitor_tabs.py [--verbose] [--force] [--mode config|dump-only|dump-close|count|permissions] "
                 "[--json|--print-clean]",
                 file=sys.stderr,
             )
@@ -320,6 +321,18 @@ def build_runtime_cfg(cfg: dict) -> tuple[dict, bool]:
             ("checkEveryMinutes", 0),
             ("cooldownMinutes", 0),
             ("maxTabs", COUNT_ONLY_MAX_TABS),
+        ):
+            if runtime_cfg.get(key) != value:
+                runtime_cfg[key] = value
+                changed = True
+        if not _cfg_bool(runtime_cfg.get("dryRun", True), default=True):
+            runtime_cfg["dryRun"] = True
+            changed = True
+    elif MODE_OVERRIDE == "permissions":
+        for key, value in (
+            ("checkEveryMinutes", 0),
+            ("cooldownMinutes", 0),
+            ("maxTabs", 0),
         ):
             if runtime_cfg.get(key) != value:
                 runtime_cfg[key] = value
@@ -539,6 +552,24 @@ def main() -> int:
             record_last_result(state, status="ok", reason="count_only")
             save_state(state)
             emit_result(status="ok", reason="count_only", tab_count=tab_count)
+            return 0
+
+        if MODE_OVERRIDE == "permissions":
+            baseline_path, baseline_mtime = _snapshot_newest_tabdump(vault_inbox)
+            log("run TabDump.app (permissions mode)")
+            run_tabdump_app()
+            newest = wait_for_new_tabdump(vault_inbox, baseline_path, baseline_mtime)
+            if newest is None:
+                log("permissions: no new TabDump *.md observed")
+                record_last_result(state, status="noop", reason="permissions_no_new_dump")
+                save_state(state)
+                emit_result(status="noop", reason="permissions_no_new_dump")
+                return 0
+
+            log(f"permissions: raw dump observed ({newest})")
+            record_last_result(state, status="ok", reason="permissions_raw_dump", raw_dump=newest)
+            save_state(state)
+            emit_result(status="ok", reason="permissions_raw_dump", raw_dump=newest)
             return 0
 
         now = time.time()

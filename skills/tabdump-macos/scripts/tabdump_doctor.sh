@@ -7,7 +7,6 @@ CFG="${APP_SUPPORT}/config.json"
 MONITOR="${APP_SUPPORT}/monitor_tabs.py"
 LOG_DIR="${APP_SUPPORT}/logs"
 OUT_LOG="${LOG_DIR}/monitor.out.log"
-ERR_LOG="${LOG_DIR}/monitor.err.log"
 PLIST="${HOME}/Library/LaunchAgents/io.orc-visioner.tabdump.monitor.plist"
 LABEL="io.orc-visioner.tabdump.monitor"
 TARGET="gui/$(id -u)/${LABEL}"
@@ -304,27 +303,13 @@ print_logs_and_signatures() {
     mark_issue "out_log_missing"
   fi
 
-  say "- monitor.err.log (last ${TAIL_LINES} lines):"
-  if [[ -f "${ERR_LOG}" ]]; then
-    if [[ "${JSON_MODE}" -eq 0 ]]; then
-      tail -n "${TAIL_LINES}" "${ERR_LOG}" | sed 's/^/  | /'
-    fi
-  else
-    say "  | (missing)"
-    mark_issue "err_log_missing"
-  fi
-
-  local scan_blob out_scan err_scan
+  local scan_blob out_scan
   scan_blob=""
   out_scan=""
-  err_scan=""
   if [[ -f "${OUT_LOG}" ]]; then
     out_scan="$(tail -n "${SCAN_LINES}" "${OUT_LOG}" 2>/dev/null || true)"
   fi
-  if [[ -f "${ERR_LOG}" ]]; then
-    err_scan="$(tail -n "${SCAN_LINES}" "${ERR_LOG}" 2>/dev/null || true)"
-  fi
-  scan_blob="${out_scan}"$'\n'"${err_scan}"
+  scan_blob="${out_scan}"
 
   section "Detected signatures"
   local found_any=0
@@ -459,7 +444,6 @@ emit_json_output() {
   TABDUMP_PATH_MONITOR="${MONITOR}" \
   TABDUMP_PATH_LOG_DIR="${LOG_DIR}" \
   TABDUMP_PATH_OUT_LOG="${OUT_LOG}" \
-  TABDUMP_PATH_ERR_LOG="${ERR_LOG}" \
   TABDUMP_PATH_PLIST="${PLIST}" \
   python3 - <<'PY'
 import datetime
@@ -483,7 +467,6 @@ issue_meta = {
     "launch_last_exit_nonzero": {"severity": "medium", "category": "launchagent", "message": "LaunchAgent last exit code is non-zero."},
     "launch_not_loaded": {"severity": "high", "category": "launchagent", "message": "LaunchAgent is not loaded."},
     "out_log_missing": {"severity": "low", "category": "logs", "message": "monitor.out.log is missing."},
-    "err_log_missing": {"severity": "low", "category": "logs", "message": "monitor.err.log is missing."},
     "tcc_appleevents_denied": {"severity": "high", "category": "permissions", "message": "AppleEvents/TCC denial detected."},
     "permission_denied": {"severity": "medium", "category": "permissions", "message": "Permission denial detected in logs."},
     "runtime_file_missing": {"severity": "high", "category": "runtime", "message": "Runtime file missing signature detected in logs."},
@@ -584,7 +567,6 @@ payload = {
         "monitor": os.environ.get("TABDUMP_PATH_MONITOR", ""),
         "logDir": os.environ.get("TABDUMP_PATH_LOG_DIR", ""),
         "outLog": os.environ.get("TABDUMP_PATH_OUT_LOG", ""),
-        "errLog": os.environ.get("TABDUMP_PATH_ERR_LOG", ""),
         "plist": os.environ.get("TABDUMP_PATH_PLIST", ""),
     },
 }

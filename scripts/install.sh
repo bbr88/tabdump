@@ -759,7 +759,7 @@ install_runtime_files() {
   cat > "${MONITOR_WRAPPER_DEST}" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
-exec "${PYTHON_BIN}" "${MONITOR_DEST}" "\$@"
+exec "${PYTHON_BIN}" "${MONITOR_DEST}" --verbose "\$@"
 EOF
   cp -f "${CORE_DIR}/__init__.py" "${CORE_PKG_DEST}/__init__.py"
   cp -f "${RENDERER_DIR}"/*.py "${RENDERER_DEST_DIR}/"
@@ -1582,12 +1582,67 @@ PY
 
 run_monitor_json() {
   local mode_arg="$1"
-  local output
-  if ! output="$(python3 "${MONITOR_PATH}" --force --mode "${mode_arg}" --json 2>&1)"; then
-    echo "[error] monitor_tabs failed: ${output}" >&2
+  local stdout_file
+  local stderr_file
+  local stdout_payload
+  local stderr_payload
+  local monitor_json
+  local rc
+
+  stdout_file="$(mktemp)"
+  stderr_file="$(mktemp)"
+  if ! python3 "${MONITOR_PATH}" --force --mode "${mode_arg}" --json >"${stdout_file}" 2>"${stderr_file}"; then
+    rc=$?
+    stdout_payload="$(cat "${stdout_file}")"
+    stderr_payload="$(cat "${stderr_file}")"
+    rm -f "${stdout_file}" "${stderr_file}"
+    if [[ -n "${stderr_payload}" ]]; then
+      echo "[error] monitor_tabs stderr:" >&2
+      printf '%s\n' "${stderr_payload}" >&2
+    fi
+    if [[ -n "${stdout_payload}" ]]; then
+      echo "[error] monitor_tabs stdout:" >&2
+      printf '%s\n' "${stdout_payload}" >&2
+    fi
+    echo "[error] monitor_tabs failed with exit code ${rc}." >&2
     return 1
   fi
-  echo "${output}"
+
+  stdout_payload="$(cat "${stdout_file}")"
+  stderr_payload="$(cat "${stderr_file}")"
+  rm -f "${stdout_file}" "${stderr_file}"
+
+  if [[ -n "${stderr_payload}" ]]; then
+    printf '%s\n' "${stderr_payload}" >&2
+  fi
+
+  if ! monitor_json="$(MONITOR_STDOUT="${stdout_payload}" python3 - <<'PY'
+import json
+import os
+import sys
+
+text = os.environ.get("MONITOR_STDOUT", "")
+lines = [line.strip() for line in text.splitlines() if line.strip()]
+for line in reversed(lines):
+    try:
+        data = json.loads(line)
+    except Exception:
+        continue
+    if isinstance(data, dict):
+        print(json.dumps(data, sort_keys=True))
+        raise SystemExit(0)
+raise SystemExit(1)
+PY
+)"; then
+    echo "[error] monitor_tabs did not return valid JSON payload on stdout." >&2
+    if [[ -n "${stdout_payload}" ]]; then
+      echo "[error] monitor_tabs stdout:" >&2
+      printf '%s\n' "${stdout_payload}" >&2
+    fi
+    return 1
+  fi
+
+  echo "${monitor_json}"
 }
 
 count_cmd() {
@@ -1712,10 +1767,7 @@ logs_cmd() {
   local follow=0
   local arg
   local out_log="${LOG_DIR}/monitor.out.log"
-  local err_log="${LOG_DIR}/monitor.err.log"
   local out_exists=0
-  local err_exists=0
-  local -a existing_logs=()
 
   while [[ "$#" -gt 0 ]]; do
     arg="$1"
@@ -1751,45 +1803,23 @@ logs_cmd() {
 
   if [[ -f "${out_log}" ]]; then
     out_exists=1
-    existing_logs+=("${out_log}")
-  fi
-  if [[ -f "${err_log}" ]]; then
-    err_exists=1
-    existing_logs+=("${err_log}")
   fi
 
   if [[ "${follow}" -eq 1 ]]; then
-    if [[ "${#existing_logs[@]}" -eq 0 ]]; then
+    if [[ "${out_exists}" -eq 0 ]]; then
       echo "- log tail: ${out_log}"
-      echo "  (missing)"
-      echo "- log tail: ${err_log}"
       echo "  (missing)"
       echo "[error] No log files found to follow under ${LOG_DIR}." >&2
       return 1
     fi
-    if [[ "${out_exists}" -eq 0 ]]; then
-      echo "- log tail: ${out_log}"
-      echo "  (missing)"
-    fi
-    if [[ "${err_exists}" -eq 0 ]]; then
-      echo "- log tail: ${err_log}"
-      echo "  (missing)"
-    fi
     echo "[info] Following TabDump logs (Ctrl-C to stop)."
-    tail -n "${lines}" -f "${existing_logs[@]}"
+    tail -n "${lines}" -f "${out_log}"
     return 0
   fi
 
   echo "- log tail: ${out_log}"
   if [[ "${out_exists}" -eq 1 ]]; then
     tail -n "${lines}" "${out_log}" | sed 's/^/  /'
-  else
-    echo "  (missing)"
-  fi
-
-  echo "- log tail: ${err_log}"
-  if [[ "${err_exists}" -eq 1 ]]; then
-    tail -n "${lines}" "${err_log}" | sed 's/^/  /'
   else
     echo "  (missing)"
   fi
@@ -1800,6 +1830,7 @@ permissions_cmd() {
   local status
   local reason
   local clean_note
+  local raw_dump
   local browsers_csv
   local old_ifs
   local -a browsers=()
@@ -1813,14 +1844,19 @@ permissions_cmd() {
   ensure_config
   ensure_monitor
   echo "[info] Running a safe permissions check (forced dump-only; tabs will not be closed)."
-  if ! monitor_json="$(run_monitor_json "dump-only")"; then
+  echo "[info] Waiting for browser Automation responses..."
+  if ! monitor_json="$(run_monitor_json "permissions")"; then
     return 1
   fi
   status="$(read_json_field "${monitor_json}" "status")"
   reason="$(read_json_field "${monitor_json}" "reason")"
   clean_note="$(read_json_field "${monitor_json}" "cleanNote")"
+  raw_dump="$(read_json_field "${monitor_json}" "rawDump")"
   if [[ "${status}" == "ok" && -n "${clean_note}" ]]; then
     echo "[ok] Permissions check produced clean dump: ${clean_note}"
+  elif [[ "${status}" == "ok" && -n "${raw_dump}" ]]; then
+    echo "[ok] Permissions check produced raw dump: ${raw_dump}"
+    echo "[info] Lightweight permissions mode skips clean-note postprocess by design."
   elif [[ "${status}" == "noop" ]]; then
     if [[ -z "${reason}" ]]; then
       reason="noop"
@@ -1883,11 +1919,9 @@ status_cmd() {
   local run_state
   local last_exit
   local out_log
-  local err_log
 
   ensure_config
   out_log="${LOG_DIR}/monitor.out.log"
-  err_log="${LOG_DIR}/monitor.err.log"
 
   echo "TabDump status"
   echo "- config: ${CONFIG_PATH}"
@@ -1983,12 +2017,6 @@ PY
   echo "- log tail: ${out_log}"
   if [[ -f "${out_log}" ]]; then
     tail -n 8 "${out_log}" | sed 's/^/  /'
-  else
-    echo "  (missing)"
-  fi
-  echo "- log tail: ${err_log}"
-  if [[ -f "${err_log}" ]]; then
-    tail -n 8 "${err_log}" | sed 's/^/  /'
   else
     echo "  (missing)"
   fi
@@ -2089,7 +2117,7 @@ PY
   <key>StandardOutPath</key>
   <string>${LOG_DIR}/monitor.out.log</string>
   <key>StandardErrorPath</key>
-  <string>${LOG_DIR}/monitor.err.log</string>
+  <string>${LOG_DIR}/monitor.out.log</string>
 </dict>
 </plist>
 PLIST

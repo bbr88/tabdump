@@ -35,9 +35,9 @@ Expected install paths:
 - Monitor state: `~/Library/Application Support/TabDump/monitor_state.json`
 - Legacy app state: `~/Library/Application Support/TabDump/state.json`
 - Logs:
-  - `~/Library/Application Support/TabDump/logs/monitor.out.log`
-  - `~/Library/Application Support/TabDump/logs/monitor.err.log`
+  - `~/Library/Application Support/TabDump/logs/monitor.out.log` (combined stdout/stderr stream)
 - Launch agent plist: `~/Library/LaunchAgents/io.orc-visioner.tabdump.monitor.plist`
+- Launch-agent monitor default flags: `--verbose`
 
 Path contract: these diagnostics intentionally assume the exact paths above. Keep Homebrew runtime installation aligned with these paths.
 
@@ -57,6 +57,7 @@ Path contract: these diagnostics intentionally assume the exact paths above. Kee
    - `tabdump count --json`
 4. Safe permissions check:
    - `tabdump permissions`
+   - Uses lightweight probe mode (raw-dump permission signal; skips clean-note postprocess).
 5. Mode and config:
    - `tabdump mode show`
    - `tabdump mode dump-only|dump-close|auto`
@@ -109,7 +110,7 @@ JSON fields:
   - `command`
   - `reason`
 - `paths`:
-  - `app`, `appSupport`, `config`, `monitor`, `logDir`, `outLog`, `errLog`, `plist`
+  - `app`, `appSupport`, `config`, `monitor`, `logDir`, `outLog`, `plist`
 
 ## CLI JSON output references
 
